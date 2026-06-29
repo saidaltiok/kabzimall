@@ -79,6 +79,7 @@ cd packages/pricing && npm install && npm test      # 22/22 geçmeli
 # API
 cd apps/api && npm install && npm run build && npm start   # http://localhost:3001/api/v1
 # geliştirme: npm run start:dev
+cd apps/api && npm test                              # Jest e2e — 18/18 geçmeli
 ```
 
 > Not: `apps/api` derlemesi `packages/pricing`'i birlikte derler (tsconfig include +
@@ -101,7 +102,8 @@ cd apps/api && npm install && npm run build && npm start   # http://localhost:30
    tablolarla değiştir (`products.base_price`, append-only `price_history`); `tenant_id` + RLS.
 3. **Auth & roller:** JWT guard + policy (fiyat yöneticisi+ — Teknik doküman Bölüm 7);
    `apply` sonrası `changedBy` token'dan çözülecek.
-4. **Test altyapısı:** `apps/api`'ye entegrasyon testleri (DoD: uç başına ≥1 test).
+4. ✅ **Test altyapısı kuruldu:** `apps/api` Jest + supertest e2e (18 test, tüm uçlar).
+   `npm test` ile çalışır; yeni uçlar buraya test ekleyerek gelir.
 5. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).
 
 ## Açık kararlar (kod dışı)

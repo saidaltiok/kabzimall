@@ -88,6 +88,18 @@ curl -X POST http://localhost:3001/api/v1/intel/cost-pool \
 # → laborPerKg 500, fuelPerKg 200, preview.directCost 2970
 ```
 
+## Testler
+
+```bash
+npm test          # Jest e2e (test/*.e2e-spec.ts) — 18 test, tüm uçlar
+```
+
+Her test, üretimdeki `main.ts` ile **aynı** yapılandırmada (global prefix +
+`ValidationPipe`) tam Nest uygulamasını ayağa kaldırıp supertest ile HTTP
+yüzeyini doğrular. Fiyat formülleri ayrıca `packages/pricing`'te node:test ile
+test edilir; buradaki testler API davranışına (doğrulama, yanıt şekli, durum
+kodu) odaklanır. Test dosyaları `tsconfig.build.json`'da hariç → prod derlemeye sızmaz.
+
 ## Mimari notlar
 
 - `src/pricing-engine.ts` tek köprü: `packages/pricing`'i re-export eder.
@@ -104,5 +116,5 @@ curl -X POST http://localhost:3001/api/v1/intel/cost-pool \
   append-only `price_history` tablolarıyla değişecek.
 - Auth/guard'lar (rol: fiyat yöneticisi+ — Teknik doküman Bölüm 7); `apply`
   sonrası `changedBy` token'dan gelecek.
-- `/intel/price/bulk-apply` (toplu güncelleme + önizleme) ve `/intel/price/suggest`
-  için entegrasyon testleri (DoD: uç başına ≥1 test).
+- `/intel/price/bulk-apply` (toplu güncelleme + önizleme) ve `/intel/dashboard`
+  gibi analiz uçları (hâlâ bellek içi).
