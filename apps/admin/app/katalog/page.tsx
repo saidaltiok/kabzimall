@@ -8,7 +8,7 @@ import Topbar from '@/components/Topbar';
 interface Category { id: string; name: string; slug: string }
 interface Product {
   id: string; slug: string; name: string; saleType: string; unitLabel: string | null;
-  basePrice: number | null; originRegion: string | null;
+  imageUrl: string | null; basePrice: number | null; originRegion: string | null;
   isActive: boolean; isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { id: string; name: string } | null;
 }
@@ -23,7 +23,7 @@ const SALE_TYPES: [string, string][] = [
 
 const empty = {
   id: '', slug: '', name: '', categoryId: '', saleType: 'WEIGHT', unitLabel: 'kg',
-  priceTl: '', originRegion: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
+  priceTl: '', originRegion: '', imageUrl: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
 };
 
 export default function KatalogPage() {
@@ -57,7 +57,7 @@ export default function KatalogPage() {
     setForm({
       id: p.id, slug: p.slug, name: p.name, categoryId: p.category?.id ?? '', saleType: p.saleType,
       unitLabel: p.unitLabel ?? '', priceTl: p.basePrice != null ? (p.basePrice / 100).toFixed(2) : '',
-      originRegion: p.originRegion ?? '', isActive: p.isActive, isFeatured: p.isFeatured,
+      originRegion: p.originRegion ?? '', imageUrl: p.imageUrl ?? '', isActive: p.isActive, isFeatured: p.isFeatured,
       isFreshDaily: p.isFreshDaily, isLocal: p.isLocal,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -71,7 +71,7 @@ export default function KatalogPage() {
       const payload: Record<string, unknown> = {
         name: form.name, saleType: form.saleType,
         unitLabel: form.unitLabel || undefined, categoryId: form.categoryId || undefined,
-        basePrice, originRegion: form.originRegion || undefined,
+        basePrice, originRegion: form.originRegion || undefined, imageUrl: form.imageUrl || undefined,
         isActive: form.isActive, isFeatured: form.isFeatured, isFreshDaily: form.isFreshDaily, isLocal: form.isLocal,
       };
       if (editing) {
@@ -158,6 +158,10 @@ export default function KatalogPage() {
               <label>Menşei / yöre</label>
               <input value={form.originRegion} onChange={setF('originRegion')} placeholder="Aydın" style={{ minWidth: 110 }} />
             </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label>Görsel URL</label>
+              <input value={form.imageUrl} onChange={setF('imageUrl')} placeholder="https://… .jpg" style={{ minWidth: 200 }} />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', margin: '14px 0', fontSize: 13 }}>
             <label><input type="checkbox" checked={form.isActive} onChange={setF('isActive')} /> Yayında</label>
@@ -188,7 +192,15 @@ export default function KatalogPage() {
               <tbody>
                 {products.map((p) => (
                   <tr key={p.id}>
-                    <td>{p.name}{p.isFreshDaily && ' 🌿'}</td>
+                    <td>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        {p.imageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.imageUrl} alt="" style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover' }} />
+                        )}
+                        {p.name}{p.isFreshDaily && ' 🌿'}
+                      </span>
+                    </td>
                     <td className="muted">{p.slug}</td>
                     <td>{p.category?.name ?? '—'}</td>
                     <td>{SALE_TYPES.find((s) => s[0] === p.saleType)?.[1] ?? p.saleType}</td>

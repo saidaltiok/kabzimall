@@ -21,6 +21,10 @@ export class CreateProductDto {
   @IsOptional() @IsString()
   unitLabel?: string;
 
+  /** Ürün görseli (URL). */
+  @IsOptional() @IsString()
+  imageUrl?: string;
+
   /** Mağaza fiyatı (kuruş). */
   @IsOptional() @IsInt() @Min(0)
   basePrice?: number;
@@ -40,6 +44,7 @@ export class UpdateProductDto {
   @IsOptional() @IsUUID() categoryId?: string;
   @IsOptional() @IsIn(SALE_TYPES) saleType?: SaleType;
   @IsOptional() @IsString() unitLabel?: string;
+  @IsOptional() @IsString() imageUrl?: string;
   @IsOptional() @IsInt() @Min(0) basePrice?: number;
   @IsOptional() @IsString() originRegion?: string;
   @IsOptional() @IsBoolean() isActive?: boolean;

@@ -7,7 +7,7 @@ import { useCart } from '@/lib/cart';
 
 interface Product {
   slug: string; name: string; saleType: string; unitLabel: string | null;
-  basePrice: number; originRegion: string | null;
+  imageUrl: string | null; basePrice: number; originRegion: string | null;
   isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { slug: string; name: string } | null;
 }
@@ -80,7 +80,14 @@ export default function HomePage() {
         <div className="grid">
           {filtered.map((p) => (
             <div className="prod" key={p.slug}>
-              <div className="ph">{emojiFor(p.slug, p.category?.slug)}</div>
+              <div className="ph">
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                ) : (
+                  emojiFor(p.slug, p.category?.slug)
+                )}
+              </div>
               {p.isFreshDaily ? <span className="pill fresh">GÜNLÜK TAZE</span> : p.isLocal ? <span className="pill local">YÖRESEL</span> : null}
               <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
               <div className="nm">{p.name}</div>

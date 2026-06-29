@@ -27,13 +27,14 @@ describe('Katalog (ürün/kategori)', () => {
   it('ürün oluştur (kategori + birim + fiyat)', async () => {
     const res = await http
       .post('/api/v1/catalog/products')
-      .send({ slug: 'cilek', name: 'Çilek', categoryId, saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 6400, isFreshDaily: true })
+      .send({ slug: 'cilek', name: 'Çilek', categoryId, saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 6400, isFreshDaily: true, imageUrl: 'https://img.example/cilek.jpg' })
       .expect(201);
     productId = res.body.id;
     expect(res.body.slug).toBe('cilek');
     expect(res.body.category.name).toBe('Meyve');
     expect(res.body.basePrice).toBe(6400);
     expect(res.body.isFreshDaily).toBe(true);
+    expect(res.body.imageUrl).toBe('https://img.example/cilek.jpg');
   });
 
   it('aynı slug → 409', async () => {

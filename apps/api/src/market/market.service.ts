@@ -13,6 +13,7 @@ const PUBLIC_PRODUCT_SELECT = {
   name: true,
   saleType: true,
   unitLabel: true,
+  imageUrl: true,
   basePrice: true,
   originRegion: true,
   isFeatured: true,

@@ -39,6 +39,7 @@ model Product {
   /// WEIGHT | PIECE | BUNCH | PACK | VARIABLE_WEIGHT_PACK
   saleType     String   @default("WEIGHT") @map("sale_type")
   unitLabel    String?  @map("unit_label")
+  imageUrl     String?  @map("image_url")
   /// Yayınlanan mağaza fiyatı (kuruş). Henüz uygulanmadıysa null.
   basePrice    Int?     @map("base_price")
   originRegion String?  @map("origin_region")

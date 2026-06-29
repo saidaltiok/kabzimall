@@ -66,6 +66,7 @@ export class CatalogService {
           categoryId: dto.categoryId ?? null,
           saleType: dto.saleType,
           unitLabel: dto.unitLabel ?? null,
+          imageUrl: dto.imageUrl ?? null,
           basePrice: dto.basePrice ?? null,
           originRegion: dto.originRegion ?? null,
           isActive: dto.isActive ?? true,
@@ -122,13 +123,13 @@ export class CatalogService {
 
   private toResponse(r: {
     id: string; slug: string; name: string; saleType: string; unitLabel: string | null;
-    basePrice: number | null; originRegion: string | null; isActive: boolean; isFeatured: boolean;
-    isFreshDaily: boolean; isLocal: boolean; categoryId: string | null;
-    category: { id: string; name: string } | null; updatedAt: Date;
+    imageUrl: string | null; basePrice: number | null; originRegion: string | null;
+    isActive: boolean; isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
+    categoryId: string | null; category: { id: string; name: string } | null; updatedAt: Date;
   }) {
     return {
       id: r.id, slug: r.slug, name: r.name, saleType: r.saleType, unitLabel: r.unitLabel,
-      basePrice: r.basePrice, originRegion: r.originRegion,
+      imageUrl: r.imageUrl, basePrice: r.basePrice, originRegion: r.originRegion,
       isActive: r.isActive, isFeatured: r.isFeatured, isFreshDaily: r.isFreshDaily, isLocal: r.isLocal,
       category: r.category, updatedAt: r.updatedAt.toISOString(),
     };
