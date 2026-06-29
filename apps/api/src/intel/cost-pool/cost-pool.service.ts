@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { directCost, type CostInput } from '../../pricing-engine';
-import { newId } from '../../common/id.util';
+import { PrismaService } from '../../prisma/prisma.service';
+import { DEV_TENANT_ID } from '../../common/tenant';
 import { CreateCostPoolDto } from './dto/create-cost-pool.dto';
+import { Prisma, type CostPool as CostPoolRow } from '@prisma/client';
 
 /** Havuzdan kg başına düşen dağıtımlı maliyet (kuruş). */
 export interface PoolAllocation {
@@ -9,41 +11,79 @@ export interface PoolAllocation {
   fuelPerKg: number;
   coldStoragePerKg: number;
   amortizationPerKg: number;
-  /** Dağıtımlı kalemlerin kg başına toplamı. */
   distributedPerKg: number;
 }
 
-export interface CostPoolRecord {
+interface PreviewProductInput {
+  halAvg: number;
+  fireRate: number;
+  packaging: number;
+  commissionRate: number;
+}
+
+export interface CostPoolResponse {
   id: string;
   period: string;
   totalVolumeKg: number;
-  totals: {
-    labor: number;
-    fuel: number;
-    coldStorage: number;
-    amortization: number;
-  };
+  totals: { labor: number; fuel: number; coldStorage: number; amortization: number };
   allocation: PoolAllocation;
-  /** previewProduct verildiyse: packages/pricing directCost önizlemesi. */
-  preview: {
-    directCost: number;
-    breakdown: CostInput;
-  } | null;
+  preview: { directCost: number; breakdown: CostInput } | null;
   createdAt: string;
 }
 
 @Injectable()
 export class CostPoolService {
-  // In-memory store (iskelet). Üretimde: cost_components havuz kayıtları.
-  private readonly store = new Map<string, CostPoolRecord>();
+  constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateCostPoolDto): CostPoolRecord {
-    const vol = dto.totalVolumeKg;
-    const coldStorage = dto.totalColdStorage ?? 0;
-    const amortization = dto.totalAmortization ?? 0;
+  async create(dto: CreateCostPoolDto): Promise<CostPoolResponse> {
+    const row = await this.prisma.costPool.create({
+      data: {
+        tenantId: DEV_TENANT_ID,
+        period: dto.period,
+        totalLabor: dto.totalLabor,
+        totalFuel: dto.totalFuel,
+        totalColdStorage: dto.totalColdStorage ?? null,
+        totalAmortization: dto.totalAmortization ?? null,
+        totalVolumeKg: dto.totalVolumeKg,
+        previewProduct: dto.previewProduct
+          ? (dto.previewProduct as unknown as Prisma.InputJsonValue)
+          : Prisma.DbNull,
+      },
+    });
+    return this.toResponse(row);
+  }
 
-    const laborPerKg = Math.round(dto.totalLabor / vol);
-    const fuelPerKg = Math.round(dto.totalFuel / vol);
+  async findAll(period?: string): Promise<CostPoolResponse[]> {
+    const rows = await this.prisma.costPool.findMany({
+      where: {
+        tenantId: DEV_TENANT_ID,
+        ...(period ? { period } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((r) => this.toResponse(r));
+  }
+
+  async findOne(id: string): Promise<CostPoolResponse> {
+    // .catch(null): geçersiz UUID'de Prisma hata fırlatır → 404'e indir.
+    const row = await this.prisma.costPool
+      .findFirst({ where: { id, tenantId: DEV_TENANT_ID } })
+      .catch(() => null);
+    if (!row) throw new NotFoundException(`Maliyet havuzu bulunamadı: ${id}`);
+    return this.toResponse(row);
+  }
+
+  /**
+   * Tahsis (kg başına) ve directCost önizlemesi YALNIZCA packages/pricing'ten —
+   * okumada hesaplanır; veritabanında yalnızca ham girdiler tutulur.
+   */
+  private toResponse(row: CostPoolRow): CostPoolResponse {
+    const vol = row.totalVolumeKg;
+    const coldStorage = row.totalColdStorage ?? 0;
+    const amortization = row.totalAmortization ?? 0;
+
+    const laborPerKg = Math.round(row.totalLabor / vol);
+    const fuelPerKg = Math.round(row.totalFuel / vol);
     const coldStoragePerKg = Math.round(coldStorage / vol);
     const amortizationPerKg = Math.round(amortization / vol);
 
@@ -52,51 +92,33 @@ export class CostPoolService {
       fuelPerKg,
       coldStoragePerKg,
       amortizationPerKg,
-      distributedPerKg:
-        laborPerKg + fuelPerKg + coldStoragePerKg + amortizationPerKg,
+      distributedPerKg: laborPerKg + fuelPerKg + coldStoragePerKg + amortizationPerKg,
     };
 
-    let preview: CostPoolRecord['preview'] = null;
-    if (dto.previewProduct) {
-      // Havuz tahsisi + ürün-bazlı kalemler → tam CostInput → directCost.
-      // Fiyat/maliyet mantığı YALNIZCA packages/pricing'ten gelir.
+    let preview: CostPoolResponse['preview'] = null;
+    const pp = row.previewProduct as unknown as PreviewProductInput | null;
+    if (pp) {
       const breakdown: CostInput = {
-        halAvg: dto.previewProduct.halAvg,
-        fireRate: dto.previewProduct.fireRate,
+        halAvg: pp.halAvg,
+        fireRate: pp.fireRate,
         labor: laborPerKg,
-        packaging: dto.previewProduct.packaging,
+        packaging: pp.packaging,
         fuel: fuelPerKg,
         coldStorage: coldStoragePerKg,
         amortization: amortizationPerKg,
-        commissionRate: dto.previewProduct.commissionRate,
+        commissionRate: pp.commissionRate,
       };
       preview = { directCost: Math.round(directCost(breakdown)), breakdown };
     }
 
-    const record: CostPoolRecord = {
-      id: newId(),
-      period: dto.period,
+    return {
+      id: row.id,
+      period: row.period,
       totalVolumeKg: vol,
-      totals: { labor: dto.totalLabor, fuel: dto.totalFuel, coldStorage, amortization },
+      totals: { labor: row.totalLabor, fuel: row.totalFuel, coldStorage, amortization },
       allocation,
       preview,
-      createdAt: new Date().toISOString(),
+      createdAt: row.createdAt.toISOString(),
     };
-
-    this.store.set(record.id, record);
-    return record;
-  }
-
-  findAll(period?: string): CostPoolRecord[] {
-    const all = [...this.store.values()].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt),
-    );
-    return period ? all.filter((r) => r.period === period) : all;
-  }
-
-  findOne(id: string): CostPoolRecord {
-    const rec = this.store.get(id);
-    if (!rec) throw new NotFoundException(`Maliyet havuzu bulunamadı: ${id}`);
-    return rec;
   }
 }

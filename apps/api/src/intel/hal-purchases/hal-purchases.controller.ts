@@ -18,8 +18,8 @@ export class HalPurchasesController {
 
   /** GET /api/v1/intel/hal-purchases?productId= */
   @Get()
-  findAll(@Query('productId') productId?: string) {
-    const data = this.service.findAll(productId);
+  async findAll(@Query('productId') productId?: string) {
+    const data = await this.service.findAll(productId);
     return { data, meta: { total: data.length } };
   }
 

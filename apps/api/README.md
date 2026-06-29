@@ -2,22 +2,30 @@
 
 Fiyat zekâsı backend'inin ilk kesimi. **Tüm fiyat/maliyet mantığı
 `packages/pricing`'ten gelir** (tek kaynak); bu uygulama yalnızca girdiyi
-doğrular, motoru çağırır ve HTTP yüzeyini sunar. Veri şimdilik **bellek içi**
-(in-memory) tutulur — DB yok, hemen çalışır.
+doğrular, motoru çağırır ve HTTP yüzeyini sunar. Veri **PostgreSQL**'de
+(Prisma + PostGIS) kalıcıdır; türetilmiş değerler (marj, mutabakat, tahsis)
+DB'de saklanmaz, okuma anında motorla hesaplanır.
 
 ## Çalıştırma
 
 ```bash
+# 1) Veritabanı (repo kökünden) — PostGIS'li Postgres, port 5432
+docker compose up -d
+
+# 2) API
 cd apps/api
-npm install
-npm run build      # tsc → dist/  (packages/pricing ile birlikte derlenir)
-npm start          # http://localhost:3001/api/v1
+cp .env.example .env       # DATABASE_URL + PORT
+npm install                # postinstall: prisma generate
+npx prisma migrate dev     # şemayı uygula (ilk kez / şema değişince)
+npm run build              # tsc → dist/  (packages/pricing ile birlikte derlenir)
+npm start                  # http://localhost:3001/api/v1
 # veya geliştirme:
 npm run start:dev
 ```
 
-> Not: `npm start`, `node dist/apps/api/src/main.js` çalıştırır. Port `PORT`
-> ortam değişkeniyle değişir (varsayılan 3001). Taban yol: `/api/v1`.
+> Not: `npm start`, `node dist/apps/api/src/main.js` çalıştırır. `.env` dotenv ile
+> yüklenir. Port `PORT` ile değişir (varsayılan 3001). Taban yol: `/api/v1`.
+> Şema: `prisma/schema.prisma`; `npm run prisma:studio` ile veriyi görsel inceleyebilirsiniz.
 
 ## Uçlar (bu kesim — Devam Rehberi Bölüm 8)
 
@@ -96,9 +104,11 @@ npm test          # Jest e2e (test/*.e2e-spec.ts) — 18 test, tüm uçlar
 
 Her test, üretimdeki `main.ts` ile **aynı** yapılandırmada (global prefix +
 `ValidationPipe`) tam Nest uygulamasını ayağa kaldırıp supertest ile HTTP
-yüzeyini doğrular. Fiyat formülleri ayrıca `packages/pricing`'te node:test ile
-test edilir; buradaki testler API davranışına (doğrulama, yanıt şekli, durum
-kodu) odaklanır. Test dosyaları `tsconfig.build.json`'da hariç → prod derlemeye sızmaz.
+yüzeyini doğrular. **DB açık olmalı** (`docker compose up -d` + migrate); her
+suite başında Intelligence tabloları temizlenir (izolasyon). Fiyat formülleri
+ayrıca `packages/pricing`'te node:test ile test edilir; buradaki testler API
+davranışına (doğrulama, yanıt şekli, durum kodu) odaklanır. Test dosyaları
+`tsconfig.build.json`'da hariç → prod derlemeye sızmaz.
 
 ## Mimari notlar
 
@@ -106,15 +116,13 @@ kodu) odaklanır. Test dosyaları `tsconfig.build.json`'da hariç → prod derle
   Formüller **asla** buraya kopyalanmaz (Teknik doküman Bölüm 2.1 kritik kuralı).
 - `ValidationPipe` (whitelist + transform) ile gövdeler doğrulanır; geçersiz
   girdi (ör. `fireRate ≥ 1`) `400` döner.
-- Bellek içi store'lar (`Map`) üretimde PostgreSQL tablolarıyla değiştirilecek
-  (`hal_price_entries`, `cost_components` vb. — Teknik doküman Bölüm 3.3).
+- Kalıcılık **Prisma** ile (`PrismaService`, global `PrismaModule`). Tablolar:
+  `products`, `price_history`, `hal_purchases`, `cost_pool_entries`. Her tabloda
+  `tenant_id` (şimdilik `common/tenant.ts` DEV sabiti).
 
 ## Sıradaki adımlar
 
-- PostgreSQL + TypeORM/Prisma ile kalıcı katman (tenant_id / RLS); bellek içi
-  `ProductsStore` / `PriceHistoryStore` gerçek `products.base_price` ve
-  append-only `price_history` tablolarıyla değişecek.
 - Auth/guard'lar (rol: fiyat yöneticisi+ — Teknik doküman Bölüm 7); `apply`
-  sonrası `changedBy` token'dan gelecek.
+  sonrası `changedBy` token'dan gelecek + Postgres **RLS** satır izolasyonu.
 - `/intel/price/bulk-apply` (toplu güncelleme + önizleme) ve `/intel/dashboard`
-  gibi analiz uçları (hâlâ bellek içi).
+  gibi analiz uçları.

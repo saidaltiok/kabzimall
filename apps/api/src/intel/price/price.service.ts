@@ -9,18 +9,15 @@ import {
   type SuggestResult,
   type Strategy,
 } from '../../pricing-engine';
+import { PrismaService } from '../../prisma/prisma.service';
+import { DEV_TENANT_ID } from '../../common/tenant';
 import { ResolvePriceDto, STRATEGIES } from './dto/resolve-price.dto';
 import { SuggestPriceDto } from './dto/suggest-price.dto';
 import { ApplyPriceDto } from './dto/apply-price.dto';
-import { ProductsStore, type ProductRecord } from './products.store';
-import { PriceHistoryStore, type PriceHistoryRecord } from './price-history.store';
 
 @Injectable()
 export class PriceService {
-  constructor(
-    private readonly products: ProductsStore,
-    private readonly history: PriceHistoryStore,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Hiyerarşik fiyat çözümü. Tüm hesap packages/pricing'te;
@@ -68,23 +65,68 @@ export class PriceService {
   /**
    * Seçilen fiyatı ürünün mağaza fiyatı (base_price) olarak yayınlar ve
    * price_history'e append-only kayıt düşer (Teknik doküman Bölüm 6.3).
+   * Client `productId`'yi ürün slug'ı olarak gönderir (katalog henüz yok).
    */
-  apply(dto: ApplyPriceDto): { product: ProductRecord; history: PriceHistoryRecord } {
-    const { product, oldPrice } = this.products.setBasePrice(dto.productId, dto.price);
-    const history = this.history.append({
-      productId: dto.productId,
-      oldPrice,
-      newPrice: dto.price,
-      strategyApplied: dto.strategy,
-      reason: dto.reason ?? null,
-      netMargin: dto.netMargin ?? null,
-      changedBy: dto.changedBy ?? null,
+  apply(dto: ApplyPriceDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.product.findUnique({
+        where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug: dto.productId } },
+        select: { id: true, basePrice: true },
+      });
+      const oldPrice = existing?.basePrice ?? null;
+
+      const productSelect = {
+        id: true,
+        slug: true,
+        basePrice: true,
+        createdAt: true,
+        updatedAt: true,
+      } as const;
+
+      const product = existing
+        ? await tx.product.update({
+            where: { id: existing.id },
+            data: { basePrice: dto.price },
+            select: productSelect,
+          })
+        : await tx.product.create({
+            data: { tenantId: DEV_TENANT_ID, slug: dto.productId, basePrice: dto.price },
+            select: productSelect,
+          });
+
+      const history = await tx.priceHistory.create({
+        data: {
+          tenantId: DEV_TENANT_ID,
+          productId: product.id,
+          oldPrice,
+          newPrice: dto.price,
+          strategyApplied: dto.strategy,
+          reason: dto.reason ?? null,
+          netMargin: dto.netMargin ?? null,
+          changedBy: dto.changedBy ?? null,
+        },
+      });
+
+      return { product, history };
     });
-    return { product, history };
   }
 
   /** Uygulanmış fiyat değişikliklerinin geçmişi (en yeni → en eski). */
-  findHistory(productId?: string): PriceHistoryRecord[] {
-    return this.history.findAll(productId);
+  async findHistory(productSlug?: string) {
+    if (productSlug) {
+      const product = await this.prisma.product.findUnique({
+        where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug: productSlug } },
+        select: { id: true },
+      });
+      if (!product) return [];
+      return this.prisma.priceHistory.findMany({
+        where: { productId: product.id },
+        orderBy: { changedAt: 'desc' },
+      });
+    }
+    return this.prisma.priceHistory.findMany({
+      where: { tenantId: DEV_TENANT_ID },
+      orderBy: { changedAt: 'desc' },
+    });
   }
 }

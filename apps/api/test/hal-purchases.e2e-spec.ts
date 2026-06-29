@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp } from './test-app';
+import { createTestApp, resetDb } from './test-app';
 
 describe('Intel /hal-purchases uçları', () => {
   let app: INestApplication;
@@ -8,6 +8,7 @@ describe('Intel /hal-purchases uçları', () => {
 
   beforeAll(async () => {
     app = await createTestApp();
+    await resetDb(app);
     http = app.getHttpServer();
   });
 

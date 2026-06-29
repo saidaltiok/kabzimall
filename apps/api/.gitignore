@@ -2,3 +2,7 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
+# Sırlar — .env asla commit edilmez (.env.example commit'lenir)
+.env
+.env.local

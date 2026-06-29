@@ -43,8 +43,8 @@ export class PriceController {
 
   /** GET /api/v1/intel/price/history?productId= */
   @Get('history')
-  history(@Query('productId') productId?: string) {
-    const data = this.priceService.findHistory(productId);
+  async history(@Query('productId') productId?: string) {
+    const data = await this.priceService.findHistory(productId);
     return { data, meta: { total: data.length } };
   }
 }

@@ -58,7 +58,9 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
 - `packages/pricing`: tam ve **22 testi geçen** saf fiyat motoru. Fonksiyonlar:
   `fireCost, directCost, netMargin, priceForMargin, psych, suggestPrice,
   resolvePrice, reconcileHalPurchase, weightPrecisionRiskPct`.
-- `apps/api`: çalışan **NestJS iskeleti**, **bellek içi** (DB yok). Uçlar:
+- `apps/api`: çalışan **NestJS iskeleti**, **PostgreSQL kalıcı** (Prisma + PostGIS,
+  Docker). Tüm Intelligence verisi `tenant_id` ile (şimdilik sabit DEV tenant;
+  auth gelince token'dan). Uçlar:
   - `POST /api/v1/intel/price/resolve` — hiyerarşik fiyat çözümü.
   - `POST /api/v1/intel/price/suggest` — tek strateji ile öneri (fallback yok).
   - `POST /api/v1/intel/price/apply` — `base_price` yayınla + `price_history` (Bölüm 6.3).
@@ -76,10 +78,16 @@ directCost 2440 (Teknik doküman Bölüm 4.3 ile birebir).
 # Fiyat motoru testleri
 cd packages/pricing && npm install && npm test      # 22/22 geçmeli
 
+# Veritabanı (repo kökünden) — PostGIS'li Postgres
+docker compose up -d                                 # DB ayağa kalkar (5432)
+
 # API
-cd apps/api && npm install && npm run build && npm start   # http://localhost:3001/api/v1
+cd apps/api && npm install                           # postinstall: prisma generate
+cp .env.example .env                                 # ilk kurulumda
+npx prisma migrate dev                               # şemayı uygula (ilk kez/şema değişince)
+npm run build && npm start                           # http://localhost:3001/api/v1
 # geliştirme: npm run start:dev
-cd apps/api && npm test                              # Jest e2e — 18/18 geçmeli
+npm test                                             # Jest e2e — 18/18 (DB açık olmalı)
 ```
 
 > Not: `apps/api` derlemesi `packages/pricing`'i birlikte derler (tsconfig include +
@@ -89,19 +97,23 @@ cd apps/api && npm test                              # Jest e2e — 18/18 geçme
 
 - TypeScript strict; DTO doğrulama `class-validator` + global `ValidationPipe`
   (whitelist + transform). Geçersiz girdi → 400.
-- API taban yol `/api/v1`; çok-kiracılık `tenant_id` token'dan çözülecek (henüz yok).
-- DB (gelince): UUID PK, `created_at/updated_at/deleted_at`, append-only
-  `hal_price_entries` & `competitor_price_entries`, izlenebilirlik için `price_history`.
+- API taban yol `/api/v1`; çok-kiracılık `tenant_id` (şimdilik `common/tenant.ts`
+  DEV sabiti; auth gelince token'dan, sonra RLS).
+- DB: **Prisma** (`apps/api/prisma/schema.prisma`). UUID PK, `created_at/updated_at`,
+  para alanları integer kuruş, append-only `price_history`. Şema değişince
+  `npx prisma migrate dev`. Fiyat/maliyet türetimi DB'de saklanmaz — okumada
+  `packages/pricing` ile hesaplanır (tek kaynak korunur).
 
 ## Sıradaki işler (öncelik sırası)
 
 1. ✅ **Fiyat döngüsü tamamlandı:** `POST /intel/price/suggest` (tek strateji),
    `POST /intel/price/apply` (`base_price` + `price_history`), `GET /intel/price/history`.
    Bellek içi `ProductsStore` / `PriceHistoryStore` ile (iskelet).
-2. **PostgreSQL kalıcı katman:** TypeORM/Prisma; bellek içi `Map` store'ları gerçek
-   tablolarla değiştir (`products.base_price`, append-only `price_history`); `tenant_id` + RLS.
+2. ✅ **PostgreSQL kalıcı katman kuruldu:** Prisma + PostGIS (Docker). `Map` store'lar
+   gerçek tablolarla değişti (`products`, `price_history`, `hal_purchases`,
+   `cost_pool_entries`); `tenant_id` (DEV sabiti). **RLS hâlâ açık** — auth ile gelecek.
 3. **Auth & roller:** JWT guard + policy (fiyat yöneticisi+ — Teknik doküman Bölüm 7);
-   `apply` sonrası `changedBy` token'dan çözülecek.
+   `apply` sonrası `changedBy` token'dan çözülecek + Postgres RLS satır izolasyonu.
 4. ✅ **Test altyapısı kuruldu:** `apps/api` Jest + supertest e2e (18 test, tüm uçlar).
    `npm test` ile çalışır; yeni uçlar buraya test ekleyerek gelir.
 5. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).

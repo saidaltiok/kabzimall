@@ -2,65 +2,80 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   reconcileHalPurchase,
   weightPrecisionRiskPct,
-  type HalPurchase,
   type HalReconciliation,
 } from '../../pricing-engine';
-import { newId } from '../../common/id.util';
+import { PrismaService } from '../../prisma/prisma.service';
+import { DEV_TENANT_ID } from '../../common/tenant';
 import { CreateHalPurchaseDto } from './dto/create-hal-purchase.dto';
+import type { HalPurchase as HalPurchaseRow } from '@prisma/client';
 
-export interface HalPurchaseRecord {
+/** API yanıtı: ham girdiler + packages/pricing ile hesaplanan mutabakat. */
+export interface HalPurchaseResponse {
   id: string;
   productId: string | null;
   recordedKg: number;
   actualKg: number | null;
   totalPaid: number;
   precisionKg: number;
-  /** packages/pricing çıktısı: efektif birim maliyet + kazanç/kayıp. */
   reconciliation: HalReconciliation;
-  /** ±precisionKg'nin birim maliyete azami etkisi (0..1). */
   weightRiskPct: number;
   createdAt: string;
 }
 
 @Injectable()
 export class HalPurchasesService {
-  // In-memory store (iskelet). Üretimde: hal_price_entries / alım tablosu.
-  private readonly store = new Map<string, HalPurchaseRecord>();
+  constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateHalPurchaseDto): HalPurchaseRecord {
-    const purchase: HalPurchase = {
-      recordedKg: dto.recordedKg,
-      actualKg: dto.actualKg,
-      totalPaid: dto.totalPaid,
-    };
-    const precisionKg = dto.precisionKg ?? 0.5;
-
-    const record: HalPurchaseRecord = {
-      id: newId(),
-      productId: dto.productId ?? null,
-      recordedKg: dto.recordedKg,
-      actualKg: dto.actualKg ?? null,
-      totalPaid: dto.totalPaid,
-      precisionKg,
-      reconciliation: reconcileHalPurchase(purchase),
-      weightRiskPct: weightPrecisionRiskPct(dto.recordedKg, precisionKg),
-      createdAt: new Date().toISOString(),
-    };
-
-    this.store.set(record.id, record);
-    return record;
+  async create(dto: CreateHalPurchaseDto): Promise<HalPurchaseResponse> {
+    const row = await this.prisma.halPurchase.create({
+      data: {
+        tenantId: DEV_TENANT_ID,
+        productSlug: dto.productId ?? null,
+        recordedKg: dto.recordedKg,
+        actualKg: dto.actualKg ?? null,
+        totalPaid: dto.totalPaid,
+        precisionKg: dto.precisionKg ?? 0.5,
+      },
+    });
+    return this.toResponse(row);
   }
 
-  findAll(productId?: string): HalPurchaseRecord[] {
-    const all = [...this.store.values()].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt),
-    );
-    return productId ? all.filter((r) => r.productId === productId) : all;
+  async findAll(productId?: string): Promise<HalPurchaseResponse[]> {
+    const rows = await this.prisma.halPurchase.findMany({
+      where: {
+        tenantId: DEV_TENANT_ID,
+        ...(productId ? { productSlug: productId } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((r) => this.toResponse(r));
   }
 
-  findOne(id: string): HalPurchaseRecord {
-    const rec = this.store.get(id);
-    if (!rec) throw new NotFoundException(`Hal alımı bulunamadı: ${id}`);
-    return rec;
+  async findOne(id: string): Promise<HalPurchaseResponse> {
+    // .catch(null): geçersiz UUID'de Prisma hata fırlatır → 404'e indir.
+    const row = await this.prisma.halPurchase
+      .findFirst({ where: { id, tenantId: DEV_TENANT_ID } })
+      .catch(() => null);
+    if (!row) throw new NotFoundException(`Hal alımı bulunamadı: ${id}`);
+    return this.toResponse(row);
+  }
+
+  /** Mutabakat ve tartı riski YALNIZCA packages/pricing'ten — okumada hesaplanır. */
+  private toResponse(row: HalPurchaseRow): HalPurchaseResponse {
+    return {
+      id: row.id,
+      productId: row.productSlug,
+      recordedKg: row.recordedKg,
+      actualKg: row.actualKg,
+      totalPaid: row.totalPaid,
+      precisionKg: row.precisionKg,
+      reconciliation: reconcileHalPurchase({
+        recordedKg: row.recordedKg,
+        actualKg: row.actualKg ?? undefined,
+        totalPaid: row.totalPaid,
+      }),
+      weightRiskPct: weightPrecisionRiskPct(row.recordedKg, row.precisionKg),
+      createdAt: row.createdAt.toISOString(),
+    };
   }
 }

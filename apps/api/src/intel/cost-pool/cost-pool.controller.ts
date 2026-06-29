@@ -19,8 +19,8 @@ export class CostPoolController {
 
   /** GET /api/v1/intel/cost-pool?period= */
   @Get()
-  findAll(@Query('period') period?: string) {
-    const data = this.service.findAll(period);
+  async findAll(@Query('period') period?: string) {
+    const data = await this.service.findAll(period);
     return { data, meta: { total: data.length } };
   }
 

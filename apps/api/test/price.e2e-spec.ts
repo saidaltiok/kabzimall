@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, DOMATES_COST } from './test-app';
+import { createTestApp, resetDb, DOMATES_COST } from './test-app';
 
 describe('Intel /price uçları', () => {
   let app: INestApplication;
@@ -8,6 +8,7 @@ describe('Intel /price uçları', () => {
 
   beforeAll(async () => {
     app = await createTestApp();
+    await resetDb(app);
     http = app.getHttpServer();
   });
 

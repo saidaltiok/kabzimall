@@ -5,11 +5,10 @@ import { HalPurchasesController } from './hal-purchases/hal-purchases.controller
 import { HalPurchasesService } from './hal-purchases/hal-purchases.service';
 import { CostPoolController } from './cost-pool/cost-pool.controller';
 import { CostPoolService } from './cost-pool/cost-pool.service';
-import { ProductsStore } from './price/products.store';
-import { PriceHistoryStore } from './price/price-history.store';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
+ * Kalıcılık PrismaService üzerinden (global PrismaModule).
  * Uçlar:
  *   POST /intel/price/resolve   — hiyerarşik fiyat çözümü (resolvePrice)
  *   POST /intel/price/suggest   — tek strateji ile öneri (suggestPrice)
@@ -20,12 +19,6 @@ import { PriceHistoryStore } from './price/price-history.store';
  */
 @Module({
   controllers: [PriceController, HalPurchasesController, CostPoolController],
-  providers: [
-    PriceService,
-    ProductsStore,
-    PriceHistoryStore,
-    HalPurchasesService,
-    CostPoolService,
-  ],
+  providers: [PriceService, HalPurchasesService, CostPoolService],
 })
 export class IntelModule {}
