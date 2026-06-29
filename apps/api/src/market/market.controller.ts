@@ -31,6 +31,12 @@ export class StorefrontController {
     return this.service.getProduct(slug);
   }
 
+  /** GET /storefront/slots — ertesi gün teslimat slotları. */
+  @Get('slots')
+  slots() {
+    return { data: this.service.availableSlots() };
+  }
+
   /** POST /storefront/orders — misafir sipariş (fiyatlar sunucuda hesaplanır). */
   @Post('orders')
   @ApiBody({

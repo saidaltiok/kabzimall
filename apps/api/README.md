@@ -68,7 +68,7 @@ gelir. Önerilen akış: maliyet (`PUT /cost-components`) → hal (`POST /hal/en
 | GET/POST | `/catalog/categories` | Kategori listele / oluştur (yazma: ADMIN\|OPERATION) |
 | GET | `/catalog/products` `?search=&categoryId=&active=` | Ürün listele |
 | POST/PATCH/DELETE | `/catalog/products` `[/:id]` | Ürün oluştur/güncelle/sil (yazma: ADMIN\|OPERATION) |
-| GET | `/storefront/products` `?search=&category=` · `/products/:slug` · `/categories` | **Public** vitrin (yayında+fiyatlı; maliyet sızmaz) |
+| GET | `/storefront/products` `?search=&category=` · `/products/:slug` · `/categories` · `/slots` | **Public** vitrin + teslimat slotları |
 | POST/GET | `/storefront/orders` `[/:id]` | **Public** misafir sipariş (kapıda ödeme); tutarlar sunucuda |
 | GET | `/admin/orders` `?status=` | Sipariş listesi (authed) |
 | PATCH | `/admin/orders/:id/status` | Durum güncelle (ADMIN\|OPERATION) |

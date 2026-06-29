@@ -9,6 +9,7 @@ import { tl } from '@/lib/format';
 interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number }
 interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
+  deliveryDate: string | null; deliveryWindow: string | null;
   subtotal: number; deliveryFee: number; grandTotal: number; items: OrderItem[];
 }
 
@@ -49,6 +50,12 @@ export default function OrderPage() {
         </div>
         <div className="ln"><span className="muted">Teslimat</span><span>{order.deliveryFee === 0 ? 'Ücretsiz' : tl(order.deliveryFee)}</span></div>
         <div className="ln serif" style={{ fontSize: 18, fontWeight: 600 }}><span>Toplam (kapıda ödeme)</span><span>{tl(order.grandTotal)}</span></div>
+        {order.deliveryWindow && (
+          <div className="ln" style={{ marginTop: 6 }}>
+            <span className="muted">Teslimat saati</span>
+            <b>{order.deliveryDate?.slice(0, 10)} · {order.deliveryWindow}</b>
+          </div>
+        )}
         <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
           Teslimat: <b>{order.customerName}</b> · {order.addressText}. Tartılı ürünlerde nihai tutar
           paketlemede gramajla kesinleşir.

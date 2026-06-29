@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Min,
   MinLength,
   ValidateNested,
@@ -18,6 +19,17 @@ export class OrderItemInput {
   /** Miktar — adet ya da kg (tartılı üründe ondalık). */
   @IsNumber() @Min(0.001)
   qty!: number;
+}
+
+export const DELIVERY_WINDOWS = ['10:00-13:00', '13:00-16:00', '16:00-19:00'] as const;
+
+export class SlotInput {
+  /** Teslimat günü YYYY-MM-DD (sunucunun sunduğu slotlardan biri). */
+  @IsString() @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date YYYY-MM-DD olmalı' })
+  date!: string;
+
+  @IsIn(DELIVERY_WINDOWS)
+  window!: string;
 }
 
 export class CustomerInput {
@@ -41,6 +53,12 @@ export class CreateOrderDto {
   @ValidateNested()
   @Type(() => CustomerInput)
   customer!: CustomerInput;
+
+  /** Ertesi gün teslimat slotu (opsiyonel; vitrin seçtirir). */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SlotInput)
+  slot?: SlotInput;
 
   @IsOptional() @IsString()
   note?: string;

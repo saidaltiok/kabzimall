@@ -69,6 +69,9 @@ model Order {
   note           String?
   status         String   @default("CONFIRMED")
   paymentMethod  String   @default("COD") @map("payment_method")
+  /// Ertesi gün teslimat slotu (Faz 1: SCHEDULED).
+  deliveryDate   DateTime? @map("delivery_date") @db.Date
+  deliveryWindow String?   @map("delivery_window")
   subtotal       Int
   deliveryFee    Int      @map("delivery_fee")
   grandTotal     Int      @map("grand_total")

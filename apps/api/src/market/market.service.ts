@@ -2,7 +2,10 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { deliveryFee, lineTotal } from '../pricing-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { dateOnly } from '../common/date';
+import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
+
+const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
 /** Müşteriye açık ürün alanları (maliyet/marj ASLA sızmaz). */
 const PUBLIC_PRODUCT_SELECT = {
@@ -66,6 +69,24 @@ export class MarketService {
     return p;
   }
 
+  /* --------------------------- Teslimat slotu --------------------------- */
+
+  /** Ertesi gün(ler) için teslimat slotları (Faz 1: SCHEDULED, sonraki 2 gün). */
+  availableSlots(): { date: string; window: string; label: string }[] {
+    const out: { date: string; window: string; label: string }[] = [];
+    for (let off = 1; off <= 2; off++) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + off);
+      const date = d.toISOString().slice(0, 10);
+      const dayLabel =
+        off === 1
+          ? 'Yarın'
+          : `${DAY_TR[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      for (const w of DELIVERY_WINDOWS) out.push({ date, window: w, label: `${dayLabel} ${w}` });
+    }
+    return out;
+  }
+
   /* ----------------------------- Sipariş ----------------------------- */
 
   async createOrder(dto: CreateOrderDto) {
@@ -90,6 +111,16 @@ export class MarketService {
       };
     });
 
+    // Slot doğrulama: yalnızca sunulan günlerden/pencerelerden biri kabul edilir.
+    let deliveryDate: Date | null = null;
+    let deliveryWindow: string | null = null;
+    if (dto.slot) {
+      const valid = this.availableSlots().some((s) => s.date === dto.slot!.date && s.window === dto.slot!.window);
+      if (!valid) throw new BadRequestException('Geçersiz teslimat slotu');
+      deliveryDate = dateOnly(dto.slot.date);
+      deliveryWindow = dto.slot.window;
+    }
+
     const subtotal = items.reduce((s, it) => s + it.lineTotal, 0);
     const fee = deliveryFee(subtotal);
     const grandTotal = subtotal + fee;
@@ -105,6 +136,8 @@ export class MarketService {
         note: dto.note ?? null,
         status: 'CONFIRMED',
         paymentMethod: dto.paymentMethod ?? 'COD',
+        deliveryDate,
+        deliveryWindow,
         subtotal,
         deliveryFee: fee,
         grandTotal,

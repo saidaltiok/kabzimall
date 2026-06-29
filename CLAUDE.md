@@ -84,9 +84,10 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
     (ad/kategori/satış tipi/birim/fiyat/bayraklar; yazma → ADMIN|OPERATION). Ürünler
     artık gerçek (slug + ad + kategori); panelin omurgası, Market'in temeli.
   - **Market (Faz 1):** `GET /storefront/categories|products[?search=&category=]|products/:slug`
-    (PUBLIC — yayında+fiyatlı ürünler, maliyet sızmaz); `POST /storefront/orders` misafir
-    sipariş (kapıda ödeme; tutarlar SUNUCUDA `lineTotal`/`deliveryFee` ile); `GET
-    /storefront/orders/:id`. Admin: `GET /admin/orders[?status=]`, `PATCH /admin/orders/:id/status`.
+    (PUBLIC — yayında+fiyatlı ürünler, maliyet sızmaz); `GET /storefront/slots` (ertesi gün
+    teslimat slotları); `POST /storefront/orders` misafir sipariş (kapıda ödeme; slot opsiyonel;
+    tutarlar SUNUCUDA `lineTotal`/`deliveryFee` ile); `GET /storefront/orders/:id`.
+    Admin: `GET /admin/orders[?status=]`, `PATCH /admin/orders/:id/status`.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.
 

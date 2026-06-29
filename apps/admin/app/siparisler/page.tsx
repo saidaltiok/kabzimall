@@ -9,6 +9,7 @@ interface OrderItem { id: string; productName: string; orderedQty: number; unitL
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string; addressText: string;
   status: string; subtotal: number; deliveryFee: number; grandTotal: number; note: string | null;
+  deliveryDate: string | null; deliveryWindow: string | null;
   createdAt: string; items: OrderItem[];
 }
 
@@ -104,6 +105,7 @@ export default function SiparislerPage() {
                       <tr>
                         <td colSpan={9} style={{ background: 'var(--cream)' }}>
                           <div style={{ padding: '4px 2px' }}>
+                            {o.deliveryWindow && <><b>Teslimat:</b> {o.deliveryDate?.slice(0, 10)} · {o.deliveryWindow} · </>}
                             <b>Adres:</b> {o.addressText}
                             {o.note && <> · <b>Not:</b> {o.note}</>}
                             <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>

@@ -84,6 +84,35 @@ describe('Market (vitrin + sipariş)', () => {
     await admin.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'YOK' }).expect(400);
   });
 
+  it('teslimat slotları listelenir (public) + sipariş slota bağlanır', async () => {
+    const slotsRes = await request(server).get('/api/v1/storefront/slots').expect(200);
+    expect(slotsRes.body.data.length).toBeGreaterThan(0);
+    const slot = slotsRes.body.data[0]; // { date, window, label }
+    expect(slot.label).toContain('Yarın');
+
+    const res = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({
+        items: [{ slug: 'domates', qty: 1 }],
+        customer: { name: 'Veli', phone: '05551112233', address: 'Moda Cd. 1' },
+        slot: { date: slot.date, window: slot.window },
+      })
+      .expect(201);
+    expect(res.body.deliveryWindow).toBe(slot.window);
+    expect(res.body.deliveryDate).toBeTruthy();
+  });
+
+  it('geçersiz slot → 400', async () => {
+    await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({
+        items: [{ slug: 'domates', qty: 1 }],
+        customer: { name: 'Veli', phone: '05551112233', address: 'Moda Cd. 1' },
+        slot: { date: '2020-01-01', window: '10:00-13:00' },
+      })
+      .expect(400);
+  });
+
   it('VIEWER durum güncelleyemez → 403', async () => {
     const viewer = authed(app, 'VIEWER');
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);
