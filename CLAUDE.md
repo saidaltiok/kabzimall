@@ -23,8 +23,8 @@ Monorepo (Teknik doküman Bölüm 2.1):
 /apps
   /mobile   React Native (müşteri)        — henüz yok
   /web      Next.js (müşteri sitesi)      — henüz yok
-  /admin    Next.js (panel + Intelligence)— henüz yok
-  /api      NestJS backend                — VAR (iskelet)
+  /admin    Next.js (panel + Intelligence)— VAR (Dashboard/Öner/Hal ekranları)
+  /api      NestJS backend                — VAR (Intelligence API tam)
 /packages
   /pricing  FİYAT MOTORU — tek kaynak     — VAR (test edilmiş)
   /types, /api-client, /ui, /i18n, /config — henüz yok
