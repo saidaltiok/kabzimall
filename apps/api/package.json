@@ -1,0 +1,26 @@
+{
+  "name": "@kabzimall/api",
+  "version": "0.1.0",
+  "description": "KabzıMall Intelligence API — NestJS iskeleti (fiyat zekâsı). packages/pricing'i tek kaynak olarak çağırır.",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/apps/api/src/main.js",
+    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.15",
+    "@nestjs/core": "^10.4.15",
+    "@nestjs/platform-express": "^10.4.15",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,16 @@
+# Bağımlılıklar ve derleme çıktıları
+node_modules/
+dist/
+build/
+
+# Loglar
+*.log
+npm-debug.log*
+
+# Ortam & editör
+.env
+.env.*
+.DS_Store
+.idea/
+.vscode/
+*.tsbuildinfo

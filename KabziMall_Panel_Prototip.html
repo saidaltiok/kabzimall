@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KabzıMall Intelligence — Panel Prototip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --forest:#1F4D38;--forest-d:#15311f;--moss:#5C8A5A;--cream:#F6F1E7;--cream-d:#EFE7D6;
+  --persimmon:#E8703A;--persimmon-d:#cf5d2b;--berry:#9E2B3A;--honey:#E6B450;
+  --ink:#1E241C;--muted:#7C857A;--line:#E7E0D2;--ok:#1f9d55;
+  --shadow:0 16px 40px -20px rgba(0,0,0,.4);--shadow-sm:0 6px 16px -10px rgba(31,77,56,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:'Inter',-apple-system,sans-serif;color:var(--ink);
+  background:radial-gradient(900px 500px at 12% 0%,rgba(92,138,90,.22),transparent),
+  radial-gradient(900px 600px at 100% 100%,rgba(232,112,58,.16),transparent),linear-gradient(160deg,#22402f,#10231a);
+  padding:26px 20px;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Fraunces',Georgia,serif}
+.window{max-width:1120px;margin:0 auto;background:var(--cream);border-radius:18px;overflow:hidden;box-shadow:0 50px 90px -30px rgba(0,0,0,.6)}
+.titlebar{background:#e7e0d2;display:flex;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid #dcd3bf}
+.dots{display:flex;gap:7px}.dots i{width:12px;height:12px;border-radius:50%;display:block}
+.dots .r{background:#ED6A5E}.dots .y{background:#F4BF4F}.dots .g{background:#61C554}
+.urlbar{flex:1;background:#fff;border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted);text-align:center;max-width:340px;margin:0 auto}
+.app{display:flex;min-height:680px}
+
+/* sidebar */
+.side{width:228px;background:linear-gradient(180deg,var(--forest),var(--forest-d));color:#dce8df;padding:18px 14px;flex:0 0 auto}
+.logo{display:flex;align-items:center;gap:10px;padding:6px 8px 16px}
+.logo .leaf{width:36px;height:36px;border-radius:11px;background:linear-gradient(150deg,var(--moss),#2b6347);display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo .bm{font-family:'Fraunces';font-size:18px;font-weight:600;color:#fff}.logo .bm b{color:var(--persimmon)}
+.logo .sub{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--honey);font-weight:700}
+.navlabel{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#7fa389;font-weight:700;padding:14px 10px 6px}
+.nav a{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:11px;font-size:13px;color:#cfe0d3;cursor:pointer;font-weight:500;margin-bottom:2px}
+.nav a .ic{width:18px;text-align:center}
+.nav a:hover{background:rgba(255,255,255,.06)}
+.nav a.active{background:var(--persimmon);color:#fff;font-weight:600;box-shadow:0 8px 16px -8px var(--persimmon)}
+.side .foot{margin-top:18px;padding:12px 10px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:#9bb6a2}
+
+/* content */
+.main{flex:1;background:var(--cream);min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line)}
+.topbar h1{font-family:'Fraunces';font-size:21px;margin:0;font-weight:600}
+.topbar .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.who{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.who .av{width:34px;height:34px;border-radius:10px;background:linear-gradient(150deg,var(--moss),var(--forest));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.body{padding:22px 24px;overflow:auto}
+
+/* cards & tables */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:var(--shadow-sm)}
+.kpi .l{font-size:11px;color:var(--muted)}
+.kpi .v{font-family:'Fraunces';font-size:25px;font-weight:600;color:var(--forest);margin-top:4px}
+.kpi .d{font-size:11px;margin-top:3px}
+.kpi.alert .v{color:var(--berry)}
+.up{color:var(--ok)}.down{color:var(--berry)}
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow-sm)}
+.card .ct{font-family:'Fraunces';font-size:15px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.card .ct span{font-family:'Inter';font-size:11px;color:var(--muted);font-weight:500}
+.chart{display:flex;align-items:flex-end;gap:10px;height:140px}
+.chart .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.chart .bar{width:100%;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,var(--moss),var(--forest))}
+.chart .col.hi .bar{background:linear-gradient(180deg,var(--persimmon),var(--persimmon-d))}
+.chart .lb{font-size:10px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+.tagp{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px}
+.tagp.up{background:#fdecec;color:var(--berry)}.tagp.down{background:#e9f6ee;color:var(--ok)}
+.tagp.risk{background:#fff3e0;color:#a85b00}.tagp.ok{background:#e9f6ee;color:var(--ok)}
+input.cell{width:70px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right;font-family:inherit;background:#fffdf7}
+input.cell:focus{outline:none;border-color:var(--persimmon);box-shadow:0 0 0 3px rgba(232,112,58,.15)}
+.hint{font-size:11.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.pchips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.pchip{border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 12px;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:7px}
+.pchip.sel{border-color:var(--forest);background:var(--forest);color:#fff}
+.pchip .e{font-size:15px}
+.calcgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.frow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.frow:last-child{border-bottom:none}
+.frow .lab{color:var(--muted)}
+.frow b{font-variant-numeric:tabular-nums}
+.frow input.cell{width:84px}
+.result{background:linear-gradient(150deg,#eef4ec,#fff);border:1px solid var(--moss);border-radius:14px;padding:16px;margin-top:6px}
+.result .l{font-size:12px;color:var(--muted)}
+.result .big{font-family:'Fraunces';font-size:30px;font-weight:600;color:var(--forest);margin:3px 0}
+.result.warn{background:linear-gradient(150deg,#fdf3ee,#fff);border-color:#f0c4ad}
+.result.warn .big{color:var(--berry)}
+.note2{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.strat{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.strat button{border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.strat button.sel{background:var(--forest);color:#fff}
+.applybtn{background:var(--persimmon);color:#fff;border:none;border-radius:12px;padding:13px 20px;font-weight:700;font-size:13.5px;cursor:pointer;box-shadow:0 12px 20px -12px var(--persimmon);font-family:inherit}
+.miniinfo{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.miniinfo b{color:var(--ink);font-variant-numeric:tabular-nums}
+.aibox{background:linear-gradient(135deg,rgba(232,112,58,.1),rgba(230,180,80,.08));border:1px solid rgba(230,180,80,.4);border-radius:16px;padding:15px 16px;font-size:12.5px;line-height:1.6;margin-top:16px}
+.aibox .k{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--persimmon-d);font-weight:700;display:block;margin-bottom:5px}
+#toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);background:var(--forest);color:#fff;font-size:13px;font-weight:600;padding:13px 22px;border-radius:14px;box-shadow:var(--shadow);opacity:0;transition:.25s;pointer-events:none;z-index:99}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.savecell{font-weight:700;color:var(--forest)}
+@media(max-width:820px){.app{flex-direction:column}.side{width:auto;display:flex;gap:6px;overflow-x:auto}.nav{display:flex}.navlabel,.side .foot,.logo .sub{display:none}.kpis{grid-template-columns:1fr 1fr}.grid2,.calcgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+    <div class="urlbar">🔒 panel.kabzimall.com/intelligence</div></div>
+  <div class="app">
+    <div class="side">
+      <div class="logo"><div class="leaf">🌿</div><div><div class="bm serif">Kabzı<b>Mall</b></div><div class="sub">Intelligence</div></div></div>
+      <div class="navlabel">Fiyat Zekâsı</div>
+      <div class="nav" id="nav">
+        <a data-r="dash" onclick="go('dash')"><span class="ic">📊</span> Dashboard</a>
+        <a data-r="hal" onclick="go('hal')"><span class="ic">🥬</span> Hal Fiyatları</a>
+        <a data-r="rakip" onclick="go('rakip')"><span class="ic">🏷️</span> Rakip Fiyatları</a>
+        <a data-r="maliyet" onclick="go('maliyet')"><span class="ic">💸</span> Maliyet & Fire</a>
+        <a data-r="oneri" onclick="go('oneri')"><span class="ic">🎯</span> Fiyat Öneri Motoru</a>
+        <a data-r="urunler" onclick="go('urunler')"><span class="ic">📦</span> Ürünler & Marj</a>
+      </div>
+      <div class="navlabel">Operasyon</div>
+      <div class="nav">
+        <a data-r="siparis" onclick="go('siparis')"><span class="ic">🧾</span> Siparişler</a>
+      </div>
+      <div class="foot">Pilot bölge: Kadıköy<br>Veri: bugün 08:00 ✓</div>
+    </div>
+    <div class="main">
+      <div class="topbar"><div><h1 id="ptitle">Dashboard</h1><div class="sub" id="psub">28 Haziran 2026, Cumartesi</div></div>
+        <div class="who"><div style="text-align:right"><div style="font-weight:600">Said Zoroğlu</div><div style="font-size:11px;color:var(--muted)">Fiyat yöneticisi</div></div><div class="av">S</div></div>
+      </div>
+      <div class="body" id="body"></div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ---------------- DATA MODEL ----------------
+const COMPS=[
+  {name:'Macrocenter',group:'Premium'},
+  {name:'Carrefour',group:'Orta'},
+  {name:'Migros',group:'Orta'},
+  {name:'Getir',group:'Hızlı'},
+  {name:'A101',group:'İndirim'},
+];
+// per unit fixed costs + percentage commission; hal = 3 time slots
+let P=[
+  {id:'domates',name:'Domates',emoji:'🍅',unit:'kg',hal:[18.0,19.2,18.9],fire:15,labor:1.2,pack:0.7,fuel:0.5,comm:3,target:30,store:34.90,comp:{Macrocenter:49,Carrefour:46,Migros:42,Getir:44,A101:39.9}},
+  {id:'salatalik',name:'Salatalık',emoji:'🥒',unit:'kg',hal:[12.0,12.5,12.3],fire:22,labor:0.8,pack:0.5,fuel:0.4,comm:3,target:28,store:31.90,comp:{Macrocenter:32,Carrefour:29,Migros:27,Getir:31,A101:24.9}},
+  {id:'muz',name:'Muz',emoji:'🍌',unit:'kg',hal:[36,36,35.5],fire:8,labor:1.0,pack:0.6,fuel:0.5,comm:3,target:30,store:52.00,comp:{Macrocenter:72,Carrefour:66,Migros:62,Getir:64,A101:58}},
+  {id:'patates',name:'Patates',emoji:'🥔',unit:'kg',hal:[14.2,14.2,14.0],fire:6,labor:0.7,pack:0.4,fuel:0.4,comm:3,target:25,store:18.90,comp:{Macrocenter:24,Carrefour:22,Migros:21,Getir:23,A101:19.9}},
+  {id:'cilek',name:'Çilek',emoji:'🍓',unit:'kg',hal:[40,42,41],fire:18,labor:1.0,pack:0.9,fuel:0.5,comm:3,target:32,store:64.00,comp:{Macrocenter:79,Carrefour:72,Migros:69,Getir:74,A101:62}},
+  {id:'maydanoz',name:'Maydanoz (demet)',emoji:'🌿',unit:'demet',hal:[4,4,4],fire:30,labor:0.5,pack:0.3,fuel:0.2,comm:3,target:35,store:8.90,comp:{Macrocenter:12,Carrefour:10,Migros:9,Getir:11,A101:8}},
+];
+const FLOOR=15; // minimum net margin %
+let state={route:'dash',sel:'domates',strategy:'margin'};
+
+// ---------------- COMPUTATIONS ----------------
+const tl=n=>n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+'₺';
+const pct=n=>(n).toFixed(0)+'%';
+const byId=id=>P.find(p=>p.id===id);
+const halAvg=p=>p.hal.reduce((a,b)=>a+(+b||0),0)/p.hal.length;
+const fireCost=p=>halAvg(p)/(1-p.fire/100);
+const directCost=p=>fireCost(p)+(+p.labor)+(+p.pack)+(+p.fuel);
+const compVals=p=>COMPS.map(c=>p.comp[c.name]).filter(v=>v!=null);
+const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const median=a=>{const s=[...a].sort((x,y)=>x-y);const m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const compAvg=p=>avg(compVals(p));
+const groupAvg=(p,g)=>{const v=COMPS.filter(c=>c.group===g).map(c=>p.comp[c.name]).filter(x=>x!=null);return v.length?avg(v):compAvg(p)};
+const psych=x=>{const r=Math.round(x);return Math.max(0.9,r-0.10)};
+const netMargin=(p,S)=>S<=0?0:((S-directCost(p)-S*p.comm/100)/S)*100; // %
+const priceForMargin=(p,m)=>directCost(p)/(1-(m/100)-(p.comm/100));
+function suggest(p,strat){
+  let s;
+  if(strat==='margin') s=priceForMargin(p,p.target);
+  else if(strat==='compAvg') s=compAvg(p);
+  else if(strat==='compMinus') s=compAvg(p)*0.97;
+  else if(strat==='median') s=median(compVals(p));
+  else if(strat==='lowest') s=Math.min(...compVals(p));
+  else if(strat==='premium') s=groupAvg(p,'Premium');
+  else if(strat==='floor') s=priceForMargin(p,FLOOR);
+  else s=priceForMargin(p,p.target);
+  let price=psych(s), floored=false;
+  if(netMargin(p,price)<FLOOR){price=psych(priceForMargin(p,FLOOR));floored=true;}
+  return {price,floored};
+}
+
+// ---------------- ROUTER ----------------
+const TITLES={dash:['Dashboard','28 Haziran 2026, Cumartesi'],hal:['Hal Fiyatları · Saha Modu','Günlük hal fiyat girişi'],rakip:['Rakip Fiyatları','Rakip ve grup karşılaştırması'],maliyet:['Maliyet & Fire Motoru','Gerçek birim maliyet hesabı'],oneri:['Fiyat Öneri Motoru','Öneri → tek tıkla mağazaya yaz'],urunler:['Ürünler & Marj','Tüm ürünler tek tabloda'],siparis:['Siparişler','Bugünün operasyonu']};
+function go(r){state.route=r;document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.r===r));
+  document.getElementById('ptitle').textContent=TITLES[r][0];document.getElementById('psub').textContent=TITLES[r][1];
+  const b=document.getElementById('body');b.scrollTop=0;
+  b.innerHTML=({dash:Dash,hal:Hal,rakip:Rakip,maliyet:Maliyet,oneri:Oneri,urunler:Urunler,siparis:Siparis}[r])();
+  if(r==='oneri')renderOneri();}
+let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800)}
+
+// ---------------- SCREENS ----------------
+function Dash(){
+  const m=avg(P.map(p=>netMargin(p,p.store)));
+  const ci=avg(P.map(p=>p.store/compAvg(p)*100));
+  const risk=P.filter(p=>p.store>compAvg(p)||netMargin(p,p.store)<FLOOR);
+  const updated=P.length;
+  return `
+  <div class="kpis">
+    <div class="kpi"><div class="l">Güncellenen ürün (08:00)</div><div class="v">${updated}/${updated}</div><div class="d up">✓ tamamlandı</div></div>
+    <div class="kpi"><div class="l">Ortalama net marj</div><div class="v">${pct(m)}</div><div class="d" style="color:var(--muted)">hedef %30</div></div>
+    <div class="kpi"><div class="l">Rekabet endeksi</div><div class="v">${ci.toFixed(0)}</div><div class="d up">100 altı = rakipten ucuz</div></div>
+    <div class="kpi alert"><div class="l">Riskli ürün</div><div class="v">${risk.length}</div><div class="d down">rakip bandı / marj dışı</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="ct">Son 7 gün satış trendi <span>₺ / gün</span></div>
+      <div class="chart">
+        ${[52,66,58,80,90,100,72].map((h,i)=>`<div class="col ${i===5?'hi':''}"><div class="bar" style="height:${h}%"></div><div class="lb">${['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'][i]}</div></div>`).join('')}
+      </div></div>
+    <div class="card"><div class="ct">Bugün dikkat <span>aksiyon öner</span></div>
+      ${P.map(p=>{const nm=netMargin(p,p.store);const above=p.store>compAvg(p);
+        let tag,cls;if(nm<FLOOR){tag='marj düşük';cls='risk'}else if(above){tag='rakip üstü';cls='risk'}else{tag='uygun';cls='ok'}
+        return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px">
+          <span style="font-size:17px">${p.emoji}</span><b>${p.name}</b>
+          <span style="margin-left:auto;color:var(--muted)">marj ${pct(nm)}</span>
+          <span class="tagp ${cls}">${tag}</span></div>`}).join('')}
+    </div>
+  </div>
+  <div class="aibox"><span class="k">AI Günlük Yorum</span>
+    Salatalıkta rakip ortalamasının üstündesin (${tl(compAvg(byId('salatalik')))} vs senin ${tl(byId('salatalik').store)}); bugün düşürmeni öneririm.
+    Muzda marjın ${pct(netMargin(byId('muz'),byId('muz').store))}, rakipler daha yüksek çalışıyor — <b>fiyat artırma alanın var</b>.
+    Hal güncellemesi 08:00'de tamamlandı; öğlen tekrar kontrol önerilir.
+  </div>`;
+}
+
+function Hal(){
+  return `<p class="hint">Klavye-öncelikli giriş: hücreye yaz, <b>günlük ortalama anında hesaplanır</b> ve aşağı akar (maliyet → öneri). Sadece değişeni güncelle; aykırı değer uyarısı çıkar.</p>
+  <div class="card"><table>
+    <thead><tr><th>Ürün</th><th class="num">08:00</th><th class="num">12:00</th><th class="num">16:00</th><th class="num">Günlük ort.</th><th class="num">Düne göre</th></tr></thead>
+    <tbody>${P.map(p=>{const a=halAvg(p);return `<tr>
+      <td><span style="font-size:15px">${p.emoji}</span> ${p.name}</td>
+      ${[0,1,2].map(i=>`<td class="num"><input class="cell" value="${p.hal[i]}" oninput="halIn('${p.id}',${i},this.value)"></td>`).join('')}
+      <td class="num" id="halavg-${p.id}"><b>${tl(a)}</b></td>
+      <td class="num"><span class="tagp ${p.id==='salatalik'?'down':'up'}">${p.id==='salatalik'?'−2%':'+'+(2+Math.round(Math.random()*4))+'%'}</span></td>
+    </tr>`}).join('')}</tbody>
+  </table></div>
+  <p class="note2">⚠️ Aykırı değer örneği: Patates 16:00 hücresine "150" yazarsan sistem "Emin misin? Dün 14,00₺ idi" uyarısı verir.</p>`;
+}
+function halIn(id,i,val){const p=byId(id);const num=parseFloat(String(val).replace(',','.'));
+  if(!isNaN(num)){if(num>halAvg(p)*4&&p.hal[i]>0){toast('⚠️ '+p.name+': aykırı değer? Dün ~'+tl(halAvg(p)));}
+    p.hal[i]=num;}
+  document.getElementById('halavg-'+id).innerHTML='<b>'+tl(halAvg(p))+'</b>';}
+
+function Rakip(){
+  const p=byId(state.sel);
+  return `${pchips()}
+  <p class="hint">Seçili ürün için rakip fiyatlarını gir; <b>min · maks · ortalama · medyan</b> ve "bize göre" anında güncellenir. Rakipler gruplara ayrılmıştır (Premium / Orta / İndirim / Hızlı).</p>
+  <div class="card"><table>
+    <thead><tr><th>Rakip</th><th>Grup</th><th class="num">Fiyat (₺)</th><th class="num">Bize göre</th></tr></thead>
+    <tbody>${COMPS.map(c=>`<tr><td>${c.name}</td><td><span class="tagp ok" style="background:#eef4ec;color:var(--forest)">${c.group}</span></td>
+      <td class="num"><input class="cell" value="${p.comp[c.name]}" oninput="rakipIn('${c.name}',this.value)"></td>
+      <td class="num" id="rk-${c.name}">${cmpBadge(p.comp[c.name],p.store)}</td></tr>`).join('')}
+      <tr style="font-weight:700"><td>KabzıMall</td><td>—</td><td class="num">${tl(p.store)}</td><td class="num"><span class="tagp down">senin fiyatın</span></td></tr>
+    </tbody>
+  </table>
+  <div class="miniinfo" id="rkstats">${rkStats(p)}</div>
+  </div>`;
+}
+function cmpBadge(v,store){const d=Math.round((v/store-1)*100);return `<span class="tagp ${d>=0?'up':'down'}">${d>=0?'+':''}${d}%</span>`}
+function rkStats(p){const v=compVals(p);return `Min <b>${tl(Math.min(...v))}</b> · Maks <b>${tl(Math.max(...v))}</b> · Ortalama <b>${tl(compAvg(p))}</b> · Medyan <b>${tl(median(v))}</b> · Sen ortalamanın <b>${Math.round((1-p.store/compAvg(p))*100)}%</b> altındasın`}
+function rakipIn(name,val){const p=byId(state.sel);const num=parseFloat(String(val).replace(',','.'));if(!isNaN(num))p.comp[name]=num;
+  document.getElementById('rk-'+name).innerHTML=cmpBadge(p.comp[name],p.store);
+  document.getElementById('rkstats').innerHTML=rkStats(p);}
+
+function Maliyet(){
+  const p=byId(state.sel);
+  return `${pchips()}
+  <p class="hint">Alış, fire ve giderleri düzenle; <b>gerçek birim maliyet anında yeniden hesaplanır</b>. Dikkat: fire maliyete toplanmaz, <b>bölünür</b> — %20 fire maliyeti %25 artırır.</p>
+  <div class="calcgrid">
+    <div class="card"><div class="ct">Girdiler — ${p.emoji} ${p.name}</div>
+      <div class="frow"><span class="lab">Hal alış (günlük ort.)</span><b id="m-hal">${tl(halAvg(p))}</b></div>
+      <div class="frow"><span class="lab">Fire oranı (%)</span><input class="cell" value="${p.fire}" oninput="costIn('fire',this.value)"></div>
+      <div class="frow"><span class="lab">İşçilik / birim (₺)</span><input class="cell" value="${p.labor}" oninput="costIn('labor',this.value)"></div>
+      <div class="frow"><span class="lab">Ambalaj / poşet (₺)</span><input class="cell" value="${p.pack}" oninput="costIn('pack',this.value)"></div>
+      <div class="frow"><span class="lab">Yakıt / dağıtım payı (₺)</span><input class="cell" value="${p.fuel}" oninput="costIn('fuel',this.value)"></div>
+      <div class="frow"><span class="lab">Kart komisyonu (%)</span><input class="cell" value="${p.comm}" oninput="costIn('comm',this.value)"></div>
+    </div>
+    <div>
+      <div class="card"><div class="ct">Hesap akışı</div>
+        <div class="frow"><span class="lab">Fire dâhil maliyet (÷ ${(1-p.fire/100).toFixed(2)})</span><b id="m-fire">${tl(fireCost(p))}</b></div>
+        <div class="frow"><span class="lab">+ İşçilik + ambalaj + yakıt</span><b id="m-fixed">${tl(p.labor+p.pack+p.fuel)}</b></div>
+        <div class="frow"><span class="lab">= Doğrudan birim maliyet</span><b id="m-direct">${tl(directCost(p))}</b></div>
+      </div>
+      <div class="result warn" style="margin-top:14px"><div class="l">Gerçek birim maliyet (komisyon hariç)</div>
+        <div class="big" id="m-big">${tl(directCost(p))}</div>
+        <div class="note2" id="m-note">Fire etkisi: %${p.fire} fire, maliyeti <b>+%${((1/(1-p.fire/100)-1)*100).toFixed(1)}</b> artırıyor.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="ct">Senaryo</div>
+    <table><thead><tr><th>Senaryo</th><th class="num">Doğrudan maliyet</th><th class="num">Mevcut fiyatta net marj</th></tr></thead><tbody id="scen">${scenRows(p)}</tbody></table>
+  </div>`;
+}
+function scenRows(p){
+  const mk=(label,fire)=>{const fc=halAvg(p)/(1-fire/100);const dc=fc+(+p.labor)+(+p.pack)+(+p.fuel);const nm=((p.store-dc-p.store*p.comm/100)/p.store)*100;return `<tr><td>${label}</td><td class="num">${tl(dc)}</td><td class="num"><span class="tagp ${nm<FLOOR?'risk':'ok'}">${pct(nm)}</span></td></tr>`};
+  return mk('Fire %10',10)+mk('Mevcut (%'+p.fire+')',p.fire)+mk('Fire %20',20)+mk('Fire %30',30);
+}
+function costIn(f,val){const p=byId(state.sel);const num=parseFloat(String(val).replace(',','.'));if(!isNaN(num))p[f]=num;
+  document.getElementById('m-fire').textContent=tl(fireCost(p));
+  document.getElementById('m-fixed').textContent=tl((+p.labor)+(+p.pack)+(+p.fuel));
+  document.getElementById('m-direct').textContent=tl(directCost(p));
+  document.getElementById('m-big').textContent=tl(directCost(p));
+  document.getElementById('m-note').innerHTML=`Fire etkisi: %${p.fire} fire, maliyeti <b>+%${((1/(1-p.fire/100)-1)*100).toFixed(1)}</b> artırıyor.`;
+  document.getElementById('scen').innerHTML=scenRows(p);}
+
+const STRATS=[['margin','Maliyet + hedef marj'],['compAvg','Rakip ortalaması'],['compMinus','Ortalama − %3'],['median','Medyan'],['lowest','En düşük rakip'],['premium','Premium grubu'],['floor','Min net kârı koru']];
+function Oneri(){
+  const p=byId(state.sel);
+  return `${pchips()}
+  <p class="hint">Strateji seç → <b>önerilen fiyat anında hesaplanır</b> (komisyon + hedef marj dâhil, psikolojik yuvarlama + taban marj kuralı uygulanır). Beğenince <b>tek tıkla mağazaya yaz</b>.</p>
+  <div class="calcgrid">
+    <div class="card"><div class="ct">Girdiler — ${p.emoji} ${p.name}</div>
+      <div class="frow"><span class="lab">Hal (günlük ort.)</span><b>${tl(halAvg(p))}</b></div>
+      <div class="frow"><span class="lab">Doğrudan maliyet</span><b>${tl(directCost(p))}</b></div>
+      <div class="frow"><span class="lab">Rakip ortalaması</span><b>${tl(compAvg(p))}</b></div>
+      <div class="frow"><span class="lab">Hedef net marj</span><b>%${p.target}</b></div>
+      <div class="frow"><span class="lab">Mağazadaki güncel fiyat</span><b id="o-store">${tl(p.store)}</b></div>
+    </div>
+    <div>
+      <div class="strat" id="strat">${STRATS.map(s=>`<button class="${state.strategy===s[0]?'sel':''}" onclick="setStrat('${s[0]}')">${s[1]}</button>`).join('')}</div>
+      <div id="o-result"></div>
+    </div>
+  </div>`;
+}
+function setStrat(s){state.strategy=s;document.querySelectorAll('#strat button').forEach((b,i)=>b.classList.toggle('sel',STRATS[i][0]===s));renderOneri()}
+function renderOneri(){
+  const p=byId(state.sel);const {price,floored}=suggest(p,state.strategy);
+  const nm=netMargin(p,price);const ci=Math.round(price/compAvg(p)*100);
+  document.getElementById('o-result').innerHTML=`
+    <div class="result"><div class="l">Önerilen satış fiyatı</div><div class="big">${tl(price)}</div>
+      <div class="miniinfo"><span>Net marj <b>${pct(nm)}</b></span><span>Rekabet endeksi <b>${ci}</b> ${ci<100?'(ucuz)':'(pahalı)'}</span><span>Maliyet <b>${tl(directCost(p))}</b></span></div>
+      <div class="note2">${floored?'⚠️ Taban marj (%'+FLOOR+') devreye girdi: öneri min net kârın altına düşmeyecek şekilde yükseltildi.':'Hesap: '+tl(directCost(p))+' ÷ (1 − marj − komisyon) → psikolojik yuvarlama.'}</div>
+      <div style="margin-top:14px"><button class="applybtn" onclick="applyPrice(${price.toFixed(2)})">✓ Bu fiyatı mağazaya yaz</button></div>
+    </div>`;
+}
+function applyPrice(price){const p=byId(state.sel);p.store=price;document.getElementById('o-store').textContent=tl(price);toast('✓ '+p.name+' mağaza fiyatı '+tl(price)+' olarak güncellendi');renderOneri();}
+
+function pchips(){return `<div class="pchips">${P.map(p=>`<div class="pchip ${state.sel===p.id?'sel':''}" onclick="selProd('${p.id}')"><span class="e">${p.emoji}</span>${p.name}</div>`).join('')}</div>`}
+function selProd(id){state.sel=id;go(state.route)}
+
+function Urunler(){
+  return `<p class="hint">Tüm ürünler tek tabloda: hal → maliyet → mağaza fiyatı → net marj → rekabet endeksi. Buradan toplu görüp <b>Öneri Motoru</b>'na geçebilirsin.</p>
+  <div class="card"><table>
+    <thead><tr><th>Ürün</th><th class="num">Hal ort.</th><th class="num">Maliyet</th><th class="num">Mağaza</th><th class="num">Rakip ort.</th><th class="num">Net marj</th><th class="num">Endeks</th><th></th></tr></thead>
+    <tbody>${P.map(p=>{const nm=netMargin(p,p.store);const ci=Math.round(p.store/compAvg(p)*100);return `<tr>
+      <td><span style="font-size:15px">${p.emoji}</span> ${p.name}</td>
+      <td class="num">${tl(halAvg(p))}</td><td class="num">${tl(directCost(p))}</td>
+      <td class="num savecell">${tl(p.store)}</td><td class="num">${tl(compAvg(p))}</td>
+      <td class="num"><span class="tagp ${nm<FLOOR?'risk':'ok'}">${pct(nm)}</span></td>
+      <td class="num"><span class="tagp ${ci<100?'down':'up'}">${ci}</span></td>
+      <td class="num"><button onclick="selProd('${p.id}');go('oneri')" style="border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Fiyatla →</button></td>
+    </tr>`}).join('')}</tbody>
+  </table></div>`;
+}
+function Siparis(){
+  const rows=[['KM814520','3 kalem','Bugün 14:00–17:00','421,11₺','Hazırlanıyor','risk'],['KM814519','5 kalem','Bugün 14:00–17:00','612,40₺','Paketlendi','ok'],['KM814518','2 kalem','Bugün 12:00–14:00','188,90₺','Yola çıktı','ok']];
+  return `<p class="hint">Operasyon özeti (demo). Fiyat zekâsı bu siparişlerin marjını besler.</p>
+  <div class="card"><table><thead><tr><th>No</th><th>İçerik</th><th>Teslimat</th><th class="num">Tutar</th><th>Durum</th></tr></thead>
+  <tbody>${rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td class="num">${r[3]}</td><td><span class="tagp ${r[5]}">${r[4]}</span></td></tr>`).join('')}</tbody></table></div>`;
+}
+
+// init
+go('dash');
+</script>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KabzıMall — Tasarım Yönü (Hi-Fi)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --forest:#1F4D38; --forest-d:#163A2A; --moss:#5C8A5A;
+  --cream:#F6F1E7; --cream-d:#EFE7D6; --card:#FFFFFF;
+  --persimmon:#E8703A; --persimmon-d:#cf5d2b;
+  --berry:#9E2B3A; --honey:#E6B450;
+  --ink:#1E241C; --muted:#7C857A; --line:#E7E0D2;
+  --shadow:0 18px 40px -18px rgba(31,77,56,.35);
+  --shadow-sm:0 8px 20px -12px rgba(31,77,56,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased}
+.serif{font-family:'Fraunces',Georgia,serif}
+h1,h2,h3,.brandmark{font-family:'Fraunces',Georgia,serif;font-weight:600}
+
+/* ---------- page header ---------- */
+.masthead{background:radial-gradient(1200px 400px at 80% -10%,rgba(232,112,58,.25),transparent),linear-gradient(160deg,var(--forest),var(--forest-d));color:#fff;padding:52px 30px 60px}
+.masthead .inner{max-width:1180px;margin:0 auto}
+.eyebrow{letter-spacing:.32em;text-transform:uppercase;font-size:11px;color:var(--honey);font-weight:600}
+.masthead h1{font-size:46px;margin:14px 0 10px;line-height:1.02;letter-spacing:-.5px}
+.masthead h1 em{color:var(--persimmon);font-style:normal}
+.masthead p{max-width:680px;color:rgba(255,255,255,.82);font-size:15px;line-height:1.6;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 30px 80px}
+
+.secline{display:flex;align-items:baseline;gap:14px;margin:54px 0 22px}
+.secline .n{font-family:'Fraunces',serif;font-size:13px;color:var(--persimmon);font-weight:700;border:1.5px solid var(--persimmon);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.secline h2{font-size:25px;margin:0;letter-spacing:-.3px}
+.secline p{margin:0;color:var(--muted);font-size:13.5px}
+
+/* ---------- brand kit ---------- */
+.kit{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px}
+.panelcard{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow-sm)}
+.panelcard h3{margin:0 0 14px;font-size:16px}
+.logoBig{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.leaf{width:46px;height:46px;border-radius:14px;background:linear-gradient(150deg,var(--moss),var(--forest));display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:var(--shadow-sm)}
+.brandmark{font-size:27px;letter-spacing:-.5px}
+.brandmark b{color:var(--persimmon)}
+.tagline{color:var(--muted);font-size:12.5px;margin-top:-4px}
+.sw{display:flex;flex-direction:column;gap:9px}
+.swatch{display:flex;align-items:center;gap:12px;font-size:12px}
+.dot{width:34px;height:34px;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.swatch code{color:var(--muted);font-size:11px;margin-left:auto}
+.type-d{font-size:30px;line-height:1.1;margin:2px 0}
+.type-s{font-size:13px;color:var(--muted);margin-bottom:14px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.btn{border:none;border-radius:13px;padding:11px 18px;font-weight:600;font-size:13px;font-family:'Inter';cursor:default}
+.btn.p{background:var(--persimmon);color:#fff;box-shadow:0 10px 18px -10px var(--persimmon)}
+.btn.g{background:var(--forest);color:#fff}
+.btn.o{background:transparent;color:var(--forest);box-shadow:inset 0 0 0 1.5px var(--forest)}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:30px;letter-spacing:.02em}
+.pill.fresh{background:#eaf3ea;color:var(--forest)}
+.pill.local{background:#fbeee6;color:var(--persimmon-d)}
+.pill.season{background:#fbf2dd;color:#9a7415}
+
+/* ---------- phones ---------- */
+.devices{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:312px;background:#0d130f;border-radius:46px;padding:11px;box-shadow:var(--shadow)}
+.scr{position:relative;background:var(--cream);border-radius:36px;overflow:hidden;height:660px;display:flex;flex-direction:column}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:122px;height:26px;background:#0d130f;border-radius:0 0 18px 18px;z-index:30}
+.statusbar{height:42px;display:flex;justify-content:space-between;align-items:center;padding:0 24px 0 26px;font-size:12px;font-weight:600;color:var(--ink);z-index:20}
+.view{flex:1;overflow:auto;}
+.view::-webkit-scrollbar{display:none}
+.cap{text-align:center;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.cap b{color:var(--ink);font-weight:600}
+
+/* home */
+.hbar{padding:4px 20px 10px}
+.loc{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.loc b{color:var(--forest)}
+.hrow{display:flex;justify-content:space-between;align-items:center;margin-top:3px}
+.hrow .bm{font-family:'Fraunces';font-size:22px;font-weight:600}
+.hrow .bm b{color:var(--persimmon)}
+.bell{width:38px;height:38px;border-radius:12px;background:#fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;font-size:16px}
+.searchbar{margin:10px 20px;background:#fff;border-radius:16px;padding:13px 16px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-sm)}
+.promo{margin:6px 20px 0;border-radius:22px;padding:20px;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--forest),#2b6347)}
+.promo:after{content:"🍑";position:absolute;right:-6px;bottom:-14px;font-size:96px;opacity:.9;transform:rotate(-8deg)}
+.promo .k{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--honey);font-weight:700}
+.promo .t{font-family:'Fraunces';font-size:21px;margin:6px 0 3px;max-width:170px;line-height:1.1}
+.promo .s{font-size:12px;color:rgba(255,255,255,.82);max-width:165px}
+.promo .cta{margin-top:12px;display:inline-block;background:var(--persimmon);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:11px}
+.cats{display:flex;gap:14px;overflow:auto;padding:18px 20px 6px}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex:0 0 auto;text-align:center;font-size:11px;font-weight:600;color:var(--ink)}
+.cat .ring{width:58px;height:58px;border-radius:20px;background:#fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:7px}
+.cat .ring.act{background:linear-gradient(150deg,var(--persimmon),#f3935f)}
+.sectit{display:flex;justify-content:space-between;align-items:baseline;padding:14px 20px 8px}
+.sectit h4{font-family:'Fraunces';font-size:17px;margin:0;font-weight:600}
+.sectit a{font-size:11.5px;color:var(--persimmon);font-weight:700;text-decoration:none}
+.prow{display:flex;gap:14px;overflow:auto;padding:2px 20px 6px}
+.prow::-webkit-scrollbar{display:none}
+.prod{flex:0 0 auto;width:140px;background:#fff;border-radius:20px;padding:10px;box-shadow:var(--shadow-sm);position:relative}
+.prod .ph{height:96px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:48px;background:radial-gradient(circle at 50% 35%,#fff,var(--cream-d))}
+.prod .badge{position:absolute;top:16px;left:16px}
+.prod .add{position:absolute;right:16px;top:84px;width:32px;height:32px;border-radius:11px;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 8px 14px -8px var(--forest)}
+.prod .nm{font-size:13px;font-weight:600;margin:12px 0 1px}
+.prod .or{font-size:10.5px;color:var(--muted);margin-bottom:6px}
+.prod .pr{font-family:'Fraunces';font-size:16px;font-weight:600;color:var(--forest)}
+.prod .pr s{font-family:'Inter';font-size:10.5px;color:var(--muted);font-weight:500}
+.prod .unit{font-size:10px;color:var(--muted)}
+.basket{margin:8px 20px 0;background:linear-gradient(135deg,#fff,#fff);border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;align-items:center;gap:13px;box-shadow:var(--shadow-sm)}
+.basket .ic{width:48px;height:48px;border-radius:15px;background:linear-gradient(150deg,#fbf2dd,#f6e3bf);display:flex;align-items:center;justify-content:center;font-size:24px}
+.basket .nm{font-family:'Fraunces';font-size:15px;font-weight:600}
+.basket .meta{font-size:11.5px;color:var(--muted)}
+.basket .pr{margin-left:auto;font-family:'Fraunces';font-weight:600;color:var(--forest);font-size:15px}
+.nav{display:flex;background:#fff;border-top:1px solid var(--line);padding:8px 6px 10px}
+.nav div{flex:1;text-align:center;font-size:9.5px;color:var(--muted);font-weight:600}
+.nav .ic{font-size:19px;display:block;margin-bottom:2px;filter:grayscale(1);opacity:.5}
+.nav .active{color:var(--persimmon)}
+.nav .active .ic{filter:none;opacity:1}
+
+/* product detail */
+.pd-hero{height:300px;background:radial-gradient(circle at 50% 40%,#fff,var(--cream-d));display:flex;align-items:center;justify-content:center;font-size:140px;position:relative}
+.pd-top{position:absolute;top:50px;left:0;right:0;display:flex;justify-content:space-between;padding:0 20px;z-index:20}
+.circ{width:40px;height:40px;border-radius:13px;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:var(--shadow-sm)}
+.dots{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.dots i{width:7px;height:7px;border-radius:50%;background:#cdc6b6;display:block}
+.dots i.on{background:var(--forest);width:18px;border-radius:6px}
+.sheet{background:var(--cream);border-radius:30px 30px 0 0;margin-top:-26px;position:relative;padding:22px 20px 0;flex:1;display:flex;flex-direction:column}
+.pd-tags{display:flex;gap:6px;margin-bottom:10px}
+.pd-name{font-family:'Fraunces';font-size:25px;font-weight:600;letter-spacing:-.3px}
+.pd-sub{color:var(--muted);font-size:12.5px;margin:2px 0 12px}
+.pd-price{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+.pd-price b{font-family:'Fraunces';font-size:27px;color:var(--forest);font-weight:600}
+.pd-price s{color:var(--muted);font-size:14px}
+.pd-price .save{margin-left:auto;background:#fbeee6;color:var(--persimmon-d);font-size:11px;font-weight:700;padding:5px 10px;border-radius:10px}
+.vrow{display:flex;gap:9px;margin-bottom:14px}
+.vchip{flex:1;text-align:center;border-radius:14px;padding:11px 0;font-size:12.5px;font-weight:600;background:#fff;color:var(--muted);box-shadow:var(--shadow-sm)}
+.vchip.sel{background:var(--forest);color:#fff}
+.notecard{background:#fff;border-radius:16px;padding:13px 14px;font-size:12px;color:var(--muted);box-shadow:var(--shadow-sm);margin-bottom:12px}
+.notecard b{color:var(--ink)}
+.infogrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.infobit{background:#fff;border-radius:14px;padding:11px 12px;box-shadow:var(--shadow-sm)}
+.infobit .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.infobit .v{font-size:12.5px;font-weight:600;margin-top:2px}
+.buybar{margin-top:auto;background:var(--cream);padding:14px 0 18px;display:flex;gap:12px;align-items:center}
+.step{display:flex;align-items:center;gap:14px;background:#fff;border-radius:15px;padding:8px 14px;box-shadow:var(--shadow-sm)}
+.step button{border:none;background:transparent;font-size:20px;color:var(--forest)}
+.step b{font-size:14px}
+.buybar .addbig{flex:1;background:var(--persimmon);color:#fff;border:none;border-radius:15px;padding:15px;font-weight:700;font-size:14px;box-shadow:0 12px 20px -12px var(--persimmon)}
+
+/* cart */
+.cart-h{padding:6px 20px 12px;display:flex;justify-content:space-between;align-items:center}
+.cart-h h4{font-family:'Fraunces';font-size:21px;margin:0;font-weight:600}
+.cart-h span{font-size:12px;color:var(--muted)}
+.citem{margin:0 20px 12px;background:#fff;border-radius:18px;padding:11px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow-sm)}
+.citem .ph{width:54px;height:54px;border-radius:14px;background:radial-gradient(circle at 50% 35%,#fff,var(--cream-d));display:flex;align-items:center;justify-content:center;font-size:28px}
+.citem .nm{font-size:13.5px;font-weight:600}
+.citem .meta{font-size:11px;color:var(--muted)}
+.citem .pr{font-family:'Fraunces';font-weight:600;color:var(--forest);font-size:14px;margin-top:3px}
+.mini{margin-left:auto;text-align:center;font-size:12px;color:var(--forest);font-weight:600}
+.mini .q{display:block;margin:3px 0;font-size:13px;color:var(--ink)}
+.prefcard{margin:4px 20px 12px;background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadow-sm)}
+.prefcard .t{font-size:12.5px;font-weight:700;margin-bottom:8px}
+.opt{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);padding:5px 0}
+.rad{width:17px;height:17px;border-radius:50%;border:2px solid #d8d0bf}
+.rad.on{border-color:var(--persimmon);background:radial-gradient(circle,var(--persimmon) 42%,transparent 46%)}
+.opt.on{color:var(--ink);font-weight:600}
+.summary{margin:4px 20px 0;background:var(--forest);color:#fff;border-radius:22px;padding:18px;box-shadow:var(--shadow)}
+.summary .ln{display:flex;justify-content:space-between;font-size:13px;margin:7px 0;color:rgba(255,255,255,.85)}
+.summary .ln.tot{font-family:'Fraunces';font-size:18px;color:#fff;border-top:1px solid rgba(255,255,255,.18);padding-top:11px;margin-top:11px;font-weight:600}
+.summary .save{color:var(--honey)}
+.summary .note{font-size:10.5px;color:rgba(255,255,255,.7);margin-top:8px;line-height:1.4}
+.checkout{margin:14px 20px 18px;background:var(--persimmon);color:#fff;border:none;border-radius:16px;padding:16px;width:calc(100% - 40px);font-weight:700;font-size:14.5px;box-shadow:0 14px 22px -12px var(--persimmon)}
+
+/* ---------- dashboard ---------- */
+.dash{background:linear-gradient(180deg,#16271d,#0f1d16);border-radius:26px;padding:24px;color:#eef3ee;box-shadow:var(--shadow)}
+.dash .dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.dash .dh .bm{font-family:'Fraunces';font-size:20px}
+.dash .dh .bm b{color:var(--persimmon)}
+.dash .dh .bm span{color:#8ea693;font-size:12px;font-family:'Inter';margin-left:8px}
+.dash .chiprow{display:flex;gap:8px}
+.dash .ch{font-size:11.5px;background:rgba(255,255,255,.08);padding:7px 13px;border-radius:30px;color:#cde0d2}
+.dash .ch.on{background:var(--persimmon);color:#fff;font-weight:600}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.metric{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:16px}
+.metric .l{font-size:11px;color:#8ea693}
+.metric .v{font-family:'Fraunces';font-size:27px;font-weight:600;margin-top:5px}
+.metric .d{font-size:11px;margin-top:5px}
+.up{color:#7ee0a0}.down{color:#ff9a7a}
+.metric.alert{background:linear-gradient(150deg,rgba(158,43,58,.35),rgba(158,43,58,.12));border-color:rgba(232,112,58,.4)}
+.metric.alert .v{color:#ffb38f}
+.dgrid{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.card2{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:16px}
+.card2 .ct{font-size:13px;font-weight:600;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.card2 .ct span{font-size:10.5px;color:#8ea693;font-weight:500}
+.chart{display:flex;align-items:flex-end;gap:10px;height:130px;padding-top:6px}
+.chart .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.chart .bar{width:100%;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--moss),var(--forest))}
+.chart .col.hi .bar{background:linear-gradient(180deg,var(--persimmon),var(--persimmon-d))}
+.chart .lb{font-size:9.5px;color:#8ea693}
+.sugg{display:flex;flex-direction:column;gap:11px}
+.sline{display:flex;align-items:center;gap:11px;font-size:12px}
+.sline .em{width:34px;height:34px;border-radius:11px;background:radial-gradient(circle at 50% 35%,#fff,var(--cream-d));display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
+.sline .nm{font-weight:600}
+.sline .sub{color:#8ea693;font-size:10.5px}
+.sline .tag{margin-left:auto;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:9px}
+.tag.rec{background:rgba(126,224,160,.16);color:#7ee0a0}
+.tag.warn{background:rgba(255,154,122,.16);color:#ff9a7a}
+.aibox{margin-top:14px;background:linear-gradient(135deg,rgba(232,112,58,.16),rgba(230,180,80,.1));border:1px solid rgba(230,180,80,.25);border-radius:18px;padding:15px 16px;font-size:12.5px;line-height:1.55;color:#f3ead9}
+.aibox .k{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--honey);font-weight:700;margin-bottom:6px;display:block}
+.foot{margin-top:60px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:12.5px;text-align:center;line-height:1.6}
+
+@media(max-width:900px){.kit{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.dgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="masthead"><div class="inner">
+  <div class="eyebrow">Tasarım Yönü · Hi-Fi</div>
+  <h1 class="serif">Tazelik, <em>lüks</em> gibi hissettiren bir manav.</h1>
+  <p>İlk taslak bilinçli olarak wireframe'di. Burası serbest yorum: editöryel bir serif başlık, tek karakterli persimmon aksanı, fotoğraf-öncelikli kartlar, yumuşak derinlik ve bol boşluk. "Köy pazarı" değil; sıcak ama premium bir dijital market.</p>
+</div></div>
+
+<div class="wrap">
+
+  <!-- BRAND KIT -->
+  <div class="secline"><div class="n">01</div><div><h2>Marka & Arayüz Sistemi</h2><p>Renk, tipografi ve temel bileşenler.</p></div></div>
+  <div class="kit">
+    <div class="panelcard">
+      <h3>Kimlik</h3>
+      <div class="logoBig">
+        <div class="leaf">🌿</div>
+        <div><div class="brandmark">Kabzı<b>Mall</b></div><div class="tagline">dalından sofraya</div></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn p">Sepete ekle</button>
+        <button class="btn g">Sipariş ver</button>
+        <button class="btn o">İncele</button>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:7px;flex-wrap:wrap">
+        <span class="pill fresh">GÜNLÜK TAZE</span>
+        <span class="pill local">YÖRESEL</span>
+        <span class="pill season">SEZON</span>
+      </div>
+    </div>
+    <div class="panelcard">
+      <h3>Palet</h3>
+      <div class="sw">
+        <div class="swatch"><span class="dot" style="background:#1F4D38"></span> Forest — ana <code>#1F4D38</code></div>
+        <div class="swatch"><span class="dot" style="background:#5C8A5A"></span> Moss — ikincil <code>#5C8A5A</code></div>
+        <div class="swatch"><span class="dot" style="background:#E8703A"></span> Persimmon — aksan <code>#E8703A</code></div>
+        <div class="swatch"><span class="dot" style="background:#E6B450"></span> Honey — vurgu <code>#E6B450</code></div>
+        <div class="swatch"><span class="dot" style="background:#9E2B3A"></span> Berry — uyarı <code>#9E2B3A</code></div>
+        <div class="swatch"><span class="dot" style="background:#F6F1E7"></span> Cream — zemin <code>#F6F1E7</code></div>
+      </div>
+    </div>
+    <div class="panelcard">
+      <h3>Tipografi</h3>
+      <div class="type-d serif">Fraunces</div>
+      <div class="type-s">Başlık & marka — sıcak, editöryel serif</div>
+      <div style="font-size:22px;font-weight:700">Inter</div>
+      <div class="type-s">Arayüz & metin — net, modern sans-serif</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5">Köşe yarıçapı 14–22px · yumuşak gölge · bol boşluk · ince çizgi yerine derinlik.</div>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div class="secline"><div class="n">02</div><div><h2>Müşteri Uygulaması</h2><p>Ana Sayfa · Ürün Detay · Sepet — yüksek çözünürlük.</p></div></div>
+  <div class="devices">
+
+    <!-- HOME -->
+    <div>
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="statusbar"><span>9:41</span><span>● ▮▮ 🔋</span></div>
+        <div class="view">
+          <div class="hbar">
+            <div class="hrow"><div class="bm serif">Kabzı<b>Mall</b></div><div class="bell">🔔</div></div>
+            <div class="loc">📍 Teslimat · <b>Moda, Kadıköy</b> ▾</div>
+          </div>
+          <div class="searchbar">🔍 Domates, muz, zeytinyağı…</div>
+          <div class="promo">
+            <div class="k">İlk sipariş</div>
+            <div class="t serif">Dalından %10 indirim</div>
+            <div class="s">Bugün sabah toplanan ürünlerde geçerli</div>
+            <div class="cta">Keşfet</div>
+          </div>
+          <div class="cats">
+            <div class="cat"><div class="ring act">🍑</div>Meyve</div>
+            <div class="cat"><div class="ring">🥬</div>Sebze</div>
+            <div class="cat"><div class="ring">🫒</div>Zeytinyağı</div>
+            <div class="cat"><div class="ring">🧀</div>Kahvaltı</div>
+            <div class="cat"><div class="ring">🏺</div>Yöresel</div>
+          </div>
+          <div class="sectit"><h4 class="serif">Bugün taze gelenler</h4><a>Tümü →</a></div>
+          <div class="prow">
+            <div class="prod">
+              <div class="ph">🍅</div><span class="badge"><span class="pill fresh">TAZE</span></span><div class="add">+</div>
+              <div class="nm">Tarla Domatesi</div><div class="or">Çanakkale</div>
+              <div class="pr">34,90₺ <s>39,90</s></div><div class="unit">/ kg</div>
+            </div>
+            <div class="prod">
+              <div class="ph">🍓</div><span class="badge"><span class="pill season">SEZON</span></span><div class="add">+</div>
+              <div class="nm">Çilek</div><div class="or">Aydın</div>
+              <div class="pr">64,00₺</div><div class="unit">/ kg</div>
+            </div>
+            <div class="prod">
+              <div class="ph">🥒</div><div class="add">+</div>
+              <div class="nm">Salatalık</div><div class="or">Yerli</div>
+              <div class="pr">22,50₺</div><div class="unit">/ kg</div>
+            </div>
+          </div>
+          <div class="sectit"><h4 class="serif">Hazır sepetler</h4><a>Tümü →</a></div>
+          <div class="basket">
+            <div class="ic">🧺</div>
+            <div><div class="nm serif">Haftalık Sebze Sepeti</div><div class="meta">9 ürün · ~4 kişilik</div></div>
+            <div class="pr">389₺</div>
+          </div>
+          <div class="basket" style="margin-top:10px;margin-bottom:14px">
+            <div class="ic" style="background:linear-gradient(150deg,#eaf3ea,#cfe4cf)">🥖</div>
+            <div><div class="nm serif">Kahvaltılık Seçkisi</div><div class="meta">7 ürün · yöresel</div></div>
+            <div class="pr">529₺</div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="active"><span class="ic">🏠</span>Ana Sayfa</div>
+          <div><span class="ic">🗂️</span>Kategori</div>
+          <div><span class="ic">🛒</span>Sepet</div>
+          <div><span class="ic">📦</span>Siparişler</div>
+          <div><span class="ic">👤</span>Hesap</div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Ana Sayfa</b> · keşif + tekrar sipariş</div>
+    </div>
+
+    <!-- PRODUCT DETAIL -->
+    <div>
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="statusbar"><span>9:41</span><span>● ▮▮ 🔋</span></div>
+        <div class="view" style="display:flex;flex-direction:column">
+          <div class="pd-hero">🍅
+            <div class="pd-top"><div class="circ">‹</div><div style="display:flex;gap:8px"><div class="circ">↗</div><div class="circ">♥</div></div></div>
+            <div class="dots"><i class="on"></i><i></i><i></i></div>
+          </div>
+          <div class="sheet">
+            <div class="pd-tags"><span class="pill fresh">GÜNLÜK TAZE</span><span class="pill local">YERLİ</span><span class="pill season">SEZON</span></div>
+            <div class="pd-name serif">Tarla Domatesi</div>
+            <div class="pd-sub">Çanakkale · sabah toplandı · elle ayıklandı</div>
+            <div class="pd-price"><b class="serif">34,90₺</b><s>39,90₺</s><span class="save">%12 indirim</span></div>
+            <div class="vrow"><div class="vchip">500 g</div><div class="vchip sel">1 kg</div><div class="vchip">2 kg</div></div>
+            <div class="notecard">📝 <b>Ürün notun:</b> "Çok sert olmasın, biraz olgun seçilsin" — paketleyene iletilir.</div>
+            <div class="infogrid">
+              <div class="infobit"><div class="l">Menşei</div><div class="v">Çanakkale</div></div>
+              <div class="infobit"><div class="l">Saklama</div><div class="v">4–5 gün, sebzelik</div></div>
+            </div>
+            <div class="notecard" style="font-size:11px">⚖️ Tartılı üründe nihai tutar gramaja göre küçük farklılık gösterebilir.</div>
+            <div class="buybar">
+              <div class="step"><button>−</button><b>1 kg</b><button>+</button></div>
+              <button class="addbig">Sepete ekle · 34,90₺</button>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Ürün Detay</b> · güvenin oluştuğu ekran</div>
+    </div>
+
+    <!-- CART -->
+    <div>
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="statusbar"><span>9:41</span><span>● ▮▮ 🔋</span></div>
+        <div class="view">
+          <div class="cart-h"><h4 class="serif">Sepetim</h4><span>3 ürün</span></div>
+          <div class="citem"><div class="ph">🍅</div><div><div class="nm">Tarla Domatesi</div><div class="meta">1 kg · 📝 not var</div><div class="pr">34,90₺</div></div><div class="mini">−<span class="q">1</span>+</div></div>
+          <div class="citem"><div class="ph">🍌</div><div><div class="nm">Muz</div><div class="meta">2 kg</div><div class="pr">104,00₺</div></div><div class="mini">−<span class="q">2</span>+</div></div>
+          <div class="citem"><div class="ph">🫒</div><div><div class="nm">Zeytinyağı 1L</div><div class="meta">erken hasat</div><div class="pr">329,00₺</div></div><div class="mini">−<span class="q">1</span>+</div></div>
+          <div class="prefcard">
+            <div class="t">Bir ürün stokta kalmazsa?</div>
+            <div class="opt on"><span class="rad on"></span> Benzer ürünle değiştir</div>
+            <div class="opt"><span class="rad"></span> Beni arayarak sor</div>
+            <div class="opt"><span class="rad"></span> Eksik ürünü çıkar</div>
+          </div>
+          <div class="summary">
+            <div class="ln"><span>Ara toplam</span><span>467,90₺</span></div>
+            <div class="ln"><span>İlk sipariş indirimi</span><span class="save">−46,79₺</span></div>
+            <div class="ln"><span>Teslimat</span><span class="save">Ücretsiz</span></div>
+            <div class="ln tot serif"><span>Toplam</span><span>421,11₺</span></div>
+            <div class="note">⚖️ Tartılı ürünlerde nihai tutar paketleme sonrası gramaja göre güncellenir.</div>
+          </div>
+          <button class="checkout">Teslimat & ödemeye geç →</button>
+        </div>
+      </div></div>
+      <div class="cap"><b>Sepet</b> · dönüşümün kalbi</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="secline"><div class="n">03</div><div><h2>KabzıMall Intelligence</h2><p>Fiyat zekâsı paneli — premium, koyu, veri-yoğun karar ekranı.</p></div></div>
+  <div class="dash">
+    <div class="dh">
+      <div class="bm serif">Kabzı<b>Mall</b> <span>Intelligence · 28 Haziran, Cmt</span></div>
+      <div class="chiprow"><div class="ch on">Bugün</div><div class="ch">Hafta</div><div class="ch">Ay</div></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="l">Tahmini ciro</div><div class="v serif">71.400₺</div><div class="d up">▲ %12 dünden</div></div>
+      <div class="metric"><div class="l">Ortalama net marj</div><div class="v serif">%29</div><div class="d" style="color:#8ea693">hedef %30</div></div>
+      <div class="metric"><div class="l">Rekabet endeksi</div><div class="v serif">86</div><div class="d up">rakipten ucuz</div></div>
+      <div class="metric alert"><div class="l">Riskli ürün</div><div class="v serif">6</div><div class="d down">▲ rakip bandı dışı</div></div>
+    </div>
+    <div class="dgrid">
+      <div class="card2">
+        <div class="ct">Son 7 gün satış trendi <span>₺ / gün</span></div>
+        <div class="chart">
+          <div class="col"><div class="bar" style="height:52%"></div><div class="lb">Pzt</div></div>
+          <div class="col"><div class="bar" style="height:66%"></div><div class="lb">Sal</div></div>
+          <div class="col"><div class="bar" style="height:58%"></div><div class="lb">Çar</div></div>
+          <div class="col"><div class="bar" style="height:80%"></div><div class="lb">Per</div></div>
+          <div class="col"><div class="bar" style="height:90%"></div><div class="lb">Cum</div></div>
+          <div class="col hi"><div class="bar" style="height:100%"></div><div class="lb">Cmt</div></div>
+          <div class="col"><div class="bar" style="height:72%"></div><div class="lb">Paz</div></div>
+        </div>
+      </div>
+      <div class="card2">
+        <div class="ct">Fiyat önerileri <span>tek tıkla uygula</span></div>
+        <div class="sugg">
+          <div class="sline"><div class="em">🍅</div><div><div class="nm">Domates</div><div class="sub">Hal 18₺ · maliyet 23,58₺</div></div><div class="tag rec">→ 34,90₺</div></div>
+          <div class="sline"><div class="em">🥒</div><div><div class="nm">Salatalık</div><div class="sub">Rakiplerin %20 üstündesin</div></div><div class="tag warn">düşür</div></div>
+          <div class="sline"><div class="em">🍶</div><div><div class="nm">Nar ekşisi</div><div class="sub">Premium konum uygun</div></div><div class="tag rec">+ %8</div></div>
+          <div class="sline"><div class="em">🥔</div><div><div class="nm">Patates</div><div class="sub">Rakiplerin altında, marj var</div></div><div class="tag warn">+ %6</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="aibox">
+      <span class="k">AI Günlük Yorum</span>
+      Son üç haftadır domates fiyatı pazartesileri ortalamanın <b>%9 altında</b> oluşuyor — hafta başı stok planını buna göre kur. Muzda rakipler 15 gündür ~%42 marjla çalışıyor; senin marjın %31, <b>fiyat artırma alanın var</b>. Salatalıkta rakip bandının üstüne çıktın, bugün düşürmeni öneririm.
+    </div>
+  </div>
+
+  <div class="foot">
+    KabzıMall — Yüksek çözünürlüklü tasarım yönü (kavramsal). Görseller emoji ile temsil edilmiştir; gerçek projede stüdyo ürün fotoğrafları kullanılır.<br>Fontlar: Fraunces & Inter (Google Fonts). Bu dosya tarayıcıda en iyi görünür.
+  </div>
+</div>
+</body>
+</html>

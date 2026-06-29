@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KabzıMall — Ekran Wireframe'leri</title>
+<style>
+  :root{
+    --green:#2F6B3E; --green2:#6EA76B; --orange:#F28C28; --nar:#B64632;
+    --bg:#FAF8F3; --card:#FFFFFF; --ink:#1F2937; --ink2:#6B7280; --line:#E5E7EB;
+    --ok:#1f9d55; --warn:#B64632;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header.top{background:linear-gradient(135deg,var(--green),#244f2e);color:#fff;padding:26px 28px}
+  header.top h1{margin:0;font-size:26px;letter-spacing:.3px}
+  header.top p{margin:6px 0 0;opacity:.9;font-size:14px;max-width:760px}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 60px}
+  .sec{margin:34px 0 10px}
+  .sec h2{font-size:18px;color:var(--green);margin:0 0 4px;border-bottom:2px solid var(--green2);padding-bottom:6px}
+  .sec .hint{color:var(--ink2);font-size:13px;margin:6px 0 14px}
+  .row{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+
+  /* phone */
+  .phone{width:300px;background:#111;border-radius:34px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .screen{background:var(--bg);border-radius:26px;overflow:hidden;height:600px;display:flex;flex-direction:column;position:relative}
+  .scap{font-size:12px;color:var(--ink2);text-align:center;margin-top:8px;font-weight:600}
+  .sbar{height:22px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:10px;color:#fff;background:var(--green)}
+  .sbar .dots{letter-spacing:2px}
+  .body{flex:1;overflow:auto;padding:10px}
+
+  .appbar{background:var(--green);color:#fff;padding:8px 12px}
+  .appbar .addr{font-size:11px;opacity:.95;display:flex;align-items:center;gap:5px}
+  .appbar .brand{font-weight:800;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+  .search{background:#fff;border-radius:10px;padding:8px 10px;color:var(--ink2);font-size:12px;margin:8px 0;border:1px solid var(--line)}
+  .banner{background:linear-gradient(120deg,var(--orange),#ffb259);color:#fff;border-radius:12px;padding:12px;font-size:12px;font-weight:600;min-height:62px;display:flex;flex-direction:column;justify-content:center}
+  .banner small{font-weight:500;opacity:.95}
+  .chips{display:flex;gap:8px;overflow:auto;margin:10px 0}
+  .chip{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:10px;width:56px}
+  .chip .ic{font-size:18px}
+  .blocktitle{font-size:12px;font-weight:700;margin:10px 2px 6px;display:flex;justify-content:space-between}
+  .blocktitle a{color:var(--green);font-weight:600;font-size:11px;text-decoration:none}
+  .hscroll{display:flex;gap:8px;overflow:auto}
+  .pcard{flex:0 0 auto;width:104px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px}
+  .pcard .img{height:64px;background:#eef4ec;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px}
+  .pcard .nm{font-size:11px;margin:6px 0 2px;line-height:1.2}
+  .pcard .pr{font-size:12px;font-weight:800;color:var(--green)}
+  .pcard .unit{font-size:9px;color:var(--ink2)}
+  .tag{display:inline-block;background:#eef4ec;color:var(--green);font-size:8px;padding:1px 5px;border-radius:6px;font-weight:700}
+  .addbtn{margin-top:6px;background:var(--green);color:#fff;border:none;border-radius:8px;padding:5px;width:100%;font-size:11px;font-weight:700}
+  .basket{background:#fff;border:1px dashed var(--green2);border-radius:12px;padding:10px;font-size:11px;margin:8px 0}
+  .tabbar{display:flex;background:#fff;border-top:1px solid var(--line)}
+  .tabbar div{flex:1;text-align:center;padding:8px 0;font-size:9px;color:var(--ink2)}
+  .tabbar div.active{color:var(--green);font-weight:700}
+  .tabbar .ic{font-size:16px;display:block}
+
+  /* product detail */
+  .gallery{height:170px;background:#eef4ec;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:64px;position:relative}
+  .gallery .fav{position:absolute;top:8px;right:8px;background:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+  .ptitle{font-size:16px;font-weight:800;margin:10px 0 4px}
+  .price{font-size:20px;font-weight:800;color:var(--green)}
+  .variants{display:flex;gap:6px;margin:10px 0}
+  .variants .v{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:11px}
+  .variants .v.sel{border-color:var(--green);background:#eef4ec;color:var(--green);font-weight:700}
+  .stepper{display:flex;align-items:center;gap:12px;margin:10px 0}
+  .stepper button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:16px}
+  .note{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:11px;color:var(--ink2);margin:8px 0}
+  .infoline{font-size:11px;color:var(--ink2);margin:4px 0;display:flex;gap:6px}
+  .cta{position:sticky;bottom:0;background:var(--green);color:#fff;border:none;width:100%;padding:12px;font-size:14px;font-weight:800;border-radius:12px;margin-top:8px}
+
+  /* cart */
+  .cartitem{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;gap:8px;margin-bottom:8px}
+  .cartitem .img{width:46px;height:46px;background:#eef4ec;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px}
+  .cartitem .nm{font-size:12px;font-weight:700}
+  .cartitem .meta{font-size:10px;color:var(--ink2)}
+  .miniprice{font-size:12px;font-weight:800;color:var(--green)}
+  .pref{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:11px;margin:8px 0}
+  .pref label{display:block;margin:5px 0;color:var(--ink2)}
+  .summary{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12px}
+  .summary .ln{display:flex;justify-content:space-between;margin:3px 0}
+  .summary .tot{font-weight:800;font-size:14px;border-top:1px dashed var(--line);padding-top:6px;margin-top:6px}
+  .warnote{background:#fdf3ee;border:1px solid #f3cdbb;color:var(--nar);font-size:10px;padding:6px;border-radius:8px;margin-top:6px}
+
+  /* desktop panels */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;flex:1;min-width:540px}
+  .ptop{background:var(--green);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+  .ptop b{font-size:15px}
+  .ptop .tabs{display:flex;gap:14px;font-size:12px;opacity:.92}
+  .pcont{padding:16px}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:120px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .kpi .lab{font-size:11px;color:var(--ink2)}
+  .kpi .val{font-size:22px;font-weight:800;color:var(--green);margin-top:2px}
+  .kpi.warn .val{color:var(--nar)}
+  .kpi .sub{font-size:10px;color:var(--ink2)}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left}
+  th{background:#eef4ec;color:var(--green);font-size:11px}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700}
+  .pill.up{background:#fdecec;color:var(--nar)}
+  .pill.down{background:#e9f6ee;color:var(--ok)}
+  .pill.risk{background:#fff3e0;color:#a85b00}
+  .editcell{background:#fffbea}
+  input.cell{width:64px;border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px;text-align:right}
+  .barwrap{display:flex;align-items:flex-end;gap:8px;height:120px;margin-top:14px;padding:0 4px}
+  .bar{flex:1;background:var(--green2);border-radius:6px 6px 0 0;position:relative}
+  .bar span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:9px;color:var(--ink2)}
+  .legend{font-size:11px;color:var(--ink2);margin-top:24px}
+  .stratbtns{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .stratbtns button{border:1px solid var(--green);background:#fff;color:var(--green);border-radius:8px;padding:7px 10px;font-size:11px;font-weight:600}
+  .stratbtns button.primary{background:var(--green);color:#fff}
+  .formrow{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:7px 0;font-size:13px}
+  .formrow b{font-variant-numeric:tabular-nums}
+  .result{background:#eef4ec;border:1px solid var(--green2);border-radius:10px;padding:12px;margin-top:12px}
+  .result .big{font-size:24px;font-weight:800;color:var(--green)}
+  .note2{font-size:11px;color:var(--ink2);margin-top:8px}
+  .badge{display:inline-block;background:var(--nar);color:#fff;font-size:10px;padding:2px 8px;border-radius:6px;margin-left:8px}
+  .web{width:100%;max-width:760px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .webnav{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line)}
+  .webnav .b{font-weight:800;color:var(--green);font-size:17px}
+  .webnav .links{display:flex;gap:16px;font-size:12px;color:var(--ink2)}
+  .hero{background:linear-gradient(120deg,#eef4ec,#fff);padding:26px 18px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .hero h3{margin:0 0 8px;color:var(--green);font-size:22px}
+  .hero p{margin:0 0 12px;color:var(--ink2);font-size:13px}
+  .hbtn{background:var(--orange);color:#fff;border:none;padding:9px 16px;border-radius:9px;font-weight:700;font-size:13px}
+  .webgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:18px}
+  .webgrid .c{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;font-size:12px}
+  .webgrid .c .ic{font-size:28px}
+  .foot{color:var(--ink2);font-size:12px;text-align:center;margin-top:50px;border-top:1px solid var(--line);padding-top:18px}
+  .tagrow{margin:2px 0 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>KabzıMall — Ekran Wireframe'leri</h1>
+  <p>Düşük–orta sadelikte (low/mid-fidelity) tasarım taslakları. Amaç: yerleşim, akış ve içerik hiyerarşisini göstermek — nihai görsel tasarım değil. Marka paleti: koyu yeşil #2F6B3E, yumuşak yeşil #6EA76B, turuncu #F28C28, nar #B64632.</p>
+</header>
+<div class="wrap">
+
+  <!-- MOBILE -->
+  <div class="sec">
+    <h2>A · Müşteri Mobil Uygulaması</h2>
+    <div class="hint">En kritik 3 ekran: Ana Sayfa, Ürün Detay, Sepet.</div>
+  </div>
+  <div class="row">
+
+    <!-- Home -->
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="sbar"><span>09:41</span><span class="dots">▮▮▮ 5G ▮</span></div>
+        <div class="appbar">
+          <div class="brand"><span>KabzıMall</span><span>🔔</span></div>
+          <div class="addr">📍 Ev · Kadıköy, Moda — değiştir ▾</div>
+        </div>
+        <div class="body">
+          <div class="search">🔍 Domates, muz, zeytinyağı ara…</div>
+          <div class="banner">İlk siparişe %10 indirim<small>Bugün dalından gelen ürünlerde</small></div>
+          <div class="chips">
+            <div class="chip"><div class="ic">🍎</div>Meyve</div>
+            <div class="chip"><div class="ic">🥬</div>Sebze</div>
+            <div class="chip"><div class="ic">🫒</div>Zeytinyağı</div>
+            <div class="chip"><div class="ic">🧀</div>Kahvaltı</div>
+            <div class="chip"><div class="ic">🏺</div>Yöresel</div>
+          </div>
+          <div class="blocktitle"><span>Bugün taze gelenler</span><a>tümü</a></div>
+          <div class="hscroll">
+            <div class="pcard"><div class="img">🍅</div><div class="tagrow"><span class="tag">GÜNLÜK TAZE</span></div><div class="nm">Domates</div><div class="pr">34,90₺</div><div class="unit">/kg</div><button class="addbtn">Sepete ekle</button></div>
+            <div class="pcard"><div class="img">🍌</div><div class="nm">Muz</div><div class="pr">52,00₺</div><div class="unit">/kg</div><button class="addbtn">Sepete ekle</button></div>
+            <div class="pcard"><div class="img">🥒</div><div class="nm">Salatalık</div><div class="pr">22,50₺</div><div class="unit">/kg</div><button class="addbtn">Sepete ekle</button></div>
+          </div>
+          <div class="blocktitle"><span>Hazır sepetler</span><a>tümü</a></div>
+          <div class="basket">🧺 <b>Haftalık Sebze Sepeti</b> · 9 ürün · <b style="color:var(--green)">389₺</b><br><span style="color:var(--ink2)">İncele ›</span></div>
+          <div class="blocktitle"><span>Yöresel seçkiler</span><a>tümü</a></div>
+          <div class="hscroll">
+            <div class="pcard"><div class="img">🫒</div><div class="nm">Zeytinyağı 1L</div><div class="pr">329₺</div></div>
+            <div class="pcard"><div class="img">🍶</div><div class="nm">Nar ekşisi</div><div class="pr">89₺</div></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="active"><span class="ic">🏠</span>Ana Sayfa</div>
+          <div><span class="ic">🗂️</span>Kategori</div>
+          <div><span class="ic">🛒</span>Sepet</div>
+          <div><span class="ic">📦</span>Siparişler</div>
+          <div><span class="ic">👤</span>Hesabım</div>
+        </div>
+      </div></div>
+      <div class="scap">M10 · Ana Sayfa</div>
+    </div>
+
+    <!-- Product detail -->
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="sbar"><span>09:41</span><span class="dots">▮▮▮ 5G ▮</span></div>
+        <div class="appbar"><div class="brand"><span>‹ Geri</span><span>↗ ♥</span></div></div>
+        <div class="body">
+          <div class="gallery">🍅<div class="fav">♥</div></div>
+          <div class="tagrow"><span class="tag">YERLİ</span> <span class="tag">SEZON</span> <span class="tag">GÜNLÜK TAZE</span></div>
+          <div class="ptitle">Domates (Tarla)</div>
+          <div class="price">34,90₺ <span style="font-size:12px;color:var(--ink2);text-decoration:line-through">39,90₺</span></div>
+          <div class="variants">
+            <div class="v">500 g</div><div class="v sel">1 kg</div><div class="v">2 kg</div>
+          </div>
+          <div class="stepper"><button>−</button><b>1 kg</b><button>+</button></div>
+          <div class="note">📝 Ürün notu: "Domatesler çok sert olmasın, biraz olgun olsun"</div>
+          <div class="infoline">📍 Menşei: Çanakkale</div>
+          <div class="infoline">🔪 Nasıl seçiyoruz: günlük, elle ayıklanır</div>
+          <div class="infoline">❄️ Saklama: buzdolabı sebzeliği, 4–5 gün</div>
+          <div class="warnote">Tartılı üründe nihai tutar paketleme sonrası gramaja göre küçük farklılık gösterebilir.</div>
+          <div class="blocktitle"><span>Benzer ürünler</span></div>
+          <div class="hscroll">
+            <div class="pcard"><div class="img">🥒</div><div class="nm">Salatalık</div><div class="pr">22,50₺</div></div>
+            <div class="pcard"><div class="img">🫑</div><div class="nm">Biber</div><div class="pr">41,00₺</div></div>
+          </div>
+          <button class="cta">Sepete ekle · 34,90₺</button>
+        </div>
+      </div></div>
+      <div class="scap">M19 · Ürün Detay</div>
+    </div>
+
+    <!-- Cart -->
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="sbar"><span>09:41</span><span class="dots">▮▮▮ 5G ▮</span></div>
+        <div class="appbar"><div class="brand"><span>Sepetim</span><span style="font-size:11px">3 ürün</span></div></div>
+        <div class="body">
+          <div class="cartitem"><div class="img">🍅</div><div style="flex:1"><div class="nm">Domates</div><div class="meta">1 kg · 📝 not eklendi</div><div class="miniprice">34,90₺</div></div><div style="text-align:right;font-size:11px;color:var(--ink2)">− 1 +<br>🗑️</div></div>
+          <div class="cartitem"><div class="img">🍌</div><div style="flex:1"><div class="nm">Muz</div><div class="meta">2 kg</div><div class="miniprice">104,00₺</div></div><div style="text-align:right;font-size:11px;color:var(--ink2)">− 2 +<br>🗑️</div></div>
+          <div class="cartitem"><div class="img">🫒</div><div style="flex:1"><div class="nm">Zeytinyağı 1L</div><div class="meta">1 adet</div><div class="miniprice">329,00₺</div></div><div style="text-align:right;font-size:11px;color:var(--ink2)">− 1 +<br>🗑️</div></div>
+          <div class="pref">
+            <b>Bir ürün stokta kalmazsa?</b>
+            <label>◉ Benzer ürünle değiştir</label>
+            <label>○ Beni arayarak sor</label>
+            <label>○ Eksik ürünü çıkar</label>
+          </div>
+          <div class="search">🎟️ Kupon kodu gir</div>
+          <div class="summary">
+            <div class="ln"><span>Ara toplam</span><span>467,90₺</span></div>
+            <div class="ln"><span>İlk sipariş indirimi</span><span style="color:var(--ok)">−46,79₺</span></div>
+            <div class="ln"><span>Teslimat</span><span>Ücretsiz</span></div>
+            <div class="ln tot"><span>Toplam</span><span>421,11₺</span></div>
+            <div class="warnote">Tartılı ürünlerde nihai tutar gramaja göre güncellenir.</div>
+          </div>
+          <button class="cta">Devam et</button>
+        </div>
+      </div></div>
+      <div class="scap">M21 · Sepet</div>
+    </div>
+  </div>
+
+  <!-- WEB -->
+  <div class="sec">
+    <h2>B · Müşteri Web Sitesi</h2>
+    <div class="hint">Ana sayfa — satış + SEO/güven vitrini. Mobil ile ortak ürün kartı ve renk dili.</div>
+  </div>
+  <div class="web">
+    <div class="webnav">
+      <div class="b">KabzıMall</div>
+      <div class="links"><span>Kategoriler</span><span>Hazır Sepetler</span><span>Kampanyalar</span><span>Teslimat Bölgeleri</span><span>Blog</span></div>
+      <div class="links"><span>🔍</span><span>👤 Giriş</span><span>🛒 Sepet</span></div>
+    </div>
+    <div class="hero">
+      <div>
+        <h3>Dalından sofranıza, günlük taze.</h3>
+        <p>Meyve, sebze ve seçilmiş yöresel ürünler; özenle paketlenip kapınıza gelir.</p>
+        <button class="hbtn">Alışverişe başla</button>
+        &nbsp;<button class="hbtn" style="background:var(--green)">Uygulamayı indir</button>
+      </div>
+      <div style="font-size:90px">🧺</div>
+    </div>
+    <div class="webgrid">
+      <div class="c"><div class="ic">🍎</div>Meyve</div>
+      <div class="c"><div class="ic">🥬</div>Sebze</div>
+      <div class="c"><div class="ic">🫒</div>Zeytinyağı & Soslar</div>
+      <div class="c"><div class="ic">🏺</div>Yöresel</div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="sec">
+    <h2>C · Yönetim Paneli — Operasyon</h2>
+    <div class="hint">Sabah açıldığında günü özetleyen Dashboard.</div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <div class="ptop"><b>📊 Dashboard</b><div class="tabs"><span>Bugün ▾</span><span>Dışa aktar</span></div></div>
+      <div class="pcont">
+        <div class="kpis">
+          <div class="kpi"><div class="lab">Bugünkü sipariş</div><div class="val">84</div><div class="sub">↑ %12 dünden</div></div>
+          <div class="kpi"><div class="lab">Tahmini ciro</div><div class="val">71.400₺</div><div class="sub">ort. sepet 850₺</div></div>
+          <div class="kpi"><div class="lab">Ort. net marj</div><div class="val">%29</div><div class="sub">hedef %30</div></div>
+          <div class="kpi warn"><div class="lab">Riskli ürün</div><div class="val">6</div><div class="sub">rakip bandı dışı</div></div>
+        </div>
+        <table>
+          <tr><th>Hal güncelleme</th><th>Güncellenen</th><th>Artan</th><th>Azalan</th><th>Rakibe göre ort. marj</th></tr>
+          <tr><td>✓ 08:00 tamamlandı</td><td class="num">82</td><td class="num"><span class="pill up">19 ↑</span></td><td class="num"><span class="pill down">11 ↓</span></td><td class="num">%34</td></tr>
+        </table>
+        <div class="barwrap">
+          <div class="bar" style="height:55%"><span>Pzt</span></div>
+          <div class="bar" style="height:68%"><span>Sal</span></div>
+          <div class="bar" style="height:60%"><span>Çar</span></div>
+          <div class="bar" style="height:82%"><span>Per</span></div>
+          <div class="bar" style="height:90%"><span>Cum</span></div>
+          <div class="bar" style="height:100%;background:var(--green)"><span>Cmt</span></div>
+          <div class="bar" style="height:74%"><span>Paz</span></div>
+        </div>
+        <div class="legend">Son 7 gün satış trendi (₺)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTELLIGENCE -->
+  <div class="sec">
+    <h2>D · KabzıMall Intelligence — Fiyat Zekâsı <span class="badge">Rekabet avantajı</span></h2>
+    <div class="hint">Projenin kalbi: veri girişi → maliyet/marj → fiyat önerisi.</div>
+  </div>
+
+  <div class="row">
+    <!-- Hal price entry / saha modu -->
+    <div class="panel">
+      <div class="ptop"><b>🥬 Hal Fiyat Yönetimi · Saha Modu</b><div class="tabs"><span>28 Haz ▾</span><span>Dünden kopyala</span></div></div>
+      <div class="pcont">
+        <div class="hint" style="margin:0 0 10px">Klavye-öncelikli giriş: Tab ile hücre değiştir. Sadece değişeni yaz; aykırı değer uyarısı çıkar.</div>
+        <table>
+          <tr><th>Ürün</th><th>08:00</th><th>12:00</th><th>16:00</th><th>Günlük ort.</th><th>Dünkü</th></tr>
+          <tr><td>Domates (kg)</td><td class="num editcell"><input class="cell" value="18,40"></td><td class="num editcell"><input class="cell" value="19,20"></td><td class="num editcell"><input class="cell" value="18,90"></td><td class="num">18,83</td><td class="num"><span class="pill up">+4%</span></td></tr>
+          <tr><td>Salatalık (kg)</td><td class="num editcell"><input class="cell" value="12,00"></td><td class="num editcell"><input class="cell" value="12,50"></td><td class="num editcell"><input class="cell" value="12,30"></td><td class="num">12,27</td><td class="num"><span class="pill down">−2%</span></td></tr>
+          <tr><td>Muz (kg)</td><td class="num editcell"><input class="cell" value="36,00"></td><td class="num editcell"><input class="cell" value="36,00"></td><td class="num editcell"><input class="cell" value="35,50"></td><td class="num">35,83</td><td class="num">—</td></tr>
+        </table>
+        <div class="note2">⚠️ Aykırı değer örneği: Patates 16:00 girişi "150,00" → "Emin misin? Dün 14,20₺ idi."</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:22px">
+    <!-- Pricing engine -->
+    <div class="panel">
+      <div class="ptop"><b>🎯 Fiyat Öneri Motoru — Domates</b><div class="tabs"><span>Premium grup ▾</span></div></div>
+      <div class="pcont">
+        <div class="formrow"><span>Hal fiyatı</span><b>18,00₺</b></div>
+        <div class="formrow"><span>Fire dâhil maliyet (÷0,85)</span><b>21,18₺</b></div>
+        <div class="formrow"><span>+ İşçilik/ambalaj/yakıt</span><b>2,40₺</b></div>
+        <div class="formrow"><span>Doğrudan maliyet</span><b>23,58₺</b></div>
+        <div class="formrow"><span>Rakip grup ortalaması</span><b>43,00₺</b></div>
+        <div class="formrow"><span>Hedef net marj / komisyon</span><b>%30 / %3</b></div>
+        <div class="stratbtns">
+          <button class="primary">Maliyet + hedef marj</button>
+          <button>Rakip ortalaması</button>
+          <button>Ortalama − %X</button>
+          <button>Medyan</button>
+          <button>En düşük rakip</button>
+          <button>Min net kârı koru</button>
+          <button>Manuel</button>
+        </div>
+        <div class="result">
+          <div>Önerilen satış fiyatı</div>
+          <div class="big">34,90₺</div>
+          <div class="note2">Formül: 23,58 ÷ (1 − 0,30 − 0,03) = 35,19₺ → psikolojik yuvarlama 34,90₺ · Tahmini net marj <b>%29</b> · Rekabet endeksi <b>81</b> (rakipten ucuz)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cost & fire calculator -->
+    <div class="panel">
+      <div class="ptop"><b>💸 Maliyet & Fire Hesaplama</b><div class="tabs"><span>Senaryo</span></div></div>
+      <div class="pcont">
+        <div class="formrow"><span>Alış fiyatı (₺/kg)</span><b>18,00</b></div>
+        <div class="formrow"><span>Fire oranı</span><b>%15 → ÷0,85</b></div>
+        <div class="formrow"><span>= Fire dâhil maliyet</span><b>21,18₺</b></div>
+        <div class="formrow"><span>İşçilik (birim)</span><b>1,20₺</b></div>
+        <div class="formrow"><span>Ambalaj / poşet / etiket</span><b>0,70₺</b></div>
+        <div class="formrow"><span>Yakıt / dağıtım payı</span><b>0,50₺</b></div>
+        <div class="formrow"><span>Kredi kartı komisyonu</span><b>%3 (fiyattan)</b></div>
+        <div class="result" style="background:#fdf3ee;border-color:#f3cdbb">
+          <div>Gerçek birim maliyet</div>
+          <div class="big" style="color:var(--nar)">23,58₺</div>
+          <div class="note2">⚠️ Dikkat: %15 fire maliyeti +%15 değil <b>+%17,6</b> artırır (bölme etkisi). Senaryo: fire %20 → 22,50₺ taban maliyet.</div>
+        </div>
+        <table>
+          <tr><th>Senaryo</th><th>Net marj</th></tr>
+          <tr><td>Fire %10</td><td class="num">%32</td></tr>
+          <tr><td>Fire %20</td><td class="num">%24</td></tr>
+          <tr><td>Yakıt +%15</td><td class="num">%27</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:22px">
+    <!-- Competitor analysis -->
+    <div class="panel">
+      <div class="ptop"><b>🏷️ Rakip Fiyat Analizi — Domates</b><div class="tabs"><span>Gruplar ▾</span></div></div>
+      <div class="pcont">
+        <table>
+          <tr><th>Rakip</th><th>Grup</th><th>Fiyat</th><th>Bize göre</th></tr>
+          <tr><td>Macrocenter</td><td>Premium</td><td class="num">49,00₺</td><td class="num"><span class="pill up">+40%</span></td></tr>
+          <tr><td>Carrefour</td><td>Orta segment</td><td class="num">46,00₺</td><td class="num"><span class="pill up">+32%</span></td></tr>
+          <tr><td>Getir</td><td>Hızlı ticaret</td><td class="num">44,00₺</td><td class="num"><span class="pill up">+26%</span></td></tr>
+          <tr><td>Migros</td><td>Orta segment</td><td class="num">42,00₺</td><td class="num"><span class="pill up">+20%</span></td></tr>
+          <tr><td>A101</td><td>İndirim marketi</td><td class="num">39,90₺</td><td class="num"><span class="pill up">+14%</span></td></tr>
+          <tr style="font-weight:700"><td>KabzıMall</td><td>—</td><td class="num">34,90₺</td><td class="num"><span class="pill down">en ucuz</span></td></tr>
+        </table>
+        <div class="note2">Min 39,90 · Maks 49,00 · Ortalama 44,18 · Medyan 44,00. KabzıMall ortalamanın %21 altında — agresif konum. Alarm: marj bırakılıyor olabilir → "Min net kârı koru" ile kontrol et.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    KabzıMall — Ekran wireframe'leri · v1 taslak. Bu dosya kavramsal yerleşimi gösterir; piksel-mükemmel tasarım Figma aşamasında üretilir.
+  </div>
+</div>
+</body>
+</html>

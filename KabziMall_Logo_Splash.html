@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KabzıMall — Logo & Splash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1F4D38;--forest-d:#15311f;--moss:#5C8A5A;--cream:#F6F1E7;--cream-d:#EFE7D6;
+  --persimmon:#E8703A;--honey:#E6B450;--ink:#1E241C;--muted:#7C857A;--line:#E7E0D2}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',sans-serif;color:var(--ink);background:var(--cream)}
+.serif{font-family:'Fraunces',serif}
+.masthead{background:radial-gradient(900px 360px at 80% -10%,rgba(232,112,58,.25),transparent),linear-gradient(160deg,var(--forest),var(--forest-d));color:#fff;padding:46px 30px}
+.masthead .e{letter-spacing:.3em;text-transform:uppercase;font-size:11px;color:var(--honey);font-weight:700}
+.masthead h1{font-family:'Fraunces';font-size:38px;margin:12px 0 8px}
+.masthead p{max-width:680px;color:rgba(255,255,255,.82);font-size:14.5px;line-height:1.6;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 26px 70px}
+.secline{display:flex;align-items:baseline;gap:14px;margin:48px 0 18px}
+.secline .n{font-family:'Fraunces';font-size:13px;color:var(--persimmon);font-weight:700;border:1.5px solid var(--persimmon);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.secline h2{font-size:23px;margin:0}
+.secline p{margin:0;color:var(--muted);font-size:13px}
+.cards{display:flex;flex-wrap:wrap;gap:20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px;box-shadow:0 10px 26px -16px rgba(31,77,56,.4);display:flex;flex-direction:column;align-items:center;gap:14px}
+.card.dark{background:linear-gradient(160deg,var(--forest),var(--forest-d));border:none;color:#fff}
+.label{font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+.card.dark .label{color:rgba(255,255,255,.6)}
+/* wordmark */
+.word{font-family:'Fraunces';font-weight:600;letter-spacing:-.5px;display:flex;align-items:center;gap:12px}
+.word .t{font-size:34px}
+.word .t b{color:var(--persimmon)}
+.card.dark .word .t{color:#fff}
+.tagline{font-size:12px;color:var(--muted);letter-spacing:.02em}
+.card.dark .tagline{color:var(--honey)}
+.badge{width:84px;height:84px;border-radius:22px;background:linear-gradient(150deg,var(--moss),var(--forest));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px -12px rgba(31,77,56,.6)}
+.badge.persimmon{background:linear-gradient(150deg,#f3935f,var(--persimmon))}
+.badge.cream{background:var(--cream);border:1px solid var(--line)}
+.icongrid{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+.appicon{border-radius:26%;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 28px -14px rgba(0,0,0,.4)}
+.i120{width:120px;height:120px}.i72{width:72px;height:72px;border-radius:24%}.i48{width:48px;height:48px;border-radius:24%}
+.swrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.sw{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.dot{width:26px;height:26px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+/* phones */
+.phones{display:flex;gap:30px;flex-wrap:wrap}
+.phone{width:280px;background:#0d130f;border-radius:42px;padding:10px;box-shadow:0 30px 60px -26px rgba(0,0,0,.6)}
+.scr{border-radius:34px;overflow:hidden;height:560px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.scr.dark{background:radial-gradient(600px 300px at 50% 18%,#2b6347,transparent),linear-gradient(170deg,var(--forest),var(--forest-d))}
+.scr.light{background:var(--cream)}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:24px;background:#0d130f;border-radius:0 0 16px 16px}
+.scr .leaves{position:absolute;inset:0;opacity:.07;background-size:contain}
+.scr .wm{display:flex;flex-direction:column;align-items:center;gap:14px;z-index:2}
+.scr .name{font-family:'Fraunces';font-weight:600;font-size:32px;letter-spacing:-.5px}
+.scr.dark .name{color:#fff}.scr.dark .name b{color:var(--honey)}
+.scr.light .name{color:var(--forest)}.scr.light .name b{color:var(--persimmon)}
+.scr .tg{font-size:12px;letter-spacing:.04em}
+.scr.dark .tg{color:rgba(255,255,255,.75)}.scr.light .tg{color:var(--muted)}
+.loader{position:absolute;bottom:40px;display:flex;gap:7px}
+.loader i{width:8px;height:8px;border-radius:50%;display:block;animation:pulse 1.2s infinite}
+.scr.dark .loader i{background:rgba(255,255,255,.55)}.scr.light .loader i{background:var(--moss)}
+.loader i:nth-child(2){animation-delay:.2s}.loader i:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+.cap{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+.note{background:#fff;border:1px solid var(--line);border-left:5px solid var(--persimmon);border-radius:14px;padding:16px 18px;font-size:13.5px;line-height:1.6;color:var(--ink);max-width:760px}
+.foot{margin-top:54px;border-top:1px solid var(--line);padding-top:20px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<!-- ===== reusable scale-leaf mark ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="mark" viewBox="0 0 100 100">
+    <!-- leaf -->
+    <path d="M50 7 C58 12 58 23 50 28 C42 23 42 12 50 7 Z" fill="currentColor"/>
+    <path d="M50 10 L50 26" stroke="#ffffff" stroke-opacity=".0" />
+    <!-- post -->
+    <line x1="50" y1="27" x2="50" y2="80" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- beam -->
+    <line x1="24" y1="36" x2="76" y2="36" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="50" cy="36" r="3.4" fill="currentColor"/>
+    <!-- left strings + pan -->
+    <line x1="24" y1="36" x2="18" y2="53" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    <line x1="24" y1="36" x2="30" y2="53" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M14 53 Q24 66 34 53 Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+    <!-- right strings + pan -->
+    <line x1="76" y1="36" x2="70" y2="53" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    <line x1="76" y1="36" x2="82" y2="53" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M66 53 Q76 66 86 53 Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+    <!-- base -->
+    <path d="M40 80 L60 80 L66 90 L34 90 Z" fill="currentColor"/>
+  </symbol>
+</defs></svg>
+
+<div class="masthead">
+  <div class="e">Marka Kimliği</div>
+  <h1 class="serif">KabzıMall — Logo & Splash</h1>
+  <p>Sembol bir <b>terazi</b>: kabzımal mesleğinin (halde üreticinin malını tartıp satan komisyoncu) klasik aleti. Aynı zamanda KabzıMall'ın özünü anlatıyor — <b>adil tartı, doğru fiyat, gerçek değer</b>. Üstündeki taze yaprak meyve–sebzeyi temsil ediyor. Fraunces serif sıcak/butik, Inter modern bir denge kuruyor.</p>
+</div>
+
+<div class="wrap">
+
+  <!-- PRIMARY -->
+  <div class="secline"><div class="n">01</div><div><h2>Ana logo (lockup)</h2><p>Sembol + kelime markası. Açık ve koyu zemin.</p></div></div>
+  <div class="cards">
+    <div class="card" style="flex:1;min-width:320px">
+      <div class="badge"><svg width="52" height="52" style="color:#fff"><use href="#mark"/></svg></div>
+      <div class="word"><span class="t serif">Kabzı<b>Mall</b></span></div>
+      <div class="tagline">dalından sofraya · taze kabzımal</div>
+      <div class="label">Açık zemin</div>
+    </div>
+    <div class="card dark" style="flex:1;min-width:320px">
+      <div class="badge cream"><svg width="52" height="52" style="color:var(--forest)"><use href="#mark"/></svg></div>
+      <div class="word"><span class="t serif">Kabzı<b style="color:var(--honey)">Mall</b></span></div>
+      <div class="tagline">dalından sofraya · taze kabzımal</div>
+      <div class="label">Koyu zemin</div>
+    </div>
+  </div>
+
+  <!-- APP ICON -->
+  <div class="secline"><div class="n">02</div><div><h2>Uygulama ikonu</h2><p>iOS/Android için. Tek sembol, yüksek tanınırlık.</p></div></div>
+  <div class="icongrid">
+    <div style="text-align:center"><div class="appicon i120" style="background:linear-gradient(150deg,var(--moss),var(--forest))"><svg width="74" height="74" style="color:#fff"><use href="#mark"/></svg></div><div class="cap">120 px</div></div>
+    <div style="text-align:center"><div class="appicon i120" style="background:linear-gradient(150deg,#f3935f,var(--persimmon))"><svg width="74" height="74" style="color:#fff"><use href="#mark"/></svg></div><div class="cap">aksan</div></div>
+    <div style="text-align:center"><div class="appicon i72" style="background:linear-gradient(150deg,var(--moss),var(--forest))"><svg width="44" height="44" style="color:#fff"><use href="#mark"/></svg></div><div class="cap">72 px</div></div>
+    <div style="text-align:center"><div class="appicon i48" style="background:linear-gradient(150deg,var(--moss),var(--forest))"><svg width="30" height="30" style="color:#fff"><use href="#mark"/></svg></div><div class="cap">48 px</div></div>
+  </div>
+  <div class="swrow" style="margin-top:22px">
+    <div class="sw"><span class="dot" style="background:#1F4D38"></span>Forest #1F4D38</div>
+    <div class="sw"><span class="dot" style="background:#5C8A5A"></span>Moss #5C8A5A</div>
+    <div class="sw"><span class="dot" style="background:#E8703A"></span>Persimmon #E8703A</div>
+    <div class="sw"><span class="dot" style="background:#E6B450"></span>Honey #E6B450</div>
+    <div class="sw"><span class="dot" style="background:#F6F1E7"></span>Cream #F6F1E7</div>
+  </div>
+
+  <!-- HORIZONTAL + MONO -->
+  <div class="secline"><div class="n">03</div><div><h2>Yatay kullanım & tek renk</h2><p>Üst bar, fatura, favicon ve damga için.</p></div></div>
+  <div class="cards">
+    <div class="card" style="flex-direction:row;gap:14px;justify-content:flex-start;min-width:300px">
+      <svg width="40" height="40" style="color:var(--forest)"><use href="#mark"/></svg>
+      <span class="word"><span class="t serif" style="font-size:26px">Kabzı<b>Mall</b></span></span>
+    </div>
+    <div class="card" style="flex-direction:row;gap:14px;justify-content:flex-start;min-width:240px">
+      <svg width="40" height="40" style="color:var(--ink)"><use href="#mark"/></svg>
+      <span class="word"><span class="t serif" style="font-size:26px;color:var(--ink)">KabzıMall</span></span>
+      <span class="label" style="align-self:center">tek renk (siyah)</span>
+    </div>
+    <div class="card dark" style="flex-direction:row;gap:14px;justify-content:flex-start;min-width:240px">
+      <svg width="40" height="40" style="color:#fff"><use href="#mark"/></svg>
+      <span class="word"><span class="t serif" style="font-size:26px;color:#fff">KabzıMall</span></span>
+      <span class="label" style="align-self:center">tek renk (beyaz)</span>
+    </div>
+  </div>
+
+  <!-- SPLASH -->
+  <div class="secline"><div class="n">04</div><div><h2>Splash screen</h2><p>Uygulama açılışı — koyu (varsayılan) ve açık varyant.</p></div></div>
+  <div class="phones">
+    <div>
+      <div class="phone"><div class="scr dark">
+        <div class="notch"></div>
+        <div class="wm">
+          <svg width="92" height="92" style="color:#fff"><use href="#mark"/></svg>
+          <div class="name serif">Kabzı<b>Mall</b></div>
+          <div class="tg">dalından sofraya</div>
+        </div>
+        <div class="loader"><i></i><i></i><i></i></div>
+      </div></div>
+      <div class="cap">Koyu splash (varsayılan)</div>
+    </div>
+    <div>
+      <div class="phone"><div class="scr light">
+        <div class="notch"></div>
+        <div class="wm">
+          <div class="badge" style="width:96px;height:96px;border-radius:26px"><svg width="58" height="58" style="color:#fff"><use href="#mark"/></svg></div>
+          <div class="name serif">Kabzı<b>Mall</b></div>
+          <div class="tg">taze kabzımal · günlük hal</div>
+        </div>
+        <div class="loader"><i></i><i></i><i></i></div>
+      </div></div>
+      <div class="cap">Açık splash</div>
+    </div>
+  </div>
+
+  <div class="secline"><div class="n">05</div><div><h2>Konsept notu</h2></div></div>
+  <div class="note">
+    <b>Neden terazi?</b> İsim, halde üreticinin malını tartıp komisyonla satan <b>kabzımal</b> mesleğinden geliyor; terazi bu mesleğin evrensel simgesi. KabzıMall'ın iki vaadini de aynı anda anlatıyor: müşteriye <b>doğru tartı / dürüst fiyat</b>, işletmeye <b>veriyle dengelenmiş kâr</b> (fiyat zekâsı = dijital terazi). Yaprak tazeliği ekliyor. Sembol tek başına app ikonu, terazi+yaprak birlikte marka; ölçeklenince (favicon'a kadar) okunaklı kalacak sadelikte.
+  </div>
+
+  <div class="foot">KabzıMall — Logo & Splash konsepti. Tüm semboller ölçeklenebilir SVG; üretimde gerçek vektör dosyaları (SVG/PDF) ve uygulama ikon setleri dışa alınır.</div>
+</div>
+</body>
+</html>

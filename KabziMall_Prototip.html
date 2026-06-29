@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KabzıMall — Tıklanabilir Prototip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --forest:#1F4D38; --forest-d:#163A2A; --moss:#5C8A5A;
+  --cream:#F6F1E7; --cream-d:#EFE7D6; --card:#FFFFFF;
+  --persimmon:#E8703A; --persimmon-d:#cf5d2b; --berry:#9E2B3A; --honey:#E6B450;
+  --ink:#1E241C; --muted:#7C857A; --line:#E7E0D2;
+  --shadow:0 18px 40px -18px rgba(31,77,56,.35); --shadow-sm:0 8px 20px -12px rgba(31,77,56,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:'Inter',-apple-system,sans-serif;color:var(--ink);background:
+  radial-gradient(900px 500px at 15% 0%,rgba(92,138,90,.25),transparent),
+  radial-gradient(900px 600px at 100% 100%,rgba(232,112,58,.18),transparent),
+  linear-gradient(160deg,#22402f,#10231a);
+  min-height:100%;display:flex;flex-direction:column;align-items:center;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Fraunces',Georgia,serif}
+.hd{color:#fff;text-align:center;padding:26px 20px 6px;max-width:560px}
+.hd .e{letter-spacing:.3em;text-transform:uppercase;font-size:10.5px;color:var(--honey);font-weight:700}
+.hd h1{font-family:'Fraunces';font-weight:600;font-size:27px;margin:8px 0 6px}
+.hd p{margin:0;color:rgba(255,255,255,.78);font-size:13px;line-height:1.5}
+
+/* phone */
+.phone{width:330px;background:#0d130f;border-radius:48px;padding:11px;box-shadow:0 40px 80px -30px rgba(0,0,0,.7);margin:18px 0 40px}
+.scr{position:relative;background:var(--cream);border-radius:38px;overflow:hidden;height:700px;display:flex;flex-direction:column}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:128px;height:27px;background:#0d130f;border-radius:0 0 18px 18px;z-index:60}
+.statusbar{height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:12px;font-weight:600;flex:0 0 auto;z-index:20}
+.view{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
+.view::-webkit-scrollbar{display:none}
+.nav{display:flex;background:#fff;border-top:1px solid var(--line);padding:8px 4px 12px;flex:0 0 auto}
+.nav button{flex:1;background:none;border:none;font-family:inherit;font-size:9.5px;color:var(--muted);font-weight:600;cursor:pointer;position:relative}
+.nav .ic{font-size:19px;display:block;margin-bottom:2px;filter:grayscale(1);opacity:.5}
+.nav button.active{color:var(--persimmon)}
+.nav button.active .ic{filter:none;opacity:1}
+.cartdot{position:absolute;top:-3px;right:50%;transform:translateX(20px);background:var(--persimmon);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 4px}
+.cartdot.show{display:flex}
+
+/* generic */
+.pad{padding:0 18px}
+.row{display:flex;align-items:center}
+.sectit{display:flex;justify-content:space-between;align-items:baseline;padding:16px 18px 8px}
+.sectit h4{font-family:'Fraunces';font-size:17px;margin:0;font-weight:600}
+.sectit a{font-size:11.5px;color:var(--persimmon);font-weight:700;text-decoration:none;cursor:pointer}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:30px}
+.pill.fresh{background:#eaf3ea;color:var(--forest)}.pill.local{background:#fbeee6;color:var(--persimmon-d)}.pill.season{background:#fbf2dd;color:#9a7415}
+.backbtn{cursor:pointer}
+
+/* home */
+.hbar{padding:4px 18px 6px}
+.hrow{display:flex;justify-content:space-between;align-items:center}
+.bm{font-family:'Fraunces';font-size:22px;font-weight:600}.bm b{color:var(--persimmon)}
+.bell{width:38px;height:38px;border-radius:12px;background:#fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;font-size:16px}
+.loc{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px}.loc b{color:var(--forest)}
+.searchbar{margin:10px 18px;background:#fff;border-radius:16px;padding:12px 15px;color:var(--muted);font-size:13px;display:flex;gap:10px;box-shadow:var(--shadow-sm)}
+.promo{margin:2px 18px 0;border-radius:22px;padding:18px 20px;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--forest),#2b6347);cursor:pointer}
+.promo:after{content:"🍑";position:absolute;right:-8px;bottom:-16px;font-size:92px;opacity:.92;transform:rotate(-8deg)}
+.promo .k{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--honey);font-weight:700}
+.promo .t{font-family:'Fraunces';font-size:20px;margin:5px 0 3px;max-width:175px;line-height:1.1}
+.promo .s{font-size:12px;color:rgba(255,255,255,.82);max-width:165px}
+.cats{display:flex;gap:13px;overflow-x:auto;padding:16px 18px 4px}.cats::-webkit-scrollbar{display:none}
+.cat{flex:0 0 auto;text-align:center;font-size:11px;font-weight:600;cursor:pointer}
+.cat .ring{width:56px;height:56px;border-radius:19px;background:#fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;font-size:25px;margin-bottom:6px}
+.cat.sel .ring{background:linear-gradient(150deg,var(--persimmon),#f3935f)}
+.prow{display:flex;gap:13px;overflow-x:auto;padding:2px 18px 6px}.prow::-webkit-scrollbar{display:none}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;padding:6px 18px 8px}
+.prod{background:#fff;border-radius:20px;padding:10px;box-shadow:var(--shadow-sm);position:relative;cursor:pointer}
+.prow .prod{width:142px;flex:0 0 auto}
+.prod .ph{height:92px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:46px;background:radial-gradient(circle at 50% 35%,#fff,var(--cream-d))}
+.prod .badge{position:absolute;top:16px;left:16px}
+.prod .add{position:absolute;right:15px;top:80px;width:32px;height:32px;border-radius:11px;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 8px 14px -8px var(--forest);border:none;cursor:pointer}
+.prod .nm{font-size:13px;font-weight:600;margin:11px 0 1px}
+.prod .or{font-size:10.5px;color:var(--muted);margin-bottom:5px}
+.prod .pr{font-family:'Fraunces';font-size:15px;font-weight:600;color:var(--forest)}
+.prod .pr s{font-family:'Inter';font-size:10px;color:var(--muted);font-weight:500}
+.prod .unit{font-size:10px;color:var(--muted)}
+.basket{margin:8px 18px 0;background:#fff;border:1px solid var(--line);border-radius:20px;padding:13px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-sm);cursor:pointer}
+.basket .ic{width:46px;height:46px;border-radius:15px;background:linear-gradient(150deg,#fbf2dd,#f6e3bf);display:flex;align-items:center;justify-content:center;font-size:23px}
+.basket .nm{font-family:'Fraunces';font-size:14.5px;font-weight:600}.basket .meta{font-size:11px;color:var(--muted)}
+.basket .pr{margin-left:auto;font-family:'Fraunces';font-weight:600;color:var(--forest)}
+
+/* detail */
+.pd-hero{height:280px;background:radial-gradient(circle at 50% 42%,#fff,var(--cream-d));display:flex;align-items:center;justify-content:center;font-size:130px;position:relative}
+.pd-top{position:absolute;top:14px;left:0;right:0;display:flex;justify-content:space-between;padding:0 18px;z-index:20}
+.circ{width:40px;height:40px;border-radius:13px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:var(--shadow-sm);cursor:pointer;border:none}
+.sheet{background:var(--cream);border-radius:30px 30px 0 0;margin-top:-26px;position:relative;padding:20px 18px 22px}
+.pd-name{font-family:'Fraunces';font-size:24px;font-weight:600;margin-top:8px}
+.pd-sub{color:var(--muted);font-size:12.5px;margin:2px 0 12px}
+.pd-price{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+.pd-price b{font-family:'Fraunces';font-size:26px;color:var(--forest);font-weight:600}
+.pd-price s{color:var(--muted);font-size:14px}
+.pd-price .save{margin-left:auto;background:#fbeee6;color:var(--persimmon-d);font-size:11px;font-weight:700;padding:5px 10px;border-radius:10px}
+.vrow{display:flex;gap:9px;margin-bottom:14px}
+.vchip{flex:1;text-align:center;border-radius:14px;padding:11px 0;font-size:12.5px;font-weight:600;background:#fff;color:var(--muted);box-shadow:var(--shadow-sm);cursor:pointer}
+.vchip.sel{background:var(--forest);color:#fff}
+.notecard{background:#fff;border-radius:16px;padding:12px 14px;font-size:11.5px;color:var(--muted);box-shadow:var(--shadow-sm);margin-bottom:12px}.notecard b{color:var(--ink)}
+.infogrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.infobit{background:#fff;border-radius:14px;padding:11px 12px;box-shadow:var(--shadow-sm)}
+.infobit .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.infobit .v{font-size:12.5px;font-weight:600;margin-top:2px}
+.buybar{display:flex;gap:12px;align-items:center;margin-top:6px}
+.step{display:flex;align-items:center;gap:14px;background:#fff;border-radius:15px;padding:8px 14px;box-shadow:var(--shadow-sm)}
+.step button{border:none;background:transparent;font-size:20px;color:var(--forest);cursor:pointer}.step b{font-size:13px;min-width:42px;text-align:center}
+.addbig{flex:1;background:var(--persimmon);color:#fff;border:none;border-radius:15px;padding:15px;font-weight:700;font-size:14px;box-shadow:0 12px 20px -12px var(--persimmon);cursor:pointer}
+
+/* cart */
+.scrtitle{font-family:'Fraunces';font-size:21px;font-weight:600;padding:10px 18px 4px}
+.citem{margin:6px 18px;background:#fff;border-radius:18px;padding:11px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow-sm)}
+.citem .ph{width:52px;height:52px;border-radius:14px;background:radial-gradient(circle at 50% 35%,#fff,var(--cream-d));display:flex;align-items:center;justify-content:center;font-size:26px;flex:0 0 auto}
+.citem .nm{font-size:13.5px;font-weight:600}.citem .meta{font-size:11px;color:var(--muted)}
+.citem .pr{font-family:'Fraunces';font-weight:600;color:var(--forest);font-size:14px;margin-top:3px}
+.qbox{margin-left:auto;display:flex;align-items:center;gap:10px;background:var(--cream);border-radius:12px;padding:5px 9px}
+.qbox button{border:none;background:none;font-size:17px;color:var(--forest);cursor:pointer}.qbox b{font-size:13px;min-width:16px;text-align:center}
+.prefcard{margin:8px 18px;background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadow-sm)}
+.prefcard .t{font-size:12.5px;font-weight:700;margin-bottom:6px}
+.opt{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);padding:6px 0;cursor:pointer}
+.rad{width:17px;height:17px;border-radius:50%;border:2px solid #d8d0bf;flex:0 0 auto}
+.opt.on{color:var(--ink);font-weight:600}.opt.on .rad{border-color:var(--persimmon);background:radial-gradient(circle,var(--persimmon) 42%,transparent 46%)}
+.summary{margin:8px 18px 0;background:var(--forest);color:#fff;border-radius:22px;padding:18px;box-shadow:var(--shadow)}
+.summary .ln{display:flex;justify-content:space-between;font-size:13px;margin:7px 0;color:rgba(255,255,255,.85)}
+.summary .ln.tot{font-family:'Fraunces';font-size:18px;color:#fff;border-top:1px solid rgba(255,255,255,.18);padding-top:11px;margin-top:11px;font-weight:600}
+.summary .save{color:var(--honey)}
+.summary .note{font-size:10.5px;color:rgba(255,255,255,.7);margin-top:8px;line-height:1.4}
+.cta{margin:14px 18px 20px;background:var(--persimmon);color:#fff;border:none;border-radius:16px;padding:16px;width:calc(100% - 36px);font-weight:700;font-size:14.5px;box-shadow:0 14px 22px -12px var(--persimmon);cursor:pointer}
+.empty{text-align:center;color:var(--muted);padding:70px 30px}.empty .big{font-size:56px}.empty h4{font-family:'Fraunces';color:var(--ink);margin:14px 0 6px}
+
+/* checkout */
+.coblock{margin:8px 18px;background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadow-sm)}
+.coblock .h{font-size:12.5px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.choice{border:1.5px solid var(--line);border-radius:13px;padding:11px 13px;font-size:12.5px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.choice.sel{border-color:var(--persimmon);background:#fdf4ee}
+.choice .s{font-size:11px;color:var(--muted)}
+.choice .chk{color:var(--persimmon);font-weight:700;opacity:0}.choice.sel .chk{opacity:1}
+
+/* tracking */
+.track{padding:8px 22px}
+.tstep{display:flex;gap:14px;align-items:flex-start;position:relative;padding-bottom:22px}
+.tstep:before{content:"";position:absolute;left:13px;top:26px;bottom:0;width:2px;background:var(--line)}
+.tstep:last-child:before{display:none}
+.tdot{width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto;z-index:2}
+.tstep.done .tdot{background:var(--forest);border-color:var(--forest);color:#fff}
+.tstep.cur .tdot{background:var(--persimmon);border-color:var(--persimmon);color:#fff;box-shadow:0 0 0 5px rgba(232,112,58,.18)}
+.tstep .nm{font-size:13.5px;font-weight:600}.tstep .sub{font-size:11px;color:var(--muted)}
+.tstep.todo .nm{color:var(--muted)}
+
+/* toast */
+#toast{position:absolute;left:50%;bottom:92px;transform:translateX(-50%) translateY(20px);background:var(--forest);color:#fff;font-size:12.5px;font-weight:600;padding:11px 18px;border-radius:14px;box-shadow:var(--shadow);opacity:0;transition:.25s;z-index:80;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.tip{color:rgba(255,255,255,.6);font-size:11.5px;margin:0 0 8px;text-align:center}
+</style>
+</head>
+<body>
+<div class="hd">
+  <div class="e">Tıklanabilir Prototip</div>
+  <h1 class="serif">KabzıMall</h1>
+  <p class="tip">Gerçek bir uygulama gibi dene: kategoriye dokun, ürün seç, sepete ekle, ödemeye geç. Sepet ve tutarlar canlı hesaplanır.</p>
+</div>
+
+<div class="phone"><div class="scr">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span>● ▮▮ 🔋</span></div>
+  <div class="view" id="view"></div>
+  <div id="toast"></div>
+  <div class="nav" id="nav">
+    <button data-s="home" class="active" onclick="go('home')"><span class="ic">🏠</span>Ana Sayfa</button>
+    <button data-s="cat" onclick="go('cat')"><span class="ic">🗂️</span>Kategori</button>
+    <button data-s="cart" onclick="go('cart')"><span class="ic">🛒</span>Sepet<span class="cartdot" id="cartdot">0</span></button>
+    <button data-s="orders" onclick="go('orders')"><span class="ic">📦</span>Siparişler</button>
+    <button data-s="account" onclick="go('account')"><span class="ic">👤</span>Hesap</button>
+  </div>
+</div></div>
+
+<script>
+// ---------------- DATA ----------------
+const CATS = [
+  {id:'meyve', name:'Meyve', icon:'🍑'},
+  {id:'sebze', name:'Sebze', icon:'🥬'},
+  {id:'yag',   name:'Zeytinyağı', icon:'🫒'},
+  {id:'kahvalti', name:'Kahvaltı', icon:'🧀'},
+  {id:'yoresel', name:'Yöresel', icon:'🏺'},
+];
+const WEIGHTV = [{l:'500 g',m:0.5},{l:'1 kg',m:1},{l:'2 kg',m:2}];
+const PIECEV  = [{l:'1 adet',m:1}];
+const P = [
+  {id:'domates', name:'Tarla Domatesi', emoji:'🍅', cat:'sebze', origin:'Çanakkale', price:34.9, old:39.9, unit:'kg', tags:['fresh'], v:WEIGHTV, store:'Buzdolabı sebzeliği, 4–5 gün', fresh:true},
+  {id:'cilek', name:'Çilek', emoji:'🍓', cat:'meyve', origin:'Aydın', price:64, unit:'kg', tags:['season'], v:WEIGHTV, store:'Buzdolabında, 2–3 gün'},
+  {id:'muz', name:'Muz', emoji:'🍌', cat:'meyve', origin:'Anamur', price:52, unit:'kg', tags:['local'], v:WEIGHTV, store:'Oda sıcaklığı'},
+  {id:'salatalik', name:'Salatalık', emoji:'🥒', cat:'sebze', origin:'Yerli', price:22.5, unit:'kg', tags:[], v:WEIGHTV, store:'Buzdolabı sebzeliği'},
+  {id:'biber', name:'Çarliston Biber', emoji:'🫑', cat:'sebze', origin:'Antalya', price:41, unit:'kg', tags:['fresh'], v:WEIGHTV, store:'Buzdolabı sebzeliği'},
+  {id:'elma', name:'Amasya Elması', emoji:'🍎', cat:'meyve', origin:'Amasya', price:38, unit:'kg', tags:['local'], v:WEIGHTV, store:'Serin yer, 1 hafta+'},
+  {id:'zeytinyagi', name:'Erken Hasat Zeytinyağı 1L', emoji:'🫒', cat:'yag', origin:'Ayvalık', price:329, unit:'adet', tags:['local'], v:PIECEV, store:'Karanlık, serin'},
+  {id:'nareksisi', name:'Nar Ekşisi', emoji:'🍶', cat:'yoresel', origin:'Gaziantep', price:89, unit:'adet', tags:['local'], v:PIECEV, store:'Açıldıktan sonra buzdolabı'},
+  {id:'bal', name:'Çiçek Balı 850g', emoji:'🍯', cat:'kahvalti', origin:'Muğla', price:289, unit:'adet', tags:['local'], v:PIECEV, store:'Oda sıcaklığı'},
+  {id:'peynir', name:'Köy Peyniri 500g', emoji:'🧀', cat:'kahvalti', origin:'Trakya', price:179, unit:'adet', tags:['fresh'], v:PIECEV, store:'Buzdolabı'},
+  {id:'yumurta', name:'Köy Yumurtası 15li', emoji:'🥚', cat:'kahvalti', origin:'Bolu', price:119, unit:'adet', tags:[], v:PIECEV, store:'Buzdolabı'},
+  {id:'patates', name:'Patates', emoji:'🥔', cat:'sebze', origin:'Niğde', price:18.9, unit:'kg', tags:[], v:WEIGHTV, store:'Karanlık, serin'},
+];
+const BASKETS = [
+  {emoji:'🧺', name:'Haftalık Sebze Sepeti', meta:'9 ürün · ~4 kişilik', price:389},
+  {emoji:'🥖', name:'Kahvaltılık Seçkisi', meta:'7 ürün · yöresel', price:529},
+];
+const TAGTXT = {fresh:['GÜNLÜK TAZE','fresh'], season:['SEZON','season'], local:['YÖRESEL','local']};
+
+// ---------------- STATE ----------------
+let state = { screen:'home', catFilter:'all', product:null, variant:1,
+  qty:1, cart:{}, sub:'degistir', slot:0, pay:0, order:null };
+
+const money = n => n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+'₺';
+const view = document.getElementById('view');
+const byId = id => P.find(p=>p.id===id);
+
+function tagPill(t){const x=TAGTXT[t];return x?`<span class="pill ${x[1]}">${x[0]}</span>`:''}
+
+function cartCount(){return Object.values(state.cart).reduce((a,b)=>a+b.qty,0)}
+function cartSubtotal(){return Object.values(state.cart).reduce((a,b)=>a+b.price*b.qty,0)}
+function updateCartDot(){const d=document.getElementById('cartdot');const c=cartCount();d.textContent=c;d.classList.toggle('show',c>0)}
+
+let toastT;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1600)}
+
+function setActiveNav(s){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.s===s))}
+
+// ---------------- ROUTER ----------------
+function go(s){ state.screen=s; render(); view.scrollTop=0; }
+function render(){
+  const s=state.screen;
+  setActiveNav(['home','cat','cart','orders','account'].includes(s)?s:'');
+  if(s==='home') view.innerHTML=Home();
+  else if(s==='cat') view.innerHTML=Catalog();
+  else if(s==='detail') view.innerHTML=Detail();
+  else if(s==='cart') view.innerHTML=Cart();
+  else if(s==='checkout') view.innerHTML=Checkout();
+  else if(s==='success') view.innerHTML=Success();
+  else if(s==='track') view.innerHTML=Track();
+  else if(s==='orders') view.innerHTML=Orders();
+  else if(s==='account') view.innerHTML=Account();
+  updateCartDot();
+}
+
+// ---------------- SCREENS ----------------
+function prodCard(p){
+  const tag=p.tags[0]?`<span class="badge">${tagPill(p.tags[0])}</span>`:'';
+  const old=p.old?` <s>${p.old.toLocaleString('tr-TR')}</s>`:'';
+  return `<div class="prod" onclick="openProduct('${p.id}')">
+    <div class="ph">${p.emoji}</div>${tag}
+    <button class="add" onclick="event.stopPropagation();quickAdd('${p.id}')">+</button>
+    <div class="nm">${p.name}</div><div class="or">${p.origin}</div>
+    <div class="pr">${p.price.toLocaleString('tr-TR')}₺${old}</div><div class="unit">/ ${p.unit}</div>
+  </div>`;
+}
+function Home(){
+  const fresh=P.filter(p=>p.tags.includes('fresh')||p.tags.includes('season'));
+  const yoresel=P.filter(p=>['yag','yoresel','kahvalti'].includes(p.cat));
+  return `
+  <div class="hbar">
+    <div class="hrow"><div class="bm serif">Kabzı<b>Mall</b></div><div class="bell">🔔</div></div>
+    <div class="loc">📍 Teslimat · <b>Moda, Kadıköy</b> ▾</div>
+  </div>
+  <div class="searchbar" onclick="go('cat')">🔍 Domates, muz, zeytinyağı…</div>
+  <div class="promo" onclick="go('cat')">
+    <div class="k">İlk sipariş</div><div class="t serif">Dalından %10 indirim</div>
+    <div class="s">Bugün sabah toplanan ürünlerde geçerli</div>
+  </div>
+  <div class="cats">
+    ${CATS.map(c=>`<div class="cat" onclick="filterCat('${c.id}')"><div class="ring">${c.icon}</div>${c.name}</div>`).join('')}
+  </div>
+  <div class="sectit"><h4 class="serif">Bugün taze gelenler</h4><a onclick="go('cat')">Tümü →</a></div>
+  <div class="prow">${fresh.map(prodCard).join('')}</div>
+  <div class="sectit"><h4 class="serif">Hazır sepetler</h4></div>
+  ${BASKETS.map(b=>`<div class="basket" onclick="addBasket('${b.name}',${b.price})">
+    <div class="ic">${b.emoji}</div><div><div class="nm serif">${b.name}</div><div class="meta">${b.meta}</div></div>
+    <div class="pr">${b.price}₺</div></div>`).join('')}
+  <div class="sectit"><h4 class="serif">Yöresel seçkiler</h4><a onclick="filterCat('yoresel')">Tümü →</a></div>
+  <div class="prow">${yoresel.map(prodCard).join('')}</div>
+  <div style="height:14px"></div>`;
+}
+function filterCat(id){state.catFilter=id;go('cat')}
+function Catalog(){
+  const list = state.catFilter==='all'?P:P.filter(p=>p.cat===state.catFilter);
+  return `
+  <div class="scrtitle serif">Kategoriler</div>
+  <div class="cats" style="padding-top:6px">
+    <div class="cat ${state.catFilter==='all'?'sel':''}" onclick="filterCat('all')"><div class="ring">🛒</div>Tümü</div>
+    ${CATS.map(c=>`<div class="cat ${state.catFilter===c.id?'sel':''}" onclick="filterCat('${c.id}')"><div class="ring">${c.icon}</div>${c.name}</div>`).join('')}
+  </div>
+  <div class="grid">${list.map(prodCard).join('')}</div>
+  <div style="height:10px"></div>`;
+}
+function openProduct(id){state.product=id;state.variant=1;state.qty=1;go('detail')}
+function Detail(){
+  const p=byId(state.product); const v=p.v[state.variant]||p.v[0];
+  const unitPrice=p.price*v.m; const line=unitPrice*state.qty;
+  const old=p.old?`<s>${(p.old*v.m).toLocaleString('tr-TR')}₺</s><span class="save">%${Math.round((1-p.price/p.old)*100)} indirim</span>`:'';
+  return `
+  <div class="pd-hero">${p.emoji}
+    <div class="pd-top"><button class="circ" onclick="history0()">‹</button>
+      <div style="display:flex;gap:8px"><button class="circ">↗</button><button class="circ" onclick="toast('Favorilere eklendi ♥')">♥</button></div></div>
+  </div>
+  <div class="sheet">
+    <div>${p.tags.map(tagPill).join(' ')}</div>
+    <div class="pd-name serif">${p.name}</div>
+    <div class="pd-sub">${p.origin} · sabah toplandı · elle ayıklandı</div>
+    <div class="pd-price"><b class="serif">${money(unitPrice)}</b>${old}</div>
+    <div class="vrow">${p.v.map((vv,i)=>`<div class="vchip ${i===state.variant||(state.variant>=p.v.length&&i===0)?'sel':''}" onclick="setVar(${i})">${vv.l}</div>`).join('')}</div>
+    <div class="notecard">📝 <b>Ürün notu ekle:</b> "Çok sert olmasın, biraz olgun seçilsin" — paketleyene iletilir.</div>
+    <div class="infogrid">
+      <div class="infobit"><div class="l">Menşei</div><div class="v">${p.origin}</div></div>
+      <div class="infobit"><div class="l">Saklama</div><div class="v">${p.store}</div></div>
+    </div>
+    ${p.unit==='kg'?`<div class="notecard" style="font-size:11px">⚖️ Tartılı üründe nihai tutar gramaja göre küçük farklılık gösterebilir.</div>`:''}
+    <div class="buybar">
+      <div class="step"><button onclick="qStep(-1)">−</button><b>${state.qty} ${p.unit==='kg'?'×'+v.l:'adet'}</b><button onclick="qStep(1)">+</button></div>
+      <button class="addbig" onclick="addCurrent()">Sepete ekle · ${money(line)}</button>
+    </div>
+  </div>`;
+}
+function history0(){go(state.catFilter&&state.screen==='detail'?'cat':'home')}
+function setVar(i){state.variant=i;render()}
+function qStep(d){state.qty=Math.max(1,state.qty+d);render()}
+
+function addToCart(p,v,qty){
+  const key=p.id+'|'+v.l;
+  const unitPrice=p.price*v.m;
+  if(state.cart[key]) state.cart[key].qty+=qty;
+  else state.cart[key]={id:p.id,emoji:p.emoji,name:p.name,variant:v.l,unit:p.unit,price:unitPrice,qty};
+  updateCartDot();
+}
+function addCurrent(){const p=byId(state.product);const v=p.v[state.variant]||p.v[0];addToCart(p,v,state.qty);toast(`${p.name} sepete eklendi`);go('cart')}
+function quickAdd(id){const p=byId(id);addToCart(p,p.v[p.v.length>1?1:0],1);toast(`${p.name} sepete eklendi`)}
+function addBasket(name,price){const key='basket|'+name;if(state.cart[key])state.cart[key].qty+=1;else state.cart[key]={id:'basket',emoji:'🧺',name,variant:'hazır sepet',unit:'adet',price,qty:1};updateCartDot();toast(`${name} sepete eklendi`)}
+
+function Cart(){
+  const items=Object.entries(state.cart);
+  if(!items.length) return `<div class="scrtitle serif">Sepetim</div>
+    <div class="empty"><div class="big">🧺</div><h4 class="serif">Sepetin boş</h4><div>Taze ürünleri keşfetmeye başla.</div>
+    <button class="cta" style="position:static;width:auto;margin-top:18px;padding:13px 22px" onclick="go('home')">Alışverişe başla</button></div>`;
+  const sub=cartSubtotal(); const disc=sub*0.10; const deliv=(sub-disc)>=250?0:29.9; const tot=sub-disc+deliv;
+  const subs={degistir:'Benzer ürünle değiştir',ara:'Beni arayarak sor',cikar:'Eksik ürünü çıkar'};
+  return `
+  <div class="scrtitle serif">Sepetim <span style="font-size:12px;color:var(--muted);font-family:Inter">· ${cartCount()} ürün</span></div>
+  ${items.map(([k,it])=>`<div class="citem">
+    <div class="ph">${it.emoji}</div>
+    <div><div class="nm">${it.name}</div><div class="meta">${it.variant}${it.unit==='kg'&&it.id!=='basket'?' · tartılı':''}</div><div class="pr">${money(it.price*it.qty)}</div></div>
+    <div class="qbox"><button onclick="chgQty('${k}',-1)">−</button><b>${it.qty}</b><button onclick="chgQty('${k}',1)">+</button></div>
+  </div>`).join('')}
+  <div class="prefcard">
+    <div class="t">Bir ürün stokta kalmazsa?</div>
+    ${Object.entries(subs).map(([k,t])=>`<div class="opt ${state.sub===k?'on':''}" onclick="setSub('${k}')"><span class="rad"></span> ${t}</div>`).join('')}
+  </div>
+  <div class="summary">
+    <div class="ln"><span>Ara toplam</span><span>${money(sub)}</span></div>
+    <div class="ln"><span>İlk sipariş indirimi (%10)</span><span class="save">−${money(disc)}</span></div>
+    <div class="ln"><span>Teslimat</span><span class="save">${deliv===0?'Ücretsiz':money(deliv)}</span></div>
+    <div class="ln tot serif"><span>Toplam</span><span>${money(tot)}</span></div>
+    <div class="note">⚖️ Tartılı ürünlerde nihai tutar paketleme sonrası gramaja göre güncellenir.</div>
+  </div>
+  <button class="cta" onclick="go('checkout')">Teslimat & ödemeye geç →</button>`;
+}
+function chgQty(k,d){const it=state.cart[k];if(!it)return;it.qty+=d;if(it.qty<=0)delete state.cart[k];render()}
+function setSub(k){state.sub=k;render()}
+
+const SLOTS=['Bugün 14:00–17:00','Bugün 17:00–20:00','Yarın 10:00–13:00'];
+const PAYS=[['💳','Kredi / banka kartı','online ödeme'],['💵','Kapıda ödeme','nakit / kart']];
+const ADDR=['Ev','Moda Cd. No:12 D:5, Kadıköy'];
+function Checkout(){
+  const sub=cartSubtotal(); const disc=sub*0.10; const deliv=(sub-disc)>=250?0:29.9; const tot=sub-disc+deliv;
+  return `
+  <div class="scrtitle serif"><span class="backbtn" onclick="go('cart')">‹</span> Teslimat & Ödeme</div>
+  <div class="coblock"><div class="h">📍 Teslimat adresi</div>
+    <div class="choice sel"><div><b>${ADDR[0]}</b><div class="s">${ADDR[1]}</div></div><span class="chk">✓</span></div>
+  </div>
+  <div class="coblock"><div class="h">🕑 Teslimat saati</div>
+    ${SLOTS.map((s,i)=>`<div class="choice ${state.slot===i?'sel':''}" onclick="setSlot(${i})"><div>${s}</div><span class="chk">✓</span></div>`).join('')}
+  </div>
+  <div class="coblock"><div class="h">💳 Ödeme yöntemi</div>
+    ${PAYS.map((p,i)=>`<div class="choice ${state.pay===i?'sel':''}" onclick="setPay(${i})"><div>${p[0]} <b>${p[1]}</b><div class="s">${p[2]}</div></div><span class="chk">✓</span></div>`).join('')}
+  </div>
+  <div class="summary" style="margin-top:8px">
+    <div class="ln"><span>Ürünler + indirim</span><span>${money(sub-disc)}</span></div>
+    <div class="ln"><span>Teslimat</span><span class="save">${deliv===0?'Ücretsiz':money(deliv)}</span></div>
+    <div class="ln tot serif"><span>Ödenecek</span><span>${money(tot)}</span></div>
+    <div class="note">Tartılı ürünler için ${money(tot)} tutarında ön provizyon alınır; nihai tutar paketlemede gramajla kesinleşir.</div>
+  </div>
+  <button class="cta" onclick="placeOrder(${tot.toFixed(2)})">Siparişi onayla · ${money(tot)}</button>`;
+}
+function setSlot(i){state.slot=i;render()}
+function setPay(i){state.pay=i;render()}
+function placeOrder(tot){
+  state.order={no:'KM'+Math.floor(100000+Math.random()*900000),total:tot,slot:SLOTS[state.slot],items:cartCount(),when:new Date()};
+  state.cart={}; updateCartDot(); go('success');
+}
+function Success(){
+  const o=state.order;
+  return `<div class="empty" style="padding-top:80px">
+    <div class="big">✅</div><h4 class="serif" style="font-size:22px">Siparişin alındı!</h4>
+    <div style="color:var(--muted)">Sipariş no <b style="color:var(--ink)">${o.no}</b></div>
+    <div style="margin-top:14px;background:#fff;border-radius:16px;padding:14px;box-shadow:var(--shadow-sm);text-align:left">
+      <div class="row" style="justify-content:space-between;font-size:13px;margin:4px 0"><span style="color:var(--muted)">Teslimat</span><b>${o.slot}</b></div>
+      <div class="row" style="justify-content:space-between;font-size:13px;margin:4px 0"><span style="color:var(--muted)">Ürün</span><b>${o.items} kalem</b></div>
+      <div class="row" style="justify-content:space-between;font-size:13px;margin:4px 0"><span style="color:var(--muted)">Toplam</span><b>${money(o.total)}</b></div>
+    </div>
+    <button class="cta" style="position:static;width:auto;margin-top:20px;padding:14px 24px" onclick="go('track')">Siparişi takip et</button>
+    <div style="margin-top:10px"><a style="color:var(--persimmon);font-weight:700;cursor:pointer;font-size:13px" onclick="go('home')">Alışverişe devam et</a></div>
+  </div>`;
+}
+function Track(){
+  const steps=[['Sipariş alındı','9:41','done'],['Hazırlanıyor','paketleme başladı','cur'],['Paketlendi','','todo'],['Yola çıktı','','todo'],['Teslim edildi','','todo']];
+  return `<div class="scrtitle serif"><span class="backbtn" onclick="go('orders')">‹</span> Sipariş takibi</div>
+  <div style="margin:0 18px 10px;color:var(--muted);font-size:12.5px">No ${state.order?state.order.no:'KM000000'} · Tahmini ${state.order?state.order.slot:'bugün'}</div>
+  <div class="track">${steps.map(s=>`<div class="tstep ${s[2]}"><div class="tdot">${s[2]==='done'?'✓':s[2]==='cur'?'●':''}</div>
+    <div><div class="nm">${s[0]}</div><div class="sub">${s[1]}</div></div></div>`).join('')}</div>
+  <div class="notecard" style="margin:0 18px">📦 Paketleme sırasında bir ürün stokta kalmazsa tercihin uygulanır: <b>benzer ürünle değiştir</b>.</div>`;
+}
+function Orders(){
+  const o=state.order;
+  if(!o) return `<div class="scrtitle serif">Siparişlerim</div><div class="empty"><div class="big">📦</div><h4 class="serif">Henüz siparişin yok</h4><div>İlk siparişini ver, burada görünsün.</div><button class="cta" style="position:static;width:auto;margin-top:18px;padding:13px 22px" onclick="go('home')">Alışverişe başla</button></div>`;
+  return `<div class="scrtitle serif">Siparişlerim</div>
+  <div class="citem" onclick="go('track')" style="cursor:pointer">
+    <div class="ph">🧾</div>
+    <div><div class="nm">${o.no}</div><div class="meta">${o.items} kalem · ${o.slot}</div><div class="pr">${money(o.total)}</div></div>
+    <div class="qbox" style="background:#fdf4ee;color:var(--persimmon-d);font-size:11px;font-weight:700;padding:6px 10px">Hazırlanıyor</div>
+  </div>
+  <div style="padding:14px 18px;color:var(--muted);font-size:12px">Detay için siparişe dokun.</div>`;
+}
+function Account(){
+  const rows=[['👤','Profil bilgilerim'],['📍','Adreslerim'],['❤️','Favorilerim'],['🎟️','Kuponlarım'],['🔔','Bildirim ayarları'],['🌐','Dil · Türkçe'],['❓','Yardım & SSS'],['📄','Yasal metinler']];
+  return `<div class="scrtitle serif">Hesabım</div>
+  <div class="citem" style="cursor:default"><div class="ph" style="background:linear-gradient(150deg,var(--moss),var(--forest));color:#fff;font-size:22px">S</div>
+    <div><div class="nm">Said Zoroğlu</div><div class="meta">+90 5•• ••• •• 12</div></div></div>
+  ${rows.map(r=>`<div class="citem" style="cursor:pointer" onclick="toast('${r[1]} (demo)')"><div class="ph" style="font-size:22px">${r[0]}</div>
+    <div style="flex:1"><div class="nm">${r[1]}</div></div><div style="color:var(--muted)">›</div></div>`).join('')}
+  <div style="text-align:center;padding:18px"><a style="color:var(--berry);font-weight:700;font-size:13px;cursor:pointer" onclick="toast('Çıkış yapıldı (demo)')">Çıkış yap</a></div>`;
+}
+
+render();
+</script>
+</body>
+</html>

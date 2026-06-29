@@ -1,0 +1,19 @@
+{
+  "name": "@kabzimall/pricing",
+  "version": "0.1.0",
+  "description": "KabzıMall fiyatlandırma motoru — tek kaynak (fire, maliyet, net marj, strateji).",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "node --import tsx --test src/pricing.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@types/node": "^26.0.1"
+  }
+}
