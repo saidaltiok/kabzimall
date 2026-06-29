@@ -8,7 +8,7 @@ import { tl } from '@/lib/format';
 const FREE_THRESHOLD = 40000; // kuruş (400 ₺)
 
 export default function CartPage() {
-  const { items, setQty, remove, subtotal } = useCart();
+  const { items, setQty, remove, subtotal, keyOf } = useCart();
   const router = useRouter();
 
   if (items.length === 0)
@@ -30,20 +30,24 @@ export default function CartPage() {
         <div>
           {items.map((it) => {
             const step = it.unitLabel === 'kg' ? 0.5 : 1;
+            const k = keyOf(it.slug, it.basketSlug);
             return (
-              <div className="citem" key={it.slug}>
+              <div className="citem" key={k}>
                 <div className="ph">{it.emoji}</div>
                 <div>
-                  <div className="nm">{it.name}</div>
-                  <div className="meta">{tl(it.unitPrice)} / {it.unitLabel ?? 'birim'}</div>
+                  <div className="nm">
+                    {it.name}
+                    {it.basketSlug && <span className="pill local" style={{ marginLeft: 6, fontSize: 9 }}>{it.basketName ?? 'sepet'}</span>}
+                  </div>
+                  <div className="meta">{tl(it.unitPrice)} / {it.unitLabel ?? 'birim'}{it.basketSlug ? ' · paket fiyatı' : ''}</div>
                   <div className="pr">{tl(Math.round(it.unitPrice * it.qty))}</div>
                 </div>
                 <div className="qbox">
-                  <button onClick={() => setQty(it.slug, +(it.qty - step).toFixed(3))}>−</button>
+                  <button onClick={() => setQty(k, +(it.qty - step).toFixed(3))}>−</button>
                   <b>{it.qty} {it.unitLabel === 'kg' ? 'kg' : ''}</b>
-                  <button onClick={() => setQty(it.slug, +(it.qty + step).toFixed(3))}>+</button>
+                  <button onClick={() => setQty(k, +(it.qty + step).toFixed(3))}>+</button>
                 </div>
-                <button className="rm" onClick={() => remove(it.slug)}>Kaldır</button>
+                <button className="rm" onClick={() => remove(k)}>Kaldır</button>
               </div>
             );
           })}

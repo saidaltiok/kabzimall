@@ -18,7 +18,14 @@ import {
   lineTotal,
   deliveryFee,
   effectivePrice,
+  discountByPct,
 } from './pricing.ts';
+
+test('discountByPct: yüzde indirim, kuruşa yuvarlı, sınırlı', () => {
+  assert.equal(discountByPct(12550, 10), 11295); // %10
+  assert.equal(discountByPct(3590, 0), 3590); // %0 → aynı
+  assert.equal(discountByPct(1000, 150), 0); // sınır: %100
+});
 
 test('effectivePrice: indirimli < taban ise indirimli, değilse taban', () => {
   assert.equal(effectivePrice(5200, 4490), 4490); // indirim geçerli

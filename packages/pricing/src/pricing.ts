@@ -263,6 +263,12 @@ export function effectivePrice(base: Kurus, discounted?: Kurus | null): Kurus {
   return discounted != null && discounted > 0 && discounted < base ? discounted : base;
 }
 
+/** Yüzde indirim uygula (örn. hazır sepet paketi). pct 0..100; kuruşa yuvarlar. */
+export function discountByPct(price: Kurus, pct: number): Kurus {
+  const p = Math.min(100, Math.max(0, pct));
+  return Math.round(price * (1 - p / 100));
+}
+
 export interface DeliveryTier {
   /** Bu eşik ve üstündeki sepet tutarına uygulanan ücret. */
   minSubtotal: Kurus;

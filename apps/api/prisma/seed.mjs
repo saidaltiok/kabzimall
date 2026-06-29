@@ -63,7 +63,7 @@ async function main() {
       await prisma.basketTemplate.create({
         data: {
           tenantId: T, slug: 'haftalik-sebze', name: 'Haftalık Sebze Sepeti',
-          description: '4 kişilik · domates + salatalık',
+          description: '4 kişilik · domates + salatalık', discountPct: 10,
           items: { create: [{ productId: dom.id, qty: 2 }, { productId: sal.id, qty: 3 }] },
         },
       });

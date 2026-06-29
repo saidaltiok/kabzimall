@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNumber, IsOptional, IsString, Matches, Min, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsInt, IsNumber, IsOptional, IsString, Matches, Max, Min, ValidateNested } from 'class-validator';
 
 export class BasketItemInput {
   @IsString()
@@ -21,6 +21,10 @@ export class CreateBasketDto {
 
   @IsOptional() @IsString()
   imageUrl?: string;
+
+  /** Paket indirimi (% 0..100). */
+  @IsOptional() @IsInt() @Min(0) @Max(100)
+  discountPct?: number;
 
   @IsArray()
   @ArrayMinSize(1)

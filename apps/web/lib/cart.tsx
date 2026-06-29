@@ -5,20 +5,26 @@ import { createContext, useContext, useEffect, useState } from 'react';
 export interface CartItem {
   slug: string;
   name: string;
-  unitPrice: number; // kuruş
+  unitPrice: number; // kuruş (sepet indirimi uygulanmışsa indirimli)
   unitLabel: string | null;
   emoji: string;
   qty: number;
+  basketSlug?: string; // bir hazır sepetten geldiyse
+  basketName?: string;
 }
+
+/** Aynı ürün hem normal hem sepetten gelebilir → bileşik kimlik. */
+const keyOf = (slug: string, basketSlug?: string) => `${slug}|${basketSlug ?? ''}`;
 
 interface CartCtx {
   items: CartItem[];
   count: number;
   subtotal: number;
   add: (item: Omit<CartItem, 'qty'>, qty?: number) => void;
-  setQty: (slug: string, qty: number) => void;
-  remove: (slug: string) => void;
+  setQty: (key: string, qty: number) => void;
+  remove: (key: string) => void;
   clear: () => void;
+  keyOf: (slug: string, basketSlug?: string) => string;
 }
 
 const Ctx = createContext<CartCtx | null>(null);
@@ -26,6 +32,7 @@ const KEY = 'km_cart';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     try {
@@ -34,31 +41,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* yoksay */
     }
+    setLoaded(true);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(items));
-  }, [items]);
+    if (loaded) localStorage.setItem(KEY, JSON.stringify(items)); // yükleme bitmeden yazma (race önleme)
+  }, [items, loaded]);
 
   const add: CartCtx['add'] = (item, qty = 1) =>
     setItems((cur) => {
-      const i = cur.findIndex((x) => x.slug === item.slug);
+      const k = keyOf(item.slug, item.basketSlug);
+      const i = cur.findIndex((x) => keyOf(x.slug, x.basketSlug) === k);
       if (i === -1) return [...cur, { ...item, qty }];
       const next = [...cur];
       next[i] = { ...next[i], qty: +(next[i].qty + qty).toFixed(3) };
       return next;
     });
 
-  const setQty: CartCtx['setQty'] = (slug, qty) =>
-    setItems((cur) => (qty <= 0 ? cur.filter((x) => x.slug !== slug) : cur.map((x) => (x.slug === slug ? { ...x, qty } : x))));
+  const setQty: CartCtx['setQty'] = (key, qty) =>
+    setItems((cur) => (qty <= 0 ? cur.filter((x) => keyOf(x.slug, x.basketSlug) !== key) : cur.map((x) => (keyOf(x.slug, x.basketSlug) === key ? { ...x, qty } : x))));
 
-  const remove: CartCtx['remove'] = (slug) => setItems((cur) => cur.filter((x) => x.slug !== slug));
+  const remove: CartCtx['remove'] = (key) => setItems((cur) => cur.filter((x) => keyOf(x.slug, x.basketSlug) !== key));
   const clear = () => setItems([]);
 
   const count = items.reduce((a, b) => a + b.qty, 0);
   const subtotal = items.reduce((a, b) => a + Math.round(b.unitPrice * b.qty), 0);
 
-  return <Ctx.Provider value={{ items, count, subtotal, add, setQty, remove, clear }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ items, count, subtotal, add, setQty, remove, clear, keyOf }}>{children}</Ctx.Provider>;
 }
 
 export function useCart(): CartCtx {

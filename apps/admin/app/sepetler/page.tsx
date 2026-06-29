@@ -6,7 +6,7 @@ import Topbar from '@/components/Topbar';
 
 interface Product { id: string; slug: string; name: string }
 interface BasketItem { qty: number; product: { slug: string; name: string } }
-interface Basket { id: string; slug: string; name: string; description: string | null; items: BasketItem[] }
+interface Basket { id: string; slug: string; name: string; description: string | null; discountPct: number; items: BasketItem[] }
 
 export default function SepetlerPage() {
   const [baskets, setBaskets] = useState<Basket[]>([]);
@@ -14,6 +14,7 @@ export default function SepetlerPage() {
   const [slug, setSlug] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [discount, setDiscount] = useState('10');
   const [staged, setStaged] = useState<{ productSlug: string; qty: string }[]>([]);
   const [pickSlug, setPickSlug] = useState('');
   const [pickQty, setPickQty] = useState('1');
@@ -46,10 +47,11 @@ export default function SepetlerPage() {
       if (staged.length === 0) { setError('En az bir ürün ekleyin.'); return; }
       await apiSend('POST', '/catalog/baskets', {
         slug, name, description: description || undefined,
+        discountPct: discount === '' ? 0 : Number(discount),
         items: staged.map((s) => ({ productSlug: s.productSlug, qty: Number(s.qty.replace(',', '.')) })),
       });
       setOk(`✓ ${name} oluşturuldu.`);
-      setSlug(''); setName(''); setDescription(''); setStaged([]);
+      setSlug(''); setName(''); setDescription(''); setDiscount('10'); setStaged([]);
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -73,6 +75,7 @@ export default function SepetlerPage() {
           <div className="form-row">
             <div className="field"><label>Slug</label><input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="haftalik-sebze" /></div>
             <div className="field"><label>Ad</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Haftalık Sebze Sepeti" /></div>
+            <div className="field"><label>İndirim (%)</label><input value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="10" style={{ minWidth: 80 }} /></div>
             <div className="field" style={{ flex: 1 }}><label>Açıklama</label><input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="4 kişilik, 5 çeşit" /></div>
           </div>
           <div className="form-row" style={{ marginTop: 10 }}>
@@ -110,7 +113,7 @@ export default function SepetlerPage() {
               <tbody>
                 {baskets.map((b) => (
                   <tr key={b.id}>
-                    <td><b>{b.name}</b>{b.description && <div className="muted" style={{ fontSize: 11 }}>{b.description}</div>}</td>
+                    <td><b>{b.name}</b>{b.discountPct > 0 && <span className="tagp ok" style={{ marginLeft: 6 }}>%{b.discountPct}</span>}{b.description && <div className="muted" style={{ fontSize: 11 }}>{b.description}</div>}</td>
                     <td className="muted">{b.slug}</td>
                     <td>{b.items.map((it) => `${it.product.name}×${it.qty}`).join(', ')}</td>
                     <td className="num"><button className="btn ghost" style={{ fontSize: 11, padding: '5px 9px' }} onClick={() => remove(b.id)}>Sil</button></td>

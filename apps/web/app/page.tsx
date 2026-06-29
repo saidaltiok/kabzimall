@@ -13,7 +13,7 @@ interface Product {
 }
 interface Category { slug: string; name: string }
 interface BasketItemView { slug: string; name: string; unitLabel: string | null; qty: number; unitPrice: number }
-interface Basket { slug: string; name: string; description: string | null; items: BasketItemView[]; total: number }
+interface Basket { slug: string; name: string; description: string | null; discountPct: number; items: BasketItemView[]; itemsTotal: number; total: number; savings: number }
 
 const CAT_ICON: Record<string, string> = { meyve: '🍑', sebze: '🥬', yag: '🫒', kahvalti: '🧀', yoresel: '🏺' };
 
@@ -60,7 +60,17 @@ export default function HomePage() {
     flash(`${p.name} sepete eklendi ✓`);
   }
   function addBasket(b: Basket) {
-    b.items.forEach((it) => add({ slug: it.slug, name: it.name, unitPrice: it.unitPrice, unitLabel: it.unitLabel, emoji: emojiFor(it.slug) }, it.qty));
+    b.items.forEach((it) =>
+      add(
+        {
+          slug: it.slug, name: it.name,
+          unitPrice: Math.round(it.unitPrice * (1 - b.discountPct / 100)),
+          unitLabel: it.unitLabel, emoji: emojiFor(it.slug),
+          basketSlug: b.slug, basketName: b.name,
+        },
+        it.qty,
+      ),
+    );
     flash(`${b.name} sepete eklendi (${b.items.length} ürün) ✓`);
   }
 
@@ -95,10 +105,15 @@ export default function HomePage() {
           <div className="grid">
             {baskets.map((b) => (
               <div className="prod" key={b.slug} style={{ display: 'flex', flexDirection: 'column' }}>
+                {b.savings > 0 && <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{b.discountPct} AVANTAJ</span>}
                 <div className="ph" style={{ fontSize: 40 }}>🧺</div>
                 <div className="nm">{b.name}</div>
                 <div className="or">{b.description ?? `${b.items.length} ürün`}</div>
-                <div className="pr">{tl(b.total)}</div>
+                <div className="pr">
+                  {tl(b.total)}{' '}
+                  {b.savings > 0 && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.itemsTotal)}</s>}
+                </div>
+                {b.savings > 0 && <div className="unit" style={{ color: 'var(--persimmon-d)' }}>{tl(b.savings)} tasarruf</div>}
                 <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
               </div>
             ))}

@@ -169,16 +169,24 @@ describe('Market (vitrin + sipariş)', () => {
     expect(o.body.subtotal).toBe(4000);
   });
 
-  it('hazır sepet: oluştur (admin) + storefront fiyatlı döner (public)', async () => {
+  it('hazır sepet: %10 indirimli toplam + sipariş paket fiyatını uygular', async () => {
     await admin
       .post('/api/v1/catalog/baskets')
-      .send({ slug: 'haftalik', name: 'Haftalık Sepet', items: [{ productSlug: 'domates', qty: 2 }, { productSlug: 'cilek', qty: 1 }] })
+      .send({ slug: 'haftalik', name: 'Haftalık Sepet', discountPct: 10, items: [{ productSlug: 'domates', qty: 2 }, { productSlug: 'cilek', qty: 1 }] })
       .expect(201);
 
     const res = await request(server).get('/api/v1/storefront/baskets').expect(200);
     const b = res.body.data.find((x: { slug: string }) => x.slug === 'haftalik');
-    expect(b.items).toHaveLength(2);
-    expect(b.total).toBe(13580); // 3590×2 + 6400×1
+    expect(b.itemsTotal).toBe(13580); // 3590×2 + 6400×1
+    expect(b.total).toBe(12222); // %10 indirim
+    expect(b.savings).toBe(1358);
+
+    // basketSlug ile sipariş → paket indirimli birim fiyat (sunucuda)
+    const o = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'domates', qty: 2, basketSlug: 'haftalik' }], customer: { name: 'Veli', phone: '05551112233', address: 'Mahalle 1' } })
+      .expect(201);
+    expect(o.body.items[0].unitPrice).toBe(3231); // 3590 − %10
   });
 
   it('VIEWER durum güncelleyemez → 403', async () => {

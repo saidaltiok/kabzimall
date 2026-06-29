@@ -126,6 +126,7 @@ export class CatalogService {
           name: dto.name,
           description: dto.description ?? null,
           imageUrl: dto.imageUrl ?? null,
+          discountPct: dto.discountPct ?? 0,
           items: { create: items },
         },
         include: { items: { include: { product: { select: { slug: true, name: true } } } } },
