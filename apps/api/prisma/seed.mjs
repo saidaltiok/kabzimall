@@ -45,6 +45,15 @@ async function main() {
     });
   }
 
+  // Teslimat bölgeleri (ilçe)
+  for (const name of ['Kadıköy', 'Üsküdar']) {
+    await prisma.deliveryZone.upsert({
+      where: { tenantId_name: { tenantId: T, name } },
+      create: { tenantId: T, name },
+      update: {},
+    });
+  }
+
   // Hazır sepet (yoksa)
   const hasBasket = await prisma.basketTemplate.findFirst({ where: { tenantId: T, slug: 'haftalik-sebze' } });
   if (!hasBasket) {
