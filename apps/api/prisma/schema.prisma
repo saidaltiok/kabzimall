@@ -40,6 +40,8 @@ model Product {
   saleType     String   @default("WEIGHT") @map("sale_type")
   unitLabel    String?  @map("unit_label")
   imageUrl     String?  @map("image_url")
+  /// Mevcut stok (kg/adet). null = stok takibi yok (sınırsız); 0 = tükendi.
+  stockQty     Float?   @map("stock_qty")
   /// Yayınlanan mağaza fiyatı (kuruş). Henüz uygulanmadıysa null.
   basePrice    Int?     @map("base_price")
   originRegion String?  @map("origin_region")

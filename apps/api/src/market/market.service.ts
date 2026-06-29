@@ -14,6 +14,7 @@ const PUBLIC_PRODUCT_SELECT = {
   saleType: true,
   unitLabel: true,
   imageUrl: true,
+  stockQty: true,
   basePrice: true,
   originRegion: true,
   isFeatured: true,
@@ -102,6 +103,9 @@ export class MarketService {
       const p = bySlug.get(i.slug);
       if (!p) throw new BadRequestException(`Ürün bulunamadı veya yayında değil: ${i.slug}`);
       if (p.basePrice == null) throw new BadRequestException(`Ürün fiyatlandırılmamış: ${i.slug}`);
+      if (p.stockQty != null && i.qty > p.stockQty) {
+        throw new BadRequestException(`Yeterli stok yok: ${p.name} (kalan ${p.stockQty} ${p.unitLabel ?? ''})`);
+      }
       return {
         productId: p.id,
         productName: p.name,
@@ -127,27 +131,35 @@ export class MarketService {
     const grandTotal = subtotal + fee;
     const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);
 
-    const order = await this.prisma.order.create({
-      data: {
-        tenantId: DEV_TENANT_ID,
-        code,
-        customerName: dto.customer.name,
-        customerPhone: dto.customer.phone,
-        addressText: dto.customer.address,
-        note: dto.note ?? null,
-        status: 'CONFIRMED',
-        paymentMethod: dto.paymentMethod ?? 'COD',
-        deliveryDate,
-        deliveryWindow,
-        subtotal,
-        deliveryFee: fee,
-        grandTotal,
-        estimatedTotal: grandTotal,
-        items: { create: items },
-      },
-      include: { items: true },
+    // Sipariş oluşturma + stok düşme atomik (takip edilen ürünlerde).
+    return this.prisma.$transaction(async (tx) => {
+      for (const it of items) {
+        const p = products.find((x) => x.id === it.productId)!;
+        if (p.stockQty != null) {
+          await tx.product.update({ where: { id: p.id }, data: { stockQty: { decrement: it.orderedQty } } });
+        }
+      }
+      return tx.order.create({
+        data: {
+          tenantId: DEV_TENANT_ID,
+          code,
+          customerName: dto.customer.name,
+          customerPhone: dto.customer.phone,
+          addressText: dto.customer.address,
+          note: dto.note ?? null,
+          status: 'CONFIRMED',
+          paymentMethod: dto.paymentMethod ?? 'COD',
+          deliveryDate,
+          deliveryWindow,
+          subtotal,
+          deliveryFee: fee,
+          grandTotal,
+          estimatedTotal: grandTotal,
+          items: { create: items },
+        },
+        include: { items: true },
+      });
     });
-    return order;
   }
 
   async getOrder(id: string) {

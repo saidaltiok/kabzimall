@@ -7,7 +7,7 @@ import { useCart } from '@/lib/cart';
 
 interface Product {
   slug: string; name: string; saleType: string; unitLabel: string | null;
-  imageUrl: string | null; basePrice: number; originRegion: string | null;
+  imageUrl: string | null; basePrice: number; stockQty: number | null; originRegion: string | null;
   isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { slug: string; name: string } | null;
 }
@@ -78,24 +78,35 @@ export default function HomePage() {
         <div className="empty"><div className="big">🧺</div><h2 className="serif">Ürün bulunamadı</h2><div>Farklı bir kategori ya da arama dene.</div></div>
       ) : (
         <div className="grid">
-          {filtered.map((p) => (
-            <div className="prod" key={p.slug}>
-              <div className="ph">
-                {p.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
-                ) : (
-                  emojiFor(p.slug, p.category?.slug)
+          {filtered.map((p) => {
+            const soldOut = p.stockQty != null && p.stockQty <= 0;
+            return (
+              <div className="prod" key={p.slug} style={soldOut ? { opacity: 0.6 } : undefined}>
+                <div className="ph">
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                  ) : (
+                    emojiFor(p.slug, p.category?.slug)
+                  )}
+                </div>
+                {soldOut ? (
+                  <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: '#eee', color: 'var(--muted)' }}>TÜKENDİ</span>
+                ) : p.isFreshDaily ? (
+                  <span className="pill fresh">GÜNLÜK TAZE</span>
+                ) : p.isLocal ? (
+                  <span className="pill local">YÖRESEL</span>
+                ) : null}
+                {!soldOut && (
+                  <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
                 )}
+                <div className="nm">{p.name}</div>
+                <div className="or">{p.originRegion ?? '—'}</div>
+                <div className="pr">{tl(p.basePrice)}</div>
+                <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
               </div>
-              {p.isFreshDaily ? <span className="pill fresh">GÜNLÜK TAZE</span> : p.isLocal ? <span className="pill local">YÖRESEL</span> : null}
-              <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
-              <div className="nm">{p.name}</div>
-              <div className="or">{p.originRegion ?? '—'}</div>
-              <div className="pr">{tl(p.basePrice)}</div>
-              <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

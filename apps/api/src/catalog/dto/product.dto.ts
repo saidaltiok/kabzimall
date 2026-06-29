@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
 
 export const SALE_TYPES = ['WEIGHT', 'PIECE', 'BUNCH', 'PACK', 'VARIABLE_WEIGHT_PACK'] as const;
 export type SaleType = (typeof SALE_TYPES)[number];
@@ -29,6 +29,10 @@ export class CreateProductDto {
   @IsOptional() @IsInt() @Min(0)
   basePrice?: number;
 
+  /** Stok (kg/adet). null/boş = takip yok (sınırsız). */
+  @IsOptional() @IsNumber() @Min(0)
+  stockQty?: number;
+
   @IsOptional() @IsString()
   originRegion?: string;
 
@@ -46,6 +50,7 @@ export class UpdateProductDto {
   @IsOptional() @IsString() unitLabel?: string;
   @IsOptional() @IsString() imageUrl?: string;
   @IsOptional() @IsInt() @Min(0) basePrice?: number;
+  @IsOptional() @IsNumber() @Min(0) stockQty?: number;
   @IsOptional() @IsString() originRegion?: string;
   @IsOptional() @IsBoolean() isActive?: boolean;
   @IsOptional() @IsBoolean() isFeatured?: boolean;

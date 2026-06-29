@@ -113,6 +113,27 @@ describe('Market (vitrin + sipariş)', () => {
       .expect(400);
   });
 
+  it('stok: sipariş stoğu düşürür, fazlası reddedilir', async () => {
+    const created = await admin
+      .post('/api/v1/catalog/products')
+      .send({ slug: 'limon', name: 'Limon', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3000, stockQty: 5 })
+      .expect(201);
+    expect(created.body.stockQty).toBe(5);
+
+    await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'limon', qty: 2 }], customer: { name: 'Ali', phone: '05551112233', address: 'Sokak 1' } })
+      .expect(201);
+
+    const after = await admin.get(`/api/v1/catalog/products/${created.body.id}`).expect(200);
+    expect(after.body.stockQty).toBe(3); // 5 − 2
+
+    await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'limon', qty: 10 }], customer: { name: 'Ali', phone: '05551112233', address: 'Sokak 1' } })
+      .expect(400);
+  });
+
   it('VIEWER durum güncelleyemez → 403', async () => {
     const viewer = authed(app, 'VIEWER');
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);
