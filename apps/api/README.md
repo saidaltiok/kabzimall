@@ -25,6 +25,9 @@ npm run start:dev
 |---|---|---|
 | GET  | `/health` | Sağlık kontrolü |
 | POST | `/intel/price/resolve` | Hiyerarşik fiyat çözümü (`resolvePrice`) — rakip yoksa fallback zinciri |
+| POST | `/intel/price/suggest` | Tek strateji ile öneri (`suggestPrice`) — fallback yok |
+| POST | `/intel/price/apply` | Fiyatı `base_price` olarak yayınla + `price_history`'e yaz |
+| GET  | `/intel/price/history` `?productId=` | Uygulanan fiyat geçmişi (append-only) |
 | POST | `/intel/hal-purchases` | Hal alımı + ±500 g tartı mutabakatı (`reconcileHalPurchase`) |
 | GET  | `/intel/hal-purchases` `?productId=` | Kayıtlı alımları listele |
 | GET  | `/intel/hal-purchases/:id` | Tek alım |
@@ -46,6 +49,25 @@ curl -X POST http://localhost:3001/api/v1/intel/price/resolve \
 `chain` gönderilmezse motorun varsayılanı kullanılır:
 `COMP_AVG → MARGIN → HAL_MARKUP → FLOOR`. İsteğe bağlı `chain` ve `baseParams`
 ile zincir tamamen özelleştirilebilir. Tüm para alanları **kuruş** (3590 = 34,90 ₺).
+
+**Tek strateji ile öner → uygula → geçmiş (fiyat döngüsü):**
+
+```bash
+# 1) Öner (fallback yok; istenen stratejiyi uygular)
+curl -X POST http://localhost:3001/api/v1/intel/price/suggest \
+  -H 'Content-Type: application/json' \
+  -d '{"productId":"domates","cost":{"halAvg":1870,"fireRate":0.15,"labor":120,"packaging":70,"fuel":50,"commissionRate":0.03},"strategy":"MARGIN","params":{"targetMargin":0.30}}'
+# → {"price":3590,"netMargin":0.290,"strategy":"MARGIN","floored":false,...}
+
+# 2) Uygula (base_price yayınla + price_history)
+curl -X POST http://localhost:3001/api/v1/intel/price/apply \
+  -H 'Content-Type: application/json' \
+  -d '{"productId":"domates","price":3590,"strategy":"MARGIN","netMargin":0.29,"reason":"İlk yayın"}'
+# → {"product":{"id":"domates","basePrice":3590,...},"history":{"oldPrice":null,"newPrice":3590,...}}
+
+# 3) Geçmiş (en yeni → en eski)
+curl "http://localhost:3001/api/v1/intel/price/history?productId=domates"
+```
 
 **Hal alım mutabakatı:**
 
@@ -77,6 +99,10 @@ curl -X POST http://localhost:3001/api/v1/intel/cost-pool \
 
 ## Sıradaki adımlar
 
-- PostgreSQL + TypeORM/Prisma ile kalıcı katman (tenant_id / RLS).
-- `/intel/price/suggest` ve `/intel/price/apply` (+ `price_history`).
-- Auth/guard'lar (rol: fiyat yöneticisi+ — Teknik doküman Bölüm 7).
+- PostgreSQL + TypeORM/Prisma ile kalıcı katman (tenant_id / RLS); bellek içi
+  `ProductsStore` / `PriceHistoryStore` gerçek `products.base_price` ve
+  append-only `price_history` tablolarıyla değişecek.
+- Auth/guard'lar (rol: fiyat yöneticisi+ — Teknik doküman Bölüm 7); `apply`
+  sonrası `changedBy` token'dan gelecek.
+- `/intel/price/bulk-apply` (toplu güncelleme + önizleme) ve `/intel/price/suggest`
+  için entegrasyon testleri (DoD: uç başına ≥1 test).

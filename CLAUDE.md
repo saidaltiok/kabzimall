@@ -60,6 +60,9 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
   resolvePrice, reconcileHalPurchase, weightPrecisionRiskPct`.
 - `apps/api`: çalışan **NestJS iskeleti**, **bellek içi** (DB yok). Uçlar:
   - `POST /api/v1/intel/price/resolve` — hiyerarşik fiyat çözümü.
+  - `POST /api/v1/intel/price/suggest` — tek strateji ile öneri (fallback yok).
+  - `POST /api/v1/intel/price/apply` — `base_price` yayınla + `price_history` (Bölüm 6.3).
+  - `GET  /api/v1/intel/price/history` — uygulanan fiyat geçmişi (en yeni→eski).
   - `POST|GET /api/v1/intel/hal-purchases` — hal alımı + ±500 g mutabakatı.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.
@@ -91,12 +94,15 @@ cd apps/api && npm install && npm run build && npm start   # http://localhost:30
 
 ## Sıradaki işler (öncelik sırası)
 
-1. **Fiyat döngüsünü tamamla:** `POST /intel/price/suggest` (tek strateji) ve
-   `POST /intel/price/apply` (`products.base_price` güncelle + `price_history`).
+1. ✅ **Fiyat döngüsü tamamlandı:** `POST /intel/price/suggest` (tek strateji),
+   `POST /intel/price/apply` (`base_price` + `price_history`), `GET /intel/price/history`.
+   Bellek içi `ProductsStore` / `PriceHistoryStore` ile (iskelet).
 2. **PostgreSQL kalıcı katman:** TypeORM/Prisma; bellek içi `Map` store'ları gerçek
-   tablolarla değiştir; `tenant_id` + RLS.
-3. **Auth & roller:** JWT guard + policy (fiyat yöneticisi+ — Teknik doküman Bölüm 7).
-4. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).
+   tablolarla değiştir (`products.base_price`, append-only `price_history`); `tenant_id` + RLS.
+3. **Auth & roller:** JWT guard + policy (fiyat yöneticisi+ — Teknik doküman Bölüm 7);
+   `apply` sonrası `changedBy` token'dan çözülecek.
+4. **Test altyapısı:** `apps/api`'ye entegrasyon testleri (DoD: uç başına ≥1 test).
+5. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).
 
 ## Açık kararlar (kod dışı)
 

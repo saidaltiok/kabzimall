@@ -5,16 +5,27 @@ import { HalPurchasesController } from './hal-purchases/hal-purchases.controller
 import { HalPurchasesService } from './hal-purchases/hal-purchases.service';
 import { CostPoolController } from './cost-pool/cost-pool.controller';
 import { CostPoolService } from './cost-pool/cost-pool.service';
+import { ProductsStore } from './price/products.store';
+import { PriceHistoryStore } from './price/price-history.store';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
- * Bu ilk kesimde 3 çekirdek uç var (Devam Rehberi Bölüm 8):
+ * Uçlar:
  *   POST /intel/price/resolve   — hiyerarşik fiyat çözümü (resolvePrice)
+ *   POST /intel/price/suggest   — tek strateji ile öneri (suggestPrice)
+ *   POST /intel/price/apply     — base_price yayınla + price_history (Bölüm 6.3)
+ *   GET  /intel/price/history   — uygulanan fiyat geçmişi
  *        /intel/hal-purchases   — hal alımı + ±500 g tartı mutabakatı
  *        /intel/cost-pool       — havuz/dağıtımlı maliyet → birim (kg) tahsis
  */
 @Module({
   controllers: [PriceController, HalPurchasesController, CostPoolController],
-  providers: [PriceService, HalPurchasesService, CostPoolService],
+  providers: [
+    PriceService,
+    ProductsStore,
+    PriceHistoryStore,
+    HalPurchasesService,
+    CostPoolService,
+  ],
 })
 export class IntelModule {}
