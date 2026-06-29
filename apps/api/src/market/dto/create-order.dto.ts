@@ -19,10 +19,6 @@ export class OrderItemInput {
   /** Miktar — adet ya da kg (tartılı üründe ondalık). */
   @IsNumber() @Min(0.001)
   qty!: number;
-
-  /** Bu kalem bir hazır sepetten geldiyse sepet slug'ı (paket indirimi uygulanır). */
-  @IsOptional() @IsString()
-  basketSlug?: string;
 }
 
 export const DELIVERY_WINDOWS = ['10:00-13:00', '13:00-16:00', '16:00-19:00'] as const;

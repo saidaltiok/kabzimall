@@ -2,19 +2,23 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
+import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 
-interface Product { id: string; slug: string; name: string }
-interface BasketItem { qty: number; product: { slug: string; name: string } }
-interface Basket { id: string; slug: string; name: string; description: string | null; discountPct: number; items: BasketItem[] }
+interface Product { id: string; slug: string; name: string; kind: string }
+interface Component { slug: string; name: string; unitLabel: string | null; qty: number }
+interface Basket {
+  id: string; slug: string; name: string; basePrice: number | null; discountedPrice: number | null;
+  stockQty: number | null; components: Component[];
+}
 
 export default function SepetlerPage() {
   const [baskets, setBaskets] = useState<Basket[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [slug, setSlug] = useState('');
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [discount, setDiscount] = useState('10');
+  const [priceTl, setPriceTl] = useState('');
+  const [discTl, setDiscTl] = useState('');
   const [staged, setStaged] = useState<{ productSlug: string; qty: string }[]>([]);
   const [pickSlug, setPickSlug] = useState('');
   const [pickQty, setPickQty] = useState('1');
@@ -28,8 +32,9 @@ export default function SepetlerPage() {
         apiGet<{ data: Product[] }>('/catalog/products'),
       ]);
       setBaskets(b.data);
-      setProducts(p.data);
-      if (!pickSlug && p.data[0]) setPickSlug(p.data[0].slug);
+      const simple = p.data.filter((x) => x.kind !== 'BASKET');
+      setProducts(simple);
+      if (!pickSlug && simple[0]) setPickSlug(simple[0].slug);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -45,13 +50,15 @@ export default function SepetlerPage() {
     setError(null); setOk(null);
     try {
       if (staged.length === 0) { setError('En az bir ürün ekleyin.'); return; }
+      if (!priceTl) { setError('Sepet fiyatı gerekli.'); return; }
       await apiSend('POST', '/catalog/baskets', {
-        slug, name, description: description || undefined,
-        discountPct: discount === '' ? 0 : Number(discount),
-        items: staged.map((s) => ({ productSlug: s.productSlug, qty: Number(s.qty.replace(',', '.')) })),
+        slug, name,
+        basePrice: Math.round(parseFloat(priceTl.replace(',', '.')) * 100),
+        discountedPrice: discTl === '' ? undefined : Math.round(parseFloat(discTl.replace(',', '.')) * 100),
+        components: staged.map((s) => ({ productSlug: s.productSlug, qty: Number(s.qty.replace(',', '.')) })),
       });
       setOk(`✓ ${name} oluşturuldu.`);
-      setSlug(''); setName(''); setDescription(''); setDiscount('10'); setStaged([]);
+      setSlug(''); setName(''); setPriceTl(''); setDiscTl(''); setStaged([]);
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -65,8 +72,13 @@ export default function SepetlerPage() {
 
   return (
     <>
-      <Topbar title="Hazır Sepetler" sub="Tek tıkla sepete eklenen ürün demetleri" />
+      <Topbar title="Hazır Sepetler" sub="Her sepet ayrı bir üründür — kendi fiyatı + içeriği" />
       <div className="body">
+        <p className="hint">
+          Hazır sepet ayrı bir üründür: <b>kendi fiyatını ve indirimini</b> sen belirlersin (diğer
+          ürünler gibi). İçindeki ürünler yalnızca müşteriye gösterim ve paketleme içindir. Fiyat/stok/
+          indirimini sonradan <b>Ürün Kataloğu</b>'ndan da düzenleyebilirsin.
+        </p>
         {error && <div className="error">{error}</div>}
         {ok && <div className="ok-box">{ok}</div>}
 
@@ -75,12 +87,12 @@ export default function SepetlerPage() {
           <div className="form-row">
             <div className="field"><label>Slug</label><input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="haftalik-sebze" /></div>
             <div className="field"><label>Ad</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Haftalık Sebze Sepeti" /></div>
-            <div className="field"><label>İndirim (%)</label><input value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="10" style={{ minWidth: 80 }} /></div>
-            <div className="field" style={{ flex: 1 }}><label>Açıklama</label><input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="4 kişilik, 5 çeşit" /></div>
+            <div className="field"><label>Fiyat (₺)</label><input value={priceTl} onChange={(e) => setPriceTl(e.target.value)} placeholder="110,00" style={{ minWidth: 100 }} /></div>
+            <div className="field"><label>İndirimli (₺)</label><input value={discTl} onChange={(e) => setDiscTl(e.target.value)} placeholder="—" style={{ minWidth: 100 }} /></div>
           </div>
           <div className="form-row" style={{ marginTop: 10 }}>
             <div className="field">
-              <label>Ürün</label>
+              <label>İçeriğe ürün ekle</label>
               <select value={pickSlug} onChange={(e) => setPickSlug(e.target.value)}>
                 {products.map((p) => <option key={p.id} value={p.slug}>{p.name}</option>)}
               </select>
@@ -99,7 +111,7 @@ export default function SepetlerPage() {
             </div>
           )}
           <div style={{ marginTop: 14 }}>
-            <button className="btn" onClick={create} disabled={!slug || !name || staged.length === 0}>Sepeti oluştur</button>
+            <button className="btn" onClick={create} disabled={!slug || !name || !priceTl || staged.length === 0}>Sepeti oluştur</button>
           </div>
         </div>
 
@@ -109,13 +121,18 @@ export default function SepetlerPage() {
             <p className="muted">Henüz hazır sepet yok.</p>
           ) : (
             <table>
-              <thead><tr><th>Ad</th><th>Slug</th><th>İçerik</th><th></th></tr></thead>
+              <thead><tr><th>Ad</th><th>Slug</th><th className="num">Fiyat</th><th>İçerik</th><th></th></tr></thead>
               <tbody>
                 {baskets.map((b) => (
                   <tr key={b.id}>
-                    <td><b>{b.name}</b>{b.discountPct > 0 && <span className="tagp ok" style={{ marginLeft: 6 }}>%{b.discountPct}</span>}{b.description && <div className="muted" style={{ fontSize: 11 }}>{b.description}</div>}</td>
+                    <td><b>{b.name}</b></td>
                     <td className="muted">{b.slug}</td>
-                    <td>{b.items.map((it) => `${it.product.name}×${it.qty}`).join(', ')}</td>
+                    <td className="num savecell">
+                      {b.discountedPrice != null && b.basePrice != null && b.discountedPrice < b.basePrice ? (
+                        <>{tl(b.discountedPrice)} <s style={{ color: 'var(--muted)', fontWeight: 400 }}>{tl(b.basePrice)}</s></>
+                      ) : tl(b.basePrice)}
+                    </td>
+                    <td>{b.components.map((c) => `${c.name}×${c.qty}`).join(', ')}</td>
                     <td className="num"><button className="btn ghost" style={{ fontSize: 11, padding: '5px 9px' }} onClick={() => remove(b.id)}>Sil</button></td>
                   </tr>
                 ))}

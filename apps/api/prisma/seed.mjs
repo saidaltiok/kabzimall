@@ -54,23 +54,23 @@ async function main() {
     });
   }
 
-  // Hazır sepet (yoksa)
-  const hasBasket = await prisma.basketTemplate.findFirst({ where: { tenantId: T, slug: 'haftalik-sebze' } });
+  // Hazır sepet = ayrı bir ürün (kind=BASKET) + içeriği (yoksa)
+  const hasBasket = await prisma.product.findFirst({ where: { tenantId: T, slug: 'haftalik-sebze' } });
   if (!hasBasket) {
     const dom = await prisma.product.findFirst({ where: { tenantId: T, slug: 'domates' } });
     const sal = await prisma.product.findFirst({ where: { tenantId: T, slug: 'salatalik' } });
     if (dom && sal) {
-      await prisma.basketTemplate.create({
+      await prisma.product.create({
         data: {
-          tenantId: T, slug: 'haftalik-sebze', name: 'Haftalık Sebze Sepeti',
-          description: '4 kişilik · domates + salatalık', discountPct: 10,
-          items: { create: [{ productId: dom.id, qty: 2 }, { productId: sal.id, qty: 3 }] },
+          tenantId: T, kind: 'BASKET', slug: 'haftalik-sebze', name: 'Haftalık Sebze Sepeti',
+          saleType: 'PACK', unitLabel: 'paket', basePrice: 11000, discountedPrice: 9900, isFeatured: true,
+          components: { create: [{ componentId: dom.id, qty: 2 }, { componentId: sal.id, qty: 3 }] },
         },
       });
     }
   }
 
-  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} ürün, 1 hazır sepet, GLOBAL maliyet.`);
+  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} ürün, 1 hazır sepet (ürün), GLOBAL maliyet.`);
 }
 
 main().finally(() => prisma.$disconnect());

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { deliveryFee, lineTotal, effectivePrice, discountByPct } from '../pricing-engine';
+import { deliveryFee, lineTotal, effectivePrice } from '../pricing-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
 import { dateOnly } from '../common/date';
@@ -52,6 +52,7 @@ export class MarketService {
     return this.prisma.product.findMany({
       where: {
         tenantId: DEV_TENANT_ID,
+        kind: 'SIMPLE', // hazır sepetler ayrı bölümde
         isActive: true,
         basePrice: { not: null }, // fiyatı olmayan ürün vitrine çıkmaz
         ...(opts.search
@@ -98,41 +99,27 @@ export class MarketService {
     return { deleted: true };
   }
 
-  /** Yayındaki hazır sepetler — ürünler çözülmüş, geçerli fiyatla toplam. */
+  /** Yayındaki hazır sepetler — her biri kendi fiyatlı AYRI ürün + içeriği. */
   async listBaskets() {
-    const baskets = await this.prisma.basketTemplate.findMany({
-      where: { tenantId: DEV_TENANT_ID, isActive: true },
-      orderBy: { name: 'asc' },
-      include: { items: { include: { product: { select: PUBLIC_PRODUCT_SELECT } } } },
+    const rows = await this.prisma.product.findMany({
+      where: { tenantId: DEV_TENANT_ID, kind: 'BASKET', isActive: true, basePrice: { not: null } },
+      orderBy: [{ isFeatured: 'desc' }, { name: 'asc' }],
+      select: {
+        slug: true, name: true, unitLabel: true, imageUrl: true, basePrice: true, discountedPrice: true, stockQty: true,
+        components: { include: { component: { select: { slug: true, name: true, unitLabel: true } } } },
+      },
     });
-    return baskets.map((b) => {
-      const items = b.items
-        .filter((it) => it.product.isActive && it.product.basePrice != null)
-        .map((it) => {
-          const unitPrice = effectivePrice(it.product.basePrice!, it.product.discountedPrice);
-          return {
-            slug: it.product.slug,
-            name: it.product.name,
-            unitLabel: it.product.unitLabel,
-            qty: it.qty,
-            unitPrice,
-            lineTotal: lineTotal(unitPrice, it.qty),
-          };
-        });
-      const itemsTotal = items.reduce((s, x) => s + x.lineTotal, 0);
-      const total = discountByPct(itemsTotal, b.discountPct);
-      return {
-        slug: b.slug,
-        name: b.name,
-        description: b.description,
-        imageUrl: b.imageUrl,
-        discountPct: b.discountPct,
-        items,
-        itemsTotal,
-        total,
-        savings: itemsTotal - total,
-      };
-    });
+    return rows.map((b) => ({
+      slug: b.slug,
+      name: b.name,
+      imageUrl: b.imageUrl,
+      unitLabel: b.unitLabel,
+      basePrice: b.basePrice,
+      discountedPrice: b.discountedPrice,
+      price: effectivePrice(b.basePrice as number, b.discountedPrice),
+      stockQty: b.stockQty,
+      components: b.components.map((c) => ({ slug: c.component.slug, name: c.component.name, unitLabel: c.component.unitLabel, qty: c.qty })),
+    }));
   }
 
   /* --------------------------- Teslimat slotu --------------------------- */
@@ -163,16 +150,6 @@ export class MarketService {
     });
     const bySlug = new Map(products.map((p) => [p.slug, p]));
 
-    // Sipariş kalemleri bir hazır sepetten geliyorsa paket indirimini uygula (sunucuda).
-    const basketSlugs = [...new Set(dto.items.map((i) => i.basketSlug).filter(Boolean))] as string[];
-    const baskets = basketSlugs.length
-      ? await this.prisma.basketTemplate.findMany({
-          where: { tenantId: DEV_TENANT_ID, slug: { in: basketSlugs }, isActive: true },
-          include: { items: { include: { product: { select: { slug: true } } } } },
-        })
-      : [];
-    const basketBySlug = new Map(baskets.map((b) => [b.slug, { discountPct: b.discountPct, slugs: new Set(b.items.map((it) => it.product.slug)) }]));
-
     const items = dto.items.map((i) => {
       const p = bySlug.get(i.slug);
       if (!p) throw new BadRequestException(`Ürün bulunamadı veya yayında değil: ${i.slug}`);
@@ -180,13 +157,7 @@ export class MarketService {
       if (p.stockQty != null && i.qty > p.stockQty) {
         throw new BadRequestException(`Yeterli stok yok: ${p.name} (kalan ${p.stockQty} ${p.unitLabel ?? ''})`);
       }
-      let unitPrice = effectivePrice(p.basePrice, p.discountedPrice);
-      if (i.basketSlug) {
-        const bk = basketBySlug.get(i.basketSlug);
-        if (!bk) throw new BadRequestException(`Geçersiz hazır sepet: ${i.basketSlug}`);
-        if (!bk.slugs.has(i.slug)) throw new BadRequestException(`${i.slug} bu sepette yok`);
-        unitPrice = discountByPct(unitPrice, bk.discountPct);
-      }
+      const unitPrice = effectivePrice(p.basePrice, p.discountedPrice);
       return {
         productId: p.id,
         productName: p.name,

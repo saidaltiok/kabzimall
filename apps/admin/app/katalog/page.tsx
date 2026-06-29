@@ -7,7 +7,7 @@ import Topbar from '@/components/Topbar';
 
 interface Category { id: string; name: string; slug: string }
 interface Product {
-  id: string; slug: string; name: string; saleType: string; unitLabel: string | null;
+  id: string; slug: string; name: string; kind: string; saleType: string; unitLabel: string | null;
   imageUrl: string | null; basePrice: number | null; discountedPrice: number | null; stockQty: number | null; originRegion: string | null;
   isActive: boolean; isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { id: string; name: string } | null;
@@ -211,6 +211,7 @@ export default function KatalogPage() {
                           <img src={p.imageUrl} alt="" style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover' }} />
                         )}
                         {p.name}{p.isFreshDaily && ' 🌿'}
+                        {p.kind === 'BASKET' && <span className="tagp info" style={{ marginLeft: 4 }}>paket</span>}
                       </span>
                     </td>
                     <td className="muted">{p.slug}</td>

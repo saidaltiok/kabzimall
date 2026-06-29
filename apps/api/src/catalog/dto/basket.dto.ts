@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsInt, IsNumber, IsOptional, IsString, Matches, Max, Min, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsInt, IsNumber, IsOptional, IsString, Matches, Min, ValidateNested } from 'class-validator';
 
-export class BasketItemInput {
+export class BasketComponentInput {
   @IsString()
   productSlug!: string;
 
@@ -9,6 +9,10 @@ export class BasketItemInput {
   qty!: number;
 }
 
+/**
+ * Hazır sepet = AYRI BİR ÜRÜN (kind=BASKET). Kendi fiyatı/indirimi/stoğu var
+ * (diğer ürünler gibi); ek olarak içeriği (component ürünler) tanımlanır.
+ */
 export class CreateBasketDto {
   @IsString() @Matches(/^[a-z0-9-]+$/, { message: 'slug yalnızca küçük harf, rakam ve tire' })
   slug!: string;
@@ -17,18 +21,22 @@ export class CreateBasketDto {
   name!: string;
 
   @IsOptional() @IsString()
-  description?: string;
-
-  @IsOptional() @IsString()
   imageUrl?: string;
 
-  /** Paket indirimi (% 0..100). */
-  @IsOptional() @IsInt() @Min(0) @Max(100)
-  discountPct?: number;
+  /** Sepetin kendi mağaza fiyatı (kuruş). */
+  @IsInt() @Min(0)
+  basePrice!: number;
+
+  /** İndirimli fiyat (kuruş) — ürünlerdeki gibi. */
+  @IsOptional() @IsInt() @Min(0)
+  discountedPrice?: number;
+
+  @IsOptional() @IsNumber() @Min(0)
+  stockQty?: number;
 
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
-  @Type(() => BasketItemInput)
-  items!: BasketItemInput[];
+  @Type(() => BasketComponentInput)
+  components!: BasketComponentInput[];
 }

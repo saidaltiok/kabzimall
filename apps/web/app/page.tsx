@@ -12,8 +12,12 @@ interface Product {
   category: { slug: string; name: string } | null;
 }
 interface Category { slug: string; name: string }
-interface BasketItemView { slug: string; name: string; unitLabel: string | null; qty: number; unitPrice: number }
-interface Basket { slug: string; name: string; description: string | null; discountPct: number; items: BasketItemView[]; itemsTotal: number; total: number; savings: number }
+interface BasketComponent { slug: string; name: string; unitLabel: string | null; qty: number }
+interface Basket {
+  slug: string; name: string; imageUrl: string | null; unitLabel: string | null;
+  basePrice: number; discountedPrice: number | null; price: number; stockQty: number | null;
+  components: BasketComponent[];
+}
 
 const CAT_ICON: Record<string, string> = { meyve: '🍑', sebze: '🥬', yag: '🫒', kahvalti: '🧀', yoresel: '🏺' };
 
@@ -60,18 +64,9 @@ export default function HomePage() {
     flash(`${p.name} sepete eklendi ✓`);
   }
   function addBasket(b: Basket) {
-    b.items.forEach((it) =>
-      add(
-        {
-          slug: it.slug, name: it.name,
-          unitPrice: Math.round(it.unitPrice * (1 - b.discountPct / 100)),
-          unitLabel: it.unitLabel, emoji: emojiFor(it.slug),
-          basketSlug: b.slug, basketName: b.name,
-        },
-        it.qty,
-      ),
-    );
-    flash(`${b.name} sepete eklendi (${b.items.length} ürün) ✓`);
+    // Sepet AYRI BİR ÜRÜN — tek satır olarak, kendi fiyatıyla eklenir.
+    add({ slug: b.slug, name: b.name, unitPrice: b.price, unitLabel: b.unitLabel ?? 'paket', emoji: '🧺' });
+    flash(`${b.name} sepete eklendi ✓`);
   }
 
   if (loading) return <div className="loading">Yükleniyor…</div>;
@@ -103,20 +98,27 @@ export default function HomePage() {
         <>
           <div className="sectit"><h2 className="serif">Hazır sepetler</h2></div>
           <div className="grid">
-            {baskets.map((b) => (
-              <div className="prod" key={b.slug} style={{ display: 'flex', flexDirection: 'column' }}>
-                {b.savings > 0 && <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{b.discountPct} AVANTAJ</span>}
-                <div className="ph" style={{ fontSize: 40 }}>🧺</div>
-                <div className="nm">{b.name}</div>
-                <div className="or">{b.description ?? `${b.items.length} ürün`}</div>
-                <div className="pr">
-                  {tl(b.total)}{' '}
-                  {b.savings > 0 && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.itemsTotal)}</s>}
+            {baskets.map((b) => {
+              const discounted = b.discountedPrice != null && b.discountedPrice > 0 && b.discountedPrice < b.basePrice;
+              return (
+                <div className="prod" key={b.slug} style={{ display: 'flex', flexDirection: 'column' }}>
+                  {discounted && <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{Math.round((1 - b.price / b.basePrice) * 100)} İNDİRİM</span>}
+                  <div className="ph">
+                    {b.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={b.imageUrl} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                    ) : '🧺'}
+                  </div>
+                  <div className="nm">{b.name}</div>
+                  <div className="or" style={{ minHeight: 30 }}>İçinde: {b.components.map((c) => `${c.name} ${c.qty}${c.unitLabel === 'kg' ? 'kg' : ''}`).join(' · ')}</div>
+                  <div className="pr">
+                    {tl(b.price)}{' '}
+                    {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.basePrice)}</s>}
+                  </div>
+                  <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
                 </div>
-                {b.savings > 0 && <div className="unit" style={{ color: 'var(--persimmon-d)' }}>{tl(b.savings)} tasarruf</div>}
-                <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

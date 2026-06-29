@@ -169,24 +169,28 @@ describe('Market (vitrin + sipariş)', () => {
     expect(o.body.subtotal).toBe(4000);
   });
 
-  it('hazır sepet: %10 indirimli toplam + sipariş paket fiyatını uygular', async () => {
+  it('hazır sepet ayrı ürün: kendi fiyatı + içeriği + tek satır sipariş', async () => {
     await admin
       .post('/api/v1/catalog/baskets')
-      .send({ slug: 'haftalik', name: 'Haftalık Sepet', discountPct: 10, items: [{ productSlug: 'domates', qty: 2 }, { productSlug: 'cilek', qty: 1 }] })
+      .send({ slug: 'haftalik', name: 'Haftalık Sepet', basePrice: 11000, discountedPrice: 9900, components: [{ productSlug: 'domates', qty: 2 }, { productSlug: 'cilek', qty: 1 }] })
       .expect(201);
 
     const res = await request(server).get('/api/v1/storefront/baskets').expect(200);
     const b = res.body.data.find((x: { slug: string }) => x.slug === 'haftalik');
-    expect(b.itemsTotal).toBe(13580); // 3590×2 + 6400×1
-    expect(b.total).toBe(12222); // %10 indirim
-    expect(b.savings).toBe(1358);
+    expect(b.price).toBe(9900); // kendi indirimli fiyatı (effectivePrice)
+    expect(b.components).toHaveLength(2);
 
-    // basketSlug ile sipariş → paket indirimli birim fiyat (sunucuda)
+    // sepet ayrı ürün → tek satır, kendi fiyatıyla sipariş
     const o = await request(server)
       .post('/api/v1/storefront/orders')
-      .send({ items: [{ slug: 'domates', qty: 2, basketSlug: 'haftalik' }], customer: { name: 'Veli', phone: '05551112233', address: 'Mahalle 1' } })
+      .send({ items: [{ slug: 'haftalik', qty: 1 }], customer: { name: 'Veli', phone: '05551112233', address: 'Mahalle 1' } })
       .expect(201);
-    expect(o.body.items[0].unitPrice).toBe(3231); // 3590 − %10
+    expect(o.body.items[0].unitPrice).toBe(9900);
+    expect(o.body.subtotal).toBe(9900);
+
+    // vitrin ürün grid'inde sepet GÖRÜNMEZ (ayrı bölümde)
+    const grid = await request(server).get('/api/v1/storefront/products').expect(200);
+    expect(grid.body.data.some((p: { slug: string }) => p.slug === 'haftalik')).toBe(false);
   });
 
   it('VIEWER durum güncelleyemez → 403', async () => {
