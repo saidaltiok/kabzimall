@@ -39,6 +39,10 @@ npm run start:dev
 | POST | `/intel/hal/entries` | Günlük hal fiyatı ekle (append-only) |
 | POST | `/intel/hal/bulk` | Saha Modu: çok ürünlü toplu hal kaydı |
 | GET  | `/intel/hal` `?date=` | Ürün × gün ızgarası + günlük ortalama |
+| POST/GET | `/intel/competitor-groups` | Rakip grubu oluştur / listele |
+| POST/GET | `/intel/competitors` | Rakip oluştur (grup FK) / listele |
+| POST | `/intel/competitor-prices/entries` | Rakip fiyatı ekle (append-only) |
+| GET  | `/intel/competitor-prices` `?productId=&date=` | Fiyatlar + min/max/avg/median (rakip başına en güncel) |
 | POST | `/intel/hal-purchases` | Hal alımı + ±500 g tartı mutabakatı (`reconcileHalPurchase`) |
 | GET  | `/intel/hal-purchases` `?productId=` | Kayıtlı alımları listele |
 | GET  | `/intel/hal-purchases/:id` | Tek alım |
@@ -96,6 +100,16 @@ curl -X POST http://localhost:3001/api/v1/intel/hal/bulk -H 'Content-Type: appli
 # Izgara (ürün başına günlük ortalama)
 curl "http://localhost:3001/api/v1/intel/hal?date=2026-06-29"
 # → {"date":"2026-06-29","data":[{"productId":"domates","count":2,"dailyAverage":1870,"entries":[...]}, ...]}
+```
+
+**Rakip fiyatları (grup → rakip → fiyat → aggregate):**
+
+```bash
+G=$(curl -s -X POST http://localhost:3001/api/v1/intel/competitor-groups -H 'Content-Type: application/json' -d '{"name":"Orta"}' | python -c "import sys,json;print(json.load(sys.stdin)['id'])")
+C=$(curl -s -X POST http://localhost:3001/api/v1/intel/competitors -H 'Content-Type: application/json' -d "{\"name\":\"Market A\",\"groupId\":\"$G\"}" | python -c "import sys,json;print(json.load(sys.stdin)['id'])")
+curl -X POST http://localhost:3001/api/v1/intel/competitor-prices/entries -H 'Content-Type: application/json' -d "{\"productId\":\"domates\",\"competitorId\":\"$C\",\"price\":4200}"
+curl "http://localhost:3001/api/v1/intel/competitor-prices?productId=domates"
+# → {"count":1,"min":4200,"max":4200,"average":4200,"median":4200,"entries":[...]}
 ```
 
 **Hal alım mutabakatı:**

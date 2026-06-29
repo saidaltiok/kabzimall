@@ -67,6 +67,9 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
   - `GET  /api/v1/intel/price/history` — uygulanan fiyat geçmişi (en yeni→eski).
   - `POST /api/v1/intel/hal/entries` · `POST .../hal/bulk` · `GET .../hal?date=` —
     günlük hal fiyatı (append-only) + ürün×gün ızgarası + günlük ortalama.
+  - `POST|GET /api/v1/intel/competitor-groups` · `.../competitors` ·
+    `POST .../competitor-prices/entries` · `GET .../competitor-prices?productId=` —
+    rakip tanımları + fiyat (append-only) + min/max/avg/median.
   - `POST|GET /api/v1/intel/hal-purchases` — hal alımı + ±500 g mutabakatı.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.

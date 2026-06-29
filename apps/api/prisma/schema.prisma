@@ -73,6 +73,55 @@ model HalPriceEntry {
   @@map("hal_price_entries")
 }
 
+/// Rakip grubu (Premium/Orta/İndirim/Hızlı/Lokal — Teknik doküman Bölüm 3.3).
+model CompetitorGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  competitors Competitor[]
+
+  @@unique([tenantId, name])
+  @@map("competitor_groups")
+}
+
+/// Rakip işletme.
+model Competitor {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  groupId   String   @map("group_id") @db.Uuid
+  type      String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  group  CompetitorGroup        @relation(fields: [groupId], references: [id])
+  prices CompetitorPriceEntry[]
+
+  @@index([tenantId])
+  @@map("competitors")
+}
+
+/// Rakip fiyatı girişi — append-only (zaman damgalı; geçmiş korunur).
+model CompetitorPriceEntry {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  productSlug  String   @map("product_slug")
+  competitorId String   @map("competitor_id") @db.Uuid
+  price        Int
+  source       String?
+  date         DateTime @db.Date
+  capturedBy   String?  @map("captured_by")
+  capturedAt   DateTime @default(now()) @map("captured_at") @db.Timestamptz(6)
+
+  competitor Competitor @relation(fields: [competitorId], references: [id])
+
+  @@index([tenantId, productSlug, date])
+  @@map("competitor_price_entries")
+}
+
 /// Hal alımı + ±500 g tartı mutabakatı. Yalnızca ham girdiler saklanır;
 /// efektif maliyet/risk okuma anında packages/pricing ile hesaplanır.
 model HalPurchase {

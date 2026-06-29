@@ -7,6 +7,10 @@ import { CostPoolController } from './cost-pool/cost-pool.controller';
 import { CostPoolService } from './cost-pool/cost-pool.service';
 import { HalController } from './hal/hal.controller';
 import { HalService } from './hal/hal.service';
+import { CompetitorsService } from './competitors/competitors.service';
+import { CompetitorGroupsController } from './competitors/competitor-groups.controller';
+import { CompetitorsController } from './competitors/competitors.controller';
+import { CompetitorPricesController } from './competitors/competitor-prices.controller';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
@@ -19,6 +23,8 @@ import { HalService } from './hal/hal.service';
  *   POST /intel/hal/entries     — günlük hal fiyatı (append-only)
  *   POST /intel/hal/bulk        — Saha Modu toplu hal kaydı
  *   GET  /intel/hal             — ürün × gün ızgarası + günlük ortalama
+ *        /intel/competitor-groups · /intel/competitors — rakip tanımları
+ *        /intel/competitor-prices — rakip fiyatı (append-only) + min/max/avg/median
  *        /intel/hal-purchases   — hal alımı + ±500 g tartı mutabakatı
  *        /intel/cost-pool       — havuz/dağıtımlı maliyet → birim (kg) tahsis
  */
@@ -26,9 +32,18 @@ import { HalService } from './hal/hal.service';
   controllers: [
     PriceController,
     HalController,
+    CompetitorGroupsController,
+    CompetitorsController,
+    CompetitorPricesController,
     HalPurchasesController,
     CostPoolController,
   ],
-  providers: [PriceService, HalService, HalPurchasesService, CostPoolService],
+  providers: [
+    PriceService,
+    HalService,
+    CompetitorsService,
+    HalPurchasesService,
+    CostPoolService,
+  ],
 })
 export class IntelModule {}

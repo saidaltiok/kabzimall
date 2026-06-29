@@ -1,0 +1,139 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { avg, median } from '../../pricing-engine';
+import { PrismaService } from '../../prisma/prisma.service';
+import { DEV_TENANT_ID } from '../../common/tenant';
+import { dateOnly } from '../../common/date';
+import { CreateCompetitorGroupDto } from './dto/create-competitor-group.dto';
+import { CreateCompetitorDto } from './dto/create-competitor.dto';
+import { CreateCompetitorPriceDto } from './dto/create-competitor-price.dto';
+
+export interface CompetitorPricesResult {
+  productId: string;
+  date: string;
+  count: number;
+  /** Tümü kuruş; rakip yoksa null. */
+  min: number | null;
+  max: number | null;
+  average: number | null;
+  median: number | null;
+  /** Rakip başına EN GÜNCEL fiyat (aggregate bunlar üzerinden). */
+  entries: {
+    competitorId: string;
+    competitor: string;
+    group: string;
+    price: number;
+    capturedAt: string;
+  }[];
+}
+
+@Injectable()
+export class CompetitorsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  /* ----------------------------- Gruplar ----------------------------- */
+
+  createGroup(dto: CreateCompetitorGroupDto) {
+    return this.prisma.competitorGroup.create({
+      data: { tenantId: DEV_TENANT_ID, name: dto.name, sortOrder: dto.sortOrder ?? 0 },
+    });
+  }
+
+  listGroups() {
+    return this.prisma.competitorGroup.findMany({
+      where: { tenantId: DEV_TENANT_ID },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  /* ---------------------------- Rakipler ----------------------------- */
+
+  async createCompetitor(dto: CreateCompetitorDto) {
+    const group = await this.prisma.competitorGroup
+      .findFirst({ where: { id: dto.groupId, tenantId: DEV_TENANT_ID } })
+      .catch(() => null);
+    if (!group) throw new NotFoundException(`Rakip grubu bulunamadı: ${dto.groupId}`);
+
+    return this.prisma.competitor.create({
+      data: {
+        tenantId: DEV_TENANT_ID,
+        name: dto.name,
+        groupId: dto.groupId,
+        type: dto.type ?? null,
+        isActive: dto.isActive ?? true,
+      },
+    });
+  }
+
+  async listCompetitors() {
+    const rows = await this.prisma.competitor.findMany({
+      where: { tenantId: DEV_TENANT_ID },
+      orderBy: { name: 'asc' },
+      include: { group: true },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      isActive: r.isActive,
+      group: { id: r.groupId, name: r.group.name },
+    }));
+  }
+
+  /* ------------------------- Rakip fiyatları -------------------------- */
+
+  async createPrice(dto: CreateCompetitorPriceDto) {
+    const competitor = await this.prisma.competitor
+      .findFirst({ where: { id: dto.competitorId, tenantId: DEV_TENANT_ID } })
+      .catch(() => null);
+    if (!competitor) throw new NotFoundException(`Rakip bulunamadı: ${dto.competitorId}`);
+
+    return this.prisma.competitorPriceEntry.create({
+      data: {
+        tenantId: DEV_TENANT_ID,
+        productSlug: dto.productId,
+        competitorId: dto.competitorId,
+        price: dto.price,
+        source: dto.source ?? null,
+        date: dateOnly(dto.date),
+        capturedBy: dto.capturedBy ?? null,
+      },
+    });
+  }
+
+  /**
+   * Bir ürünün belirli güne ait rakip fiyatları + min/max/avg/median.
+   * Aggregate, rakip başına EN GÜNCEL fiyat üzerinden hesaplanır (mükerrer
+   * yakalama tek rakibi iki saymasın). avg/median packages/pricing'ten.
+   */
+  async pricesFor(productId: string, dateStr?: string): Promise<CompetitorPricesResult> {
+    const date = dateOnly(dateStr);
+    const rows = await this.prisma.competitorPriceEntry.findMany({
+      where: { tenantId: DEV_TENANT_ID, productSlug: productId, date },
+      orderBy: { capturedAt: 'asc' },
+      include: { competitor: { include: { group: true } } },
+    });
+
+    // asc sırada son yazan = en güncel.
+    const latest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) latest.set(r.competitorId, r);
+    const list = [...latest.values()];
+    const prices = list.map((r) => r.price);
+
+    return {
+      productId,
+      date: date.toISOString().slice(0, 10),
+      count: list.length,
+      min: prices.length ? Math.min(...prices) : null,
+      max: prices.length ? Math.max(...prices) : null,
+      average: prices.length ? Math.round(avg(prices)) : null,
+      median: prices.length ? Math.round(median(prices)) : null,
+      entries: list.map((r) => ({
+        competitorId: r.competitorId,
+        competitor: r.competitor.name,
+        group: r.competitor.group.name,
+        price: r.price,
+        capturedAt: r.capturedAt.toISOString(),
+      })),
+    };
+  }
+}
