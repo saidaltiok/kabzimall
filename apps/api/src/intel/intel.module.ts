@@ -16,6 +16,8 @@ import {
   CostComponentsController,
   CostController,
 } from './cost-components/cost-components.controller';
+import { DashboardService } from './dashboard/dashboard.service';
+import { DashboardController } from './dashboard/dashboard.controller';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
@@ -32,6 +34,7 @@ import {
  *        /intel/competitor-prices — rakip fiyatı (append-only) + min/max/avg/median
  *   PUT  /intel/cost-components — maliyet bileşeni (scope: GLOBAL/PRODUCT)
  *   GET  /intel/cost/:productId — etkin maliyet + directCost kırılımı
+ *   GET  /intel/dashboard       — KPI + riskli ürünler + son değişiklikler
  *        /intel/hal-purchases   — hal alımı + ±500 g tartı mutabakatı
  *        /intel/cost-pool       — havuz/dağıtımlı maliyet → birim (kg) tahsis
  */
@@ -44,6 +47,7 @@ import {
     CompetitorPricesController,
     CostComponentsController,
     CostController,
+    DashboardController,
     HalPurchasesController,
     CostPoolController,
   ],
@@ -52,6 +56,7 @@ import {
     HalService,
     CompetitorsService,
     CostComponentsService,
+    DashboardService,
     HalPurchasesService,
     CostPoolService,
   ],

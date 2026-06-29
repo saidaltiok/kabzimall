@@ -55,6 +55,7 @@ gelir. Önerilen akış: maliyet (`PUT /cost-components`) → hal (`POST /hal/en
 | GET  | `/intel/competitor-prices` `?productId=&date=` | Fiyatlar + min/max/avg/median (rakip başına en güncel) |
 | PUT/GET | `/intel/cost-components` | Maliyet bileşeni upsert (scope: GLOBAL/PRODUCT) / listele |
 | GET  | `/intel/cost/:productId` `?halAvg=` | Etkin maliyet + `directCost` kırılımı |
+| GET  | `/intel/dashboard` `?date=` | KPI + riskli ürünler + son fiyat değişiklikleri |
 | POST | `/intel/hal-purchases` | Hal alımı + ±500 g tartı mutabakatı (`reconcileHalPurchase`) |
 | GET  | `/intel/hal-purchases` `?productId=` | Kayıtlı alımları listele |
 | GET  | `/intel/hal-purchases/:id` | Tek alım |

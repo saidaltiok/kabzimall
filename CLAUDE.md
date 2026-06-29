@@ -74,6 +74,8 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
     rakip tanımları + fiyat (append-only) + min/max/avg/median.
   - `PUT|GET /api/v1/intel/cost-components` · `GET .../cost/:productId?halAvg=` —
     maliyet bileşenleri (GLOBAL/PRODUCT) + etkin maliyet & directCost kırılımı.
+  - `GET /api/v1/intel/dashboard?date=` — KPI'lar (fiyatlı ürün, ort. marj,
+    zararına/düşük marj sayısı) + riskli ürünler (bayraklı) + son fiyat değişiklikleri.
   - `POST|GET /api/v1/intel/hal-purchases` — hal alımı + ±500 g mutabakatı.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.
