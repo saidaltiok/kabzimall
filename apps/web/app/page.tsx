@@ -25,7 +25,13 @@ export default function HomePage() {
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
   const { add } = useCart();
+
+  function flash(msg: string) {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 1800);
+  }
 
   useEffect(() => {
     Promise.all([
@@ -51,9 +57,11 @@ export default function HomePage() {
   }
   function addToCart(p: Product) {
     add({ slug: p.slug, name: p.name, unitPrice: effective(p), unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug) });
+    flash(`${p.name} sepete eklendi ✓`);
   }
   function addBasket(b: Basket) {
     b.items.forEach((it) => add({ slug: it.slug, name: it.name, unitPrice: it.unitPrice, unitLabel: it.unitLabel, emoji: emojiFor(it.slug) }, it.qty));
+    flash(`${b.name} sepete eklendi (${b.items.length} ürün) ✓`);
   }
 
   if (loading) return <div className="loading">Yükleniyor…</div>;
@@ -62,6 +70,7 @@ export default function HomePage() {
 
   return (
     <>
+      {toast && <div className="toast">{toast}</div>}
       <div className="promo">
         <div className="k">Taze · Yöresel</div>
         <div className="t serif">Dalından sofrana, özenle</div>
