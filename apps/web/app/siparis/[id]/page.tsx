@@ -11,7 +11,7 @@ interface OrderItem { id: string; productName: string; orderedQty: number; unitL
 interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
   deliveryDate: string | null; deliveryWindow: string | null;
-  subtotal: number; deliveryFee: number; grandTotal: number; items: OrderItem[];
+  subtotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null; items: OrderItem[];
 }
 
 const STATUS: Record<string, string> = {
@@ -50,7 +50,14 @@ export default function OrderPage() {
           <span className="muted">Ara toplam</span><span>{tl(order.subtotal)}</span>
         </div>
         <div className="ln"><span className="muted">Teslimat</span><span>{order.deliveryFee === 0 ? 'Ücretsiz' : tl(order.deliveryFee)}</span></div>
-        <div className="ln serif" style={{ fontSize: 18, fontWeight: 600 }}><span>Toplam (kapıda ödeme)</span><span>{tl(order.grandTotal)}</span></div>
+        <div className="ln serif" style={{ fontSize: 18, fontWeight: 600 }}>
+          <span>{order.finalTotal != null ? 'Tahmini toplam' : 'Toplam (kapıda ödeme)'}</span><span>{tl(order.grandTotal)}</span>
+        </div>
+        {order.finalTotal != null && (
+          <div className="ln serif" style={{ fontSize: 18, fontWeight: 600, color: 'var(--forest)' }}>
+            <span>Kesinleşen (tartı sonrası)</span><span>{tl(order.finalTotal)}</span>
+          </div>
+        )}
         {order.deliveryWindow && (
           <div className="ln" style={{ marginTop: 6 }}>
             <span className="muted">Teslimat saati</span>

@@ -134,6 +134,24 @@ describe('Market (vitrin + sipariş)', () => {
       .expect(400);
   });
 
+  it('paketleme: gerçek gramajla tutar kesinleşir (estimated→final)', async () => {
+    const o = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'domates', qty: 2 }], customer: { name: 'Zehra', phone: '05551112233', address: 'Sokak 2' } })
+      .expect(201);
+    expect(o.body.finalTotal).toBeNull();
+    const itemId = o.body.items[0].id;
+    const fee = o.body.deliveryFee;
+
+    const packed = await admin
+      .post(`/api/v1/admin/orders/${o.body.id}/pack`)
+      .send({ items: [{ itemId, pickedQty: 1.85 }] })
+      .expect(201);
+    expect(packed.body.status).toBe('READY');
+    expect(packed.body.items[0].pickedQty).toBe(1.85);
+    expect(packed.body.finalTotal).toBe(6642 + fee); // round(3590×1.85)=6642
+  });
+
   it('VIEWER durum güncelleyemez → 403', async () => {
     const viewer = authed(app, 'VIEWER');
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);

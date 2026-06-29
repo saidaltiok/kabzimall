@@ -180,6 +180,37 @@ export class MarketService {
     });
   }
 
+  /**
+   * Paketleme: tartılan gerçek gramajları işler; satır ve toplam kesinleşir
+   * (estimated → final). lineTotal packages/pricing'ten. Sipariş 'READY' olur.
+   */
+  async packOrder(id: string, items: { itemId: string; pickedQty: number }[]) {
+    const order = await this.getOrder(id);
+    const picked = new Map(items.map((i) => [i.itemId, i.pickedQty]));
+    for (const pi of items) {
+      if (!order.items.some((it) => it.id === pi.itemId)) {
+        throw new BadRequestException(`Kalem bu siparişe ait değil: ${pi.itemId}`);
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      let finalSubtotal = 0;
+      for (const it of order.items) {
+        const qty = picked.get(it.id) ?? it.pickedQty ?? it.orderedQty;
+        const lt = lineTotal(it.unitPrice, qty);
+        finalSubtotal += lt;
+        if (picked.has(it.id)) {
+          await tx.orderItem.update({ where: { id: it.id }, data: { pickedQty: picked.get(it.id)!, lineTotal: lt } });
+        }
+      }
+      return tx.order.update({
+        where: { id },
+        data: { finalTotal: finalSubtotal + order.deliveryFee, status: 'READY' },
+        include: { items: true },
+      });
+    });
+  }
+
   async updateStatus(id: string, status: string) {
     if (!ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number])) {
       throw new BadRequestException(`Geçersiz durum: ${status}`);

@@ -5,10 +5,11 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number }
+interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; unitPrice: number; lineTotal: number }
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string; addressText: string;
   status: string; subtotal: number; deliveryFee: number; grandTotal: number; note: string | null;
+  estimatedTotal: number; finalTotal: number | null;
   deliveryDate: string | null; deliveryWindow: string | null;
   createdAt: string; items: OrderItem[];
 }
@@ -28,6 +29,7 @@ export default function SiparislerPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState('');
   const [open, setOpen] = useState<string | null>(null);
+  const [picks, setPicks] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (status: string) => {
@@ -45,6 +47,24 @@ export default function SiparislerPage() {
     setError(null);
     try {
       await apiSend('PATCH', `/admin/orders/${id}/status`, { status });
+      await load(filter);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function pack(o: Order) {
+    setError(null);
+    try {
+      const items = o.items
+        .map((it) => ({ itemId: it.id, raw: picks[it.id] }))
+        .filter((x) => x.raw !== undefined && x.raw !== '')
+        .map((x) => ({ itemId: x.itemId, pickedQty: Number(x.raw!.replace(',', '.')) }));
+      if (items.length === 0) {
+        setError('En az bir kalem için tartılan miktar girin.');
+        return;
+      }
+      await apiSend('POST', `/admin/orders/${o.id}/pack`, { items });
       await load(filter);
     } catch (e) {
       setError((e as Error).message);
@@ -108,13 +128,38 @@ export default function SiparislerPage() {
                             {o.deliveryWindow && <><b>Teslimat:</b> {o.deliveryDate?.slice(0, 10)} · {o.deliveryWindow} · </>}
                             <b>Adres:</b> {o.addressText}
                             {o.note && <> · <b>Not:</b> {o.note}</>}
-                            <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-                              {o.items.map((it) => (
-                                <li key={it.id}>
-                                  {it.productName} — {it.orderedQty} {it.unitLabel ?? ''} → {tl(it.lineTotal)}
-                                </li>
-                              ))}
-                            </ul>
+                            <table style={{ marginTop: 8, background: '#fff', borderRadius: 10 }}>
+                              <thead>
+                                <tr>
+                                  <th>Ürün</th><th className="num">İstenen</th>
+                                  <th className="num">Tartılan</th><th className="num">Satır</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {o.items.map((it) => (
+                                  <tr key={it.id}>
+                                    <td>{it.productName}</td>
+                                    <td className="num">{it.orderedQty} {it.unitLabel ?? ''}</td>
+                                    <td className="num">
+                                      <input
+                                        className="cell" style={{ width: 70 }}
+                                        placeholder={String(it.pickedQty ?? it.orderedQty)}
+                                        value={picks[it.id] ?? ''}
+                                        onChange={(e) => setPicks((s) => ({ ...s, [it.id]: e.target.value }))}
+                                      />
+                                    </td>
+                                    <td className="num savecell">{tl(it.lineTotal)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
+                              <button className="btn" onClick={() => pack(o)}>Paketle (tutarı kesinleştir)</button>
+                              <span className="muted" style={{ fontSize: 12 }}>
+                                Tahmini: <b>{tl(o.estimatedTotal)}</b>
+                                {o.finalTotal != null && <> · Kesinleşen: <b style={{ color: 'var(--forest)' }}>{tl(o.finalTotal)}</b></>}
+                              </span>
+                            </div>
                           </div>
                         </td>
                       </tr>

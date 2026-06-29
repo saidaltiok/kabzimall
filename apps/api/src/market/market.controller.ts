@@ -4,6 +4,7 @@ import { Public, Roles } from '../auth/decorators';
 import { CATALOG_WRITERS } from '../auth/auth.constants';
 import { MarketService } from './market.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { PackOrderDto } from './dto/pack-order.dto';
 
 @ApiTags('market: vitrin (public)')
 @Public()
@@ -77,5 +78,13 @@ export class AdminOrdersController {
   @ApiBody({ schema: { example: { status: 'PREPARING' } } })
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.service.updateStatus(id, status);
+  }
+
+  /** POST /admin/orders/:id/pack — gerçek gramajları işle, tutarı kesinleştir. */
+  @Post(':id/pack')
+  @Roles(...CATALOG_WRITERS)
+  @ApiBody({ schema: { example: { items: [{ itemId: '<kalem-uuid>', pickedQty: 1.85 }] } } })
+  pack(@Param('id') id: string, @Body() dto: PackOrderDto) {
+    return this.service.packOrder(id, dto.items);
   }
 }

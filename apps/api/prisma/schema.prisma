@@ -78,8 +78,10 @@ model Order {
   subtotal       Int
   deliveryFee    Int      @map("delivery_fee")
   grandTotal     Int      @map("grand_total")
-  /// Tartılı ürünlerde ön provizyon tutarı (Faz 1: grandTotal ile aynı).
+  /// Tartılı ürünlerde ön provizyon tutarı (sipariş anı tahmini).
   estimatedTotal Int      @map("estimated_total")
+  /// Paketleme sonrası gerçek gramajla kesinleşen tutar (henüz paketlenmediyse null).
+  finalTotal     Int?     @map("final_total")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   items OrderItem[]
@@ -97,6 +99,8 @@ model OrderItem {
   unitLabel   String? @map("unit_label")
   unitPrice   Int     @map("unit_price")
   orderedQty  Float   @map("ordered_qty")
+  /// Paketlemede tartılan gerçek miktar (girilene dek null).
+  pickedQty   Float?  @map("picked_qty")
   lineTotal   Int     @map("line_total")
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
