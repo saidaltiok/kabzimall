@@ -45,6 +45,7 @@ gelir. Önerilen akış: maliyet (`PUT /cost-components`) → hal (`POST /hal/en
 | POST | `/intel/price/suggest-product` | **Sadece `productId`** ile öneri (maliyet+hal+rakip DB'den) |
 | POST | `/intel/price/resolve-product` | `productId` ile hiyerarşik çözüm (girdiler DB'den) |
 | POST | `/intel/price/apply` | Fiyatı `base_price` olarak yayınla + `price_history`'e yaz |
+| POST | `/intel/price/bulk-apply` | Çok ürüne strateji uygula — önizleme (commit ile yaz) |
 | GET  | `/intel/price/history` `?productId=` | Uygulanan fiyat geçmişi (append-only) |
 | POST | `/intel/hal/entries` | Günlük hal fiyatı ekle (append-only) |
 | POST | `/intel/hal/bulk` | Saha Modu: çok ürünlü toplu hal kaydı |

@@ -6,6 +6,7 @@ import { SuggestPriceDto } from './dto/suggest-price.dto';
 import { ApplyPriceDto } from './dto/apply-price.dto';
 import { SuggestProductDto } from './dto/suggest-product.dto';
 import { ResolveProductDto } from './dto/resolve-product.dto';
+import { BulkApplyDto } from './dto/bulk-apply.dto';
 
 // Swagger "Try it out" için hazır örnek gövdeler (kuruş).
 const COST_EXAMPLE = {
@@ -76,6 +77,21 @@ export class PriceController {
   @ApiBody({ schema: { example: { productId: 'domates', price: 3590, strategy: 'MARGIN', netMargin: 0.29, reason: 'İlk yayın' } } })
   apply(@Body() dto: ApplyPriceDto) {
     return this.priceService.apply(dto);
+  }
+
+  /**
+   * POST /api/v1/intel/price/bulk-apply
+   * Birçok ürüne stratejiyi uygula. Varsayılan önizleme; commit=true ile yaz.
+   */
+  @Post('bulk-apply')
+  @HttpCode(200)
+  @ApiBody({
+    schema: {
+      example: { productIds: ['domates', 'patates'], strategy: 'MARGIN', params: { targetMargin: 0.3 }, commit: false },
+    },
+  })
+  bulkApply(@Body() dto: BulkApplyDto) {
+    return this.priceService.bulkApply(dto);
   }
 
   /** GET /api/v1/intel/price/history?productId= */

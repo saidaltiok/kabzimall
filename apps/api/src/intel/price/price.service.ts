@@ -18,6 +18,7 @@ import { SuggestPriceDto } from './dto/suggest-price.dto';
 import { ApplyPriceDto } from './dto/apply-price.dto';
 import { SuggestProductDto } from './dto/suggest-product.dto';
 import { ResolveProductDto } from './dto/resolve-product.dto';
+import { BulkApplyDto } from './dto/bulk-apply.dto';
 
 /** productId ile öneride DB'den toplanan girdilerin özeti (panel gösterimi). */
 interface AssembledInputs {
@@ -167,6 +168,63 @@ export class PriceService {
     } catch (e) {
       throw new BadRequestException((e as Error).message);
     }
+  }
+
+  /**
+   * Toplu öneri/uygulama. Her ürün için girdiler DB'den toplanır, strateji
+   * uygulanır. Varsayılan önizleme; commit=true ise base_price + price_history
+   * yazılır. Maliyet/hal eksik ürün batch'i bozmaz → "skipped".
+   */
+  async bulkApply(dto: BulkApplyDto) {
+    const results: Array<Record<string, unknown>> = [];
+
+    for (const slug of dto.productIds) {
+      let assembled: Awaited<ReturnType<PriceService['assemble']>>;
+      try {
+        assembled = await this.assemble(slug, undefined, dto.date);
+      } catch (e) {
+        results.push({ productId: slug, skipped: true, reason: (e as Error).message });
+        continue;
+      }
+
+      const sug = suggestPrice(assembled.cost, assembled.competitors, dto.strategy, dto.params ?? {});
+      const current = await this.prisma.product.findUnique({
+        where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug } },
+        select: { basePrice: true },
+      });
+
+      let applied = false;
+      if (dto.commit) {
+        await this.apply({
+          productId: slug,
+          price: sug.price,
+          strategy: sug.strategy,
+          netMargin: sug.netMargin,
+          reason: 'Toplu güncelleme',
+        });
+        applied = true;
+      }
+
+      results.push({
+        productId: slug,
+        currentPrice: current?.basePrice ?? null,
+        suggestedPrice: sug.price,
+        netMargin: sug.netMargin,
+        competitionIndex: sug.competitionIndex,
+        strategy: sug.strategy,
+        floored: sug.floored,
+        belowCost: sug.belowCost,
+        applied,
+      });
+    }
+
+    return {
+      committed: !!dto.commit,
+      total: dto.productIds.length,
+      applied: results.filter((r) => r.applied).length,
+      skipped: results.filter((r) => r.skipped).length,
+      results,
+    };
   }
 
   /** cost-components + günlük hal ort. + rakipleri motor girdisine dönüştürür. */

@@ -76,6 +76,8 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
     maliyet bileşenleri (GLOBAL/PRODUCT) + etkin maliyet & directCost kırılımı.
   - `GET /api/v1/intel/dashboard?date=` — KPI'lar (fiyatlı ürün, ort. marj,
     zararına/düşük marj sayısı) + riskli ürünler (bayraklı) + son fiyat değişiklikleri.
+  - `POST /api/v1/intel/price/bulk-apply` — çok ürüne strateji uygula; varsayılan
+    önizleme, `commit:true` ile base_price + price_history yazılır.
   - `POST|GET /api/v1/intel/hal-purchases` — hal alımı + ±500 g mutabakatı.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.
@@ -124,11 +126,16 @@ npm test                                             # Jest e2e (DB açık olmal
 2. ✅ **PostgreSQL kalıcı katman kuruldu:** Prisma + PostGIS (Docker). `Map` store'lar
    gerçek tablolarla değişti (`products`, `price_history`, `hal_purchases`,
    `cost_pool_entries`); `tenant_id` (DEV sabiti). **RLS hâlâ açık** — auth ile gelecek.
-3. **Auth & roller:** JWT guard + policy (fiyat yöneticisi+ — Teknik doküman Bölüm 7);
-   `apply` sonrası `changedBy` token'dan çözülecek + Postgres RLS satır izolasyonu.
-4. ✅ **Test altyapısı kuruldu:** `apps/api` Jest + supertest e2e (18 test, tüm uçlar).
-   `npm test` ile çalışır; yeni uçlar buraya test ekleyerek gelir.
-5. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).
+3. ✅ **Intelligence API yüzeyi (Bölüm 5.5) büyük ölçüde tamam:** hal (günlük +
+   ızgara), rakipler (grup/rakip/fiyat + min/max/avg/median), maliyet bileşenleri
+   + `cost/:productId`, `suggest-product`/`resolve-product` (productId ile öneri),
+   `bulk-apply` (önizlemeli toplu), `dashboard` (KPI + riskli ürünler).
+4. ✅ **Test altyapısı:** `apps/api` Jest + supertest e2e (52 test). **Swagger** `/api/docs`.
+5. **Auth & roller (SIRADAKİ):** JWT guard + policy (fiyat yöneticisi+ — Bölüm 7);
+   `changedBy` token'dan + gerçek `tenant_id` + Postgres RLS satır izolasyonu.
+6. **Admin panel (apps/admin, Next.js):** çalışan Intelligence API'ye bağlı gerçek UI
+   (prototip: `KabziMall_Panel_Prototip.html`).
+7. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).
 
 ## Açık kararlar (kod dışı)
 
