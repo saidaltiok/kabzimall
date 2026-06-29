@@ -65,6 +65,8 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
   - `POST /api/v1/intel/price/suggest` — tek strateji ile öneri (fallback yok).
   - `POST /api/v1/intel/price/apply` — `base_price` yayınla + `price_history` (Bölüm 6.3).
   - `GET  /api/v1/intel/price/history` — uygulanan fiyat geçmişi (en yeni→eski).
+  - `POST /api/v1/intel/hal/entries` · `POST .../hal/bulk` · `GET .../hal?date=` —
+    günlük hal fiyatı (append-only) + ürün×gün ızgarası + günlük ortalama.
   - `POST|GET /api/v1/intel/hal-purchases` — hal alımı + ±500 g mutabakatı.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.

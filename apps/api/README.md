@@ -36,6 +36,9 @@ npm run start:dev
 | POST | `/intel/price/suggest` | Tek strateji ile öneri (`suggestPrice`) — fallback yok |
 | POST | `/intel/price/apply` | Fiyatı `base_price` olarak yayınla + `price_history`'e yaz |
 | GET  | `/intel/price/history` `?productId=` | Uygulanan fiyat geçmişi (append-only) |
+| POST | `/intel/hal/entries` | Günlük hal fiyatı ekle (append-only) |
+| POST | `/intel/hal/bulk` | Saha Modu: çok ürünlü toplu hal kaydı |
+| GET  | `/intel/hal` `?date=` | Ürün × gün ızgarası + günlük ortalama |
 | POST | `/intel/hal-purchases` | Hal alımı + ±500 g tartı mutabakatı (`reconcileHalPurchase`) |
 | GET  | `/intel/hal-purchases` `?productId=` | Kayıtlı alımları listele |
 | GET  | `/intel/hal-purchases/:id` | Tek alım |
@@ -75,6 +78,24 @@ curl -X POST http://localhost:3001/api/v1/intel/price/apply \
 
 # 3) Geçmiş (en yeni → en eski)
 curl "http://localhost:3001/api/v1/intel/price/history?productId=domates"
+```
+
+**Günlük hal fiyatı gir → ızgara + günlük ortalama:**
+
+```bash
+# Aynı gün iki giriş (append-only)
+curl -X POST http://localhost:3001/api/v1/intel/hal/entries -H 'Content-Type: application/json' \
+  -d '{"productId":"domates","price":1850,"date":"2026-06-29","source":"MANUAL"}'
+curl -X POST http://localhost:3001/api/v1/intel/hal/entries -H 'Content-Type: application/json' \
+  -d '{"productId":"domates","price":1890,"date":"2026-06-29"}'
+
+# Saha Modu — toplu
+curl -X POST http://localhost:3001/api/v1/intel/hal/bulk -H 'Content-Type: application/json' \
+  -d '{"date":"2026-06-29","entries":[{"productId":"salatalik","price":1200},{"productId":"biber","price":2400}]}'
+
+# Izgara (ürün başına günlük ortalama)
+curl "http://localhost:3001/api/v1/intel/hal?date=2026-06-29"
+# → {"date":"2026-06-29","data":[{"productId":"domates","count":2,"dailyAverage":1870,"entries":[...]}, ...]}
 ```
 
 **Hal alım mutabakatı:**

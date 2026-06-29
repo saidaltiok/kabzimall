@@ -37,6 +37,7 @@ export async function resetDb(app: INestApplication): Promise<void> {
   const prisma = app.get(PrismaService);
   await prisma.priceHistory.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.halPriceEntry.deleteMany();
   await prisma.halPurchase.deleteMany();
   await prisma.costPool.deleteMany();
 }

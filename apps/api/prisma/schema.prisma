@@ -49,6 +49,30 @@ model PriceHistory {
   @@map("price_history")
 }
 
+/// Günlük hal fiyatı girişi — append-only (her giriş yeni satır, zaman damgalı).
+/// Günlük ortalama bu satırlardan hesaplanır; geçmiş asla üzerine yazılmaz.
+/// v1.1: hal günde 1 kez yayımlanır → time_slot nullable.
+model HalPriceEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  productSlug String   @map("product_slug")
+  /// Fiyat (kuruş/birim).
+  price       Int
+  unit        String?
+  /// Hangi güne ait (günlük liste).
+  date        DateTime @db.Date
+  /// Opsiyonel slot (v1.1 sonrası genelde null).
+  timeSlot    String?  @map("time_slot")
+  /// Kaynak: MANUAL | AUTO | kaynak adı.
+  source      String?
+  capturedBy  String?  @map("captured_by")
+  capturedAt  DateTime @default(now()) @map("captured_at") @db.Timestamptz(6)
+
+  @@index([tenantId, date])
+  @@index([tenantId, productSlug, date])
+  @@map("hal_price_entries")
+}
+
 /// Hal alımı + ±500 g tartı mutabakatı. Yalnızca ham girdiler saklanır;
 /// efektif maliyet/risk okuma anında packages/pricing ile hesaplanır.
 model HalPurchase {
