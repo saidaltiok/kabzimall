@@ -4,6 +4,7 @@ import { Roles } from '../auth/decorators';
 import { CATALOG_WRITERS } from '../auth/auth.constants';
 import { CatalogService } from './catalog.service';
 import { CreateCategoryDto, CreateProductDto, UpdateProductDto } from './dto/product.dto';
+import { CreateBasketDto } from './dto/basket.dto';
 
 @ApiTags('katalog')
 @Controller('catalog/categories')
@@ -63,5 +64,29 @@ export class ProductsController {
   @Roles(...CATALOG_WRITERS)
   remove(@Param('id') id: string) {
     return this.service.removeProduct(id);
+  }
+}
+
+@ApiTags('katalog')
+@Controller('catalog/baskets')
+export class BasketsController {
+  constructor(private readonly service: CatalogService) {}
+
+  @Get()
+  async list() {
+    const data = await this.service.listBaskets();
+    return { data, meta: { total: data.length } };
+  }
+
+  @Post()
+  @Roles(...CATALOG_WRITERS)
+  create(@Body() dto: CreateBasketDto) {
+    return this.service.createBasket(dto);
+  }
+
+  @Delete(':id')
+  @Roles(...CATALOG_WRITERS)
+  remove(@Param('id') id: string) {
+    return this.service.removeBasket(id);
   }
 }

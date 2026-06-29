@@ -41,6 +41,8 @@ export async function resetDb(app: INestApplication): Promise<void> {
   const prisma = app.get(PrismaService);
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.basketItem.deleteMany();
+  await prisma.basketTemplate.deleteMany();
   await prisma.priceHistory.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();

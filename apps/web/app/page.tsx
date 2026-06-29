@@ -12,12 +12,15 @@ interface Product {
   category: { slug: string; name: string } | null;
 }
 interface Category { slug: string; name: string }
+interface BasketItemView { slug: string; name: string; unitLabel: string | null; qty: number; unitPrice: number }
+interface Basket { slug: string; name: string; description: string | null; items: BasketItemView[]; total: number }
 
 const CAT_ICON: Record<string, string> = { meyve: '🍑', sebze: '🥬', yag: '🫒', kahvalti: '🧀', yoresel: '🏺' };
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [baskets, setBaskets] = useState<Basket[]>([]);
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +31,9 @@ export default function HomePage() {
     Promise.all([
       apiGet<{ data: Product[] }>('/storefront/products'),
       apiGet<{ data: Category[] }>('/storefront/categories'),
+      apiGet<{ data: Basket[] }>('/storefront/baskets'),
     ])
-      .then(([p, c]) => { setProducts(p.data); setCategories(c.data); })
+      .then(([p, c, b]) => { setProducts(p.data); setCategories(c.data); setBaskets(b.data); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -47,6 +51,9 @@ export default function HomePage() {
   }
   function addToCart(p: Product) {
     add({ slug: p.slug, name: p.name, unitPrice: effective(p), unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug) });
+  }
+  function addBasket(b: Basket) {
+    b.items.forEach((it) => add({ slug: it.slug, name: it.name, unitPrice: it.unitPrice, unitLabel: it.unitLabel, emoji: emojiFor(it.slug) }, it.qty));
   }
 
   if (loading) return <div className="loading">Yükleniyor…</div>;
@@ -72,6 +79,23 @@ export default function HomePage() {
           </button>
         ))}
       </div>
+
+      {cat === 'all' && !q && baskets.length > 0 && (
+        <>
+          <div className="sectit"><h2 className="serif">Hazır sepetler</h2></div>
+          <div className="grid">
+            {baskets.map((b) => (
+              <div className="prod" key={b.slug} style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="ph" style={{ fontSize: 40 }}>🧺</div>
+                <div className="nm">{b.name}</div>
+                <div className="or">{b.description ?? `${b.items.length} ürün`}</div>
+                <div className="pr">{tl(b.total)}</div>
+                <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <input className="search" placeholder="🔍 Domates, çilek, muz…" value={q} onChange={(e) => setQ(e.target.value)} />
 

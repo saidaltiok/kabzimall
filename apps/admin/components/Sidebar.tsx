@@ -19,6 +19,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
     label: 'Operasyon',
     links: [
       { href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' },
+      { href: '/sepetler', icon: '🧺', label: 'Hazır Sepetler' },
       { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
     ],
   },

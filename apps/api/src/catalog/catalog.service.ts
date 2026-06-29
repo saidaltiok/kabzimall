@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
 import { CreateCategoryDto, CreateProductDto, UpdateProductDto } from './dto/product.dto';
+import { CreateBasketDto } from './dto/basket.dto';
 
 @Injectable()
 export class CatalogService {
@@ -104,6 +105,49 @@ export class CatalogService {
     } catch {
       throw new ConflictException('Bu ürünün fiyat geçmişi var; silmek yerine pasifleştirin (isActive=false).');
     }
+  }
+
+  /* ---------------------------- Hazır sepetler ------------------------ */
+
+  async createBasket(dto: CreateBasketDto) {
+    const slugs = [...new Set(dto.items.map((i) => i.productSlug))];
+    const products = await this.prisma.product.findMany({ where: { tenantId: DEV_TENANT_ID, slug: { in: slugs } } });
+    const bySlug = new Map(products.map((p) => [p.slug, p]));
+    const items = dto.items.map((i) => {
+      const p = bySlug.get(i.productSlug);
+      if (!p) throw new BadRequestException(`Ürün bulunamadı: ${i.productSlug}`);
+      return { productId: p.id, qty: i.qty };
+    });
+    try {
+      return await this.prisma.basketTemplate.create({
+        data: {
+          tenantId: DEV_TENANT_ID,
+          slug: dto.slug,
+          name: dto.name,
+          description: dto.description ?? null,
+          imageUrl: dto.imageUrl ?? null,
+          items: { create: items },
+        },
+        include: { items: { include: { product: { select: { slug: true, name: true } } } } },
+      });
+    } catch (e) {
+      throw this.mapDbError(e, 'Sepet');
+    }
+  }
+
+  listBaskets() {
+    return this.prisma.basketTemplate.findMany({
+      where: { tenantId: DEV_TENANT_ID },
+      orderBy: { name: 'asc' },
+      include: { items: { include: { product: { select: { slug: true, name: true } } } } },
+    });
+  }
+
+  async removeBasket(id: string) {
+    const b = await this.prisma.basketTemplate.findFirst({ where: { id, tenantId: DEV_TENANT_ID } }).catch(() => null);
+    if (!b) throw new NotFoundException(`Sepet bulunamadı: ${id}`);
+    await this.prisma.basketTemplate.delete({ where: { id } });
+    return { deleted: true };
   }
 
   /* ------------------------------ Yardımcı ---------------------------- */

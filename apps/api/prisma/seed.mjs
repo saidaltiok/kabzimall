@@ -45,7 +45,23 @@ async function main() {
     });
   }
 
-  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} ürün, GLOBAL maliyet.`);
+  // Hazır sepet (yoksa)
+  const hasBasket = await prisma.basketTemplate.findFirst({ where: { tenantId: T, slug: 'haftalik-sebze' } });
+  if (!hasBasket) {
+    const dom = await prisma.product.findFirst({ where: { tenantId: T, slug: 'domates' } });
+    const sal = await prisma.product.findFirst({ where: { tenantId: T, slug: 'salatalik' } });
+    if (dom && sal) {
+      await prisma.basketTemplate.create({
+        data: {
+          tenantId: T, slug: 'haftalik-sebze', name: 'Haftalık Sebze Sepeti',
+          description: '4 kişilik · domates + salatalık',
+          items: { create: [{ productId: dom.id, qty: 2 }, { productId: sal.id, qty: 3 }] },
+        },
+      });
+    }
+  }
+
+  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} ürün, 1 hazır sepet, GLOBAL maliyet.`);
 }
 
 main().finally(() => prisma.$disconnect());

@@ -169,6 +169,18 @@ describe('Market (vitrin + sipariş)', () => {
     expect(o.body.subtotal).toBe(4000);
   });
 
+  it('hazır sepet: oluştur (admin) + storefront fiyatlı döner (public)', async () => {
+    await admin
+      .post('/api/v1/catalog/baskets')
+      .send({ slug: 'haftalik', name: 'Haftalık Sepet', items: [{ productSlug: 'domates', qty: 2 }, { productSlug: 'cilek', qty: 1 }] })
+      .expect(201);
+
+    const res = await request(server).get('/api/v1/storefront/baskets').expect(200);
+    const b = res.body.data.find((x: { slug: string }) => x.slug === 'haftalik');
+    expect(b.items).toHaveLength(2);
+    expect(b.total).toBe(13580); // 3590×2 + 6400×1
+  });
+
   it('VIEWER durum güncelleyemez → 403', async () => {
     const viewer = authed(app, 'VIEWER');
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);

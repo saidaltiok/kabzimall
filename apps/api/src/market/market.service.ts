@@ -17,6 +17,7 @@ const PUBLIC_PRODUCT_SELECT = {
   stockQty: true,
   basePrice: true,
   discountedPrice: true,
+  isActive: true,
   originRegion: true,
   isFeatured: true,
   isFreshDaily: true,
@@ -70,6 +71,38 @@ export class MarketService {
     });
     if (!p) throw new NotFoundException(`Ürün bulunamadı: ${slug}`);
     return p;
+  }
+
+  /** Yayındaki hazır sepetler — ürünler çözülmüş, geçerli fiyatla toplam. */
+  async listBaskets() {
+    const baskets = await this.prisma.basketTemplate.findMany({
+      where: { tenantId: DEV_TENANT_ID, isActive: true },
+      orderBy: { name: 'asc' },
+      include: { items: { include: { product: { select: PUBLIC_PRODUCT_SELECT } } } },
+    });
+    return baskets.map((b) => {
+      const items = b.items
+        .filter((it) => it.product.isActive && it.product.basePrice != null)
+        .map((it) => {
+          const unitPrice = effectivePrice(it.product.basePrice!, it.product.discountedPrice);
+          return {
+            slug: it.product.slug,
+            name: it.product.name,
+            unitLabel: it.product.unitLabel,
+            qty: it.qty,
+            unitPrice,
+            lineTotal: lineTotal(unitPrice, it.qty),
+          };
+        });
+      return {
+        slug: b.slug,
+        name: b.name,
+        description: b.description,
+        imageUrl: b.imageUrl,
+        items,
+        total: items.reduce((s, x) => s + x.lineTotal, 0),
+      };
+    });
   }
 
   /* --------------------------- Teslimat slotu --------------------------- */

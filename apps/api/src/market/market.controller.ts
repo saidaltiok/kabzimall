@@ -38,6 +38,13 @@ export class StorefrontController {
     return { data: this.service.availableSlots() };
   }
 
+  /** GET /storefront/baskets — yayındaki hazır sepetler (fiyatlı). */
+  @Get('baskets')
+  async baskets() {
+    const data = await this.service.listBaskets();
+    return { data };
+  }
+
   /** POST /storefront/orders — misafir sipariş (fiyatlar sunucuda hesaplanır). */
   @Post('orders')
   @ApiBody({
