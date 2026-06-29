@@ -185,4 +185,18 @@ describe('Market (vitrin + sipariş)', () => {
     const viewer = authed(app, 'VIEWER');
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);
   });
+
+  it('teslimat bölgesi: hizmet ilçesi varsa sipariş kontrol edilir', async () => {
+    await admin.post('/api/v1/admin/delivery-zones').send({ name: 'Kadıköy' }).expect(201);
+    const z = await request(server).get('/api/v1/storefront/zones').expect(200);
+    expect(z.body.data.some((x: { name: string }) => x.name === 'Kadıköy')).toBe(true);
+
+    const cust = (district?: string) => ({ name: 'Veli', phone: '05551112233', address: 'Mahalle 1', district });
+    // bölge dışı → 400
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 1 }], customer: cust('Beşiktaş') }).expect(400);
+    // ilçe yok → 400
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 1 }], customer: cust() }).expect(400);
+    // bölge içi → 201
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 1 }], customer: cust('Kadıköy') }).expect(201);
+  });
 });

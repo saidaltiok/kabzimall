@@ -13,6 +13,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Teslimat bölgesi (Faz 1: ilçe adı listesi). İleride PostGIS poligon (v1.1 §3).
+model DeliveryZone {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, name])
+  @@map("delivery_zones")
+}
+
 /// Hazır sepet şablonu (v1.1 §8). Ürünlerin (slug+miktar) demeti; müşteri tek
 /// tıkla hepsini sepete ekler. (Parametrik kişi-sayısı ölçekleme: ileride.)
 model BasketTemplate {
@@ -103,6 +115,7 @@ model Order {
   customerName   String   @map("customer_name")
   customerPhone  String   @map("customer_phone")
   addressText    String   @map("address_text")
+  district       String?
   note           String?
   status         String   @default("CONFIRMED")
   paymentMethod  String   @default("COD") @map("payment_method")

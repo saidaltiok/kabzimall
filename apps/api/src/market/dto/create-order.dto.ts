@@ -41,6 +41,10 @@ export class CustomerInput {
 
   @IsString() @MinLength(5)
   address!: string;
+
+  /** Teslimat ilçesi (hizmet bölgesi varsa zorunlu/doğrulanır). */
+  @IsOptional() @IsString()
+  district?: string;
 }
 
 export class CreateOrderDto {

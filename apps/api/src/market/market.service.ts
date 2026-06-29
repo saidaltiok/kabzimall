@@ -73,6 +73,31 @@ export class MarketService {
     return p;
   }
 
+  /* --------------------------- Teslimat bölgesi -------------------------- */
+
+  listActiveZones() {
+    return this.prisma.deliveryZone.findMany({ where: { tenantId: DEV_TENANT_ID, isActive: true }, orderBy: { name: 'asc' }, select: { name: true } });
+  }
+
+  adminListZones() {
+    return this.prisma.deliveryZone.findMany({ where: { tenantId: DEV_TENANT_ID }, orderBy: { name: 'asc' } });
+  }
+
+  async createZone(name: string) {
+    try {
+      return await this.prisma.deliveryZone.create({ data: { tenantId: DEV_TENANT_ID, name: name.trim() } });
+    } catch {
+      throw new BadRequestException('Bu ilçe zaten ekli');
+    }
+  }
+
+  async removeZone(id: string) {
+    const z = await this.prisma.deliveryZone.findFirst({ where: { id, tenantId: DEV_TENANT_ID } }).catch(() => null);
+    if (!z) throw new NotFoundException(`Bölge bulunamadı: ${id}`);
+    await this.prisma.deliveryZone.delete({ where: { id } });
+    return { deleted: true };
+  }
+
   /** Yayındaki hazır sepetler — ürünler çözülmüş, geçerli fiyatla toplam. */
   async listBaskets() {
     const baskets = await this.prisma.basketTemplate.findMany({
@@ -151,6 +176,16 @@ export class MarketService {
       };
     });
 
+    // Bölge doğrulama: hizmet ilçesi tanımlıysa, sipariş ilçesi listede olmalı.
+    const zones = await this.prisma.deliveryZone.findMany({ where: { tenantId: DEV_TENANT_ID, isActive: true }, select: { name: true } });
+    if (zones.length > 0) {
+      const d = dto.customer.district?.trim();
+      if (!d) throw new BadRequestException('Teslimat ilçesi gerekli');
+      if (!zones.some((z) => z.name.toLowerCase() === d.toLowerCase())) {
+        throw new BadRequestException(`Bu ilçeye teslimat yapılmıyor: ${d}`);
+      }
+    }
+
     // Slot doğrulama: yalnızca sunulan günlerden/pencerelerden biri kabul edilir.
     let deliveryDate: Date | null = null;
     let deliveryWindow: string | null = null;
@@ -181,6 +216,7 @@ export class MarketService {
           customerName: dto.customer.name,
           customerPhone: dto.customer.phone,
           addressText: dto.customer.address,
+          district: dto.customer.district ?? null,
           note: dto.note ?? null,
           status: 'CONFIRMED',
           paymentMethod: dto.paymentMethod ?? 'COD',

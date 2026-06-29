@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Public, Roles } from '../auth/decorators';
 import { CATALOG_WRITERS } from '../auth/auth.constants';
@@ -42,6 +42,13 @@ export class StorefrontController {
   @Get('baskets')
   async baskets() {
     const data = await this.service.listBaskets();
+    return { data };
+  }
+
+  /** GET /storefront/zones — hizmet verilen ilçeler (boşsa kısıt yok). */
+  @Get('zones')
+  async zones() {
+    const data = await this.service.listActiveZones();
     return { data };
   }
 
@@ -93,5 +100,31 @@ export class AdminOrdersController {
   @ApiBody({ schema: { example: { items: [{ itemId: '<kalem-uuid>', pickedQty: 1.85 }] } } })
   pack(@Param('id') id: string, @Body() dto: PackOrderDto) {
     return this.service.packOrder(id, dto.items);
+  }
+}
+
+@ApiTags('market: sipariş (admin)')
+@Controller('admin/delivery-zones')
+export class DeliveryZonesController {
+  constructor(private readonly service: MarketService) {}
+
+  @Get()
+  async list() {
+    const data = await this.service.adminListZones();
+    return { data, meta: { total: data.length } };
+  }
+
+  @Post()
+  @Roles(...CATALOG_WRITERS)
+  @ApiBody({ schema: { example: { name: 'Kadıköy' } } })
+  create(@Body('name') name: string) {
+    if (!name || name.trim().length < 2) throw new BadRequestException('İlçe adı gerekli');
+    return this.service.createZone(name);
+  }
+
+  @Delete(':id')
+  @Roles(...CATALOG_WRITERS)
+  remove(@Param('id') id: string) {
+    return this.service.removeZone(id);
   }
 }

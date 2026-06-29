@@ -19,11 +19,14 @@ export default function CheckoutPage() {
   const [note, setNote] = useState('');
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotKey, setSlotKey] = useState('');
+  const [zones, setZones] = useState<string[]>([]);
+  const [district, setDistrict] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<{ data: Slot[] }>('/storefront/slots').then((r) => setSlots(r.data)).catch(() => {});
+    apiGet<{ data: { name: string }[] }>('/storefront/zones').then((r) => setZones(r.data.map((z) => z.name))).catch(() => {});
   }, []);
 
   if (items.length === 0)
@@ -42,7 +45,7 @@ export default function CheckoutPage() {
       const slot = slots.find((s) => `${s.date}|${s.window}` === slotKey);
       const order = await apiPost<{ id: string; code: string }>('/storefront/orders', {
         items: items.map((i) => ({ slug: i.slug, qty: i.qty })),
-        customer: { name, phone, address },
+        customer: { name, phone, address, district: district || undefined },
         slot: slot ? { date: slot.date, window: slot.window } : undefined,
         note: note || undefined,
       });
@@ -56,7 +59,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey;
+  const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district);
 
   return (
     <>
@@ -67,7 +70,16 @@ export default function CheckoutPage() {
             <h3>Teslimat bilgileri</h3>
             <div className="field"><label>Ad Soyad</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ayşe Yılmaz" /></div>
             <div className="field"><label>Telefon</label><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0555 555 55 55" /></div>
-            <div className="field"><label>Adres</label><textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Mahalle, cadde, no, daire — Kadıköy" /></div>
+            {zones.length > 0 && (
+              <div className="field">
+                <label>İlçe (teslimat bölgesi)</label>
+                <select value={district} onChange={(e) => setDistrict(e.target.value)}>
+                  <option value="">Seçiniz…</option>
+                  {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="field"><label>Adres</label><textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Mahalle, cadde, no, daire" /></div>
             <div className="field"><label>Sipariş notu (opsiyonel)</label><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Zili çalmayın" /></div>
           </div>
           <div className="block">
