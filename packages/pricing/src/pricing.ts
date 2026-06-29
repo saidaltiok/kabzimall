@@ -251,6 +251,35 @@ export function weightPrecisionRiskPct(recordedKg: number, precisionKg = 0.5): n
   return precisionKg / recordedKg;
 }
 
+/* ----------------------- Sipariş para hesapları ----------------------- */
+
+/** Satır toplamı: birim fiyat × miktar (tartılı üründe miktar ondalık kg). */
+export function lineTotal(unitPrice: Kurus, qty: number): Kurus {
+  return Math.round(unitPrice * qty);
+}
+
+export interface DeliveryTier {
+  /** Bu eşik ve üstündeki sepet tutarına uygulanan ücret. */
+  minSubtotal: Kurus;
+  fee: Kurus;
+}
+
+/** Kademeli teslimat ücreti (v1.1 §7): eşik üstü ücretsiz. Tümü kuruş. */
+export const DEFAULT_DELIVERY_TIERS: DeliveryTier[] = [
+  { minSubtotal: 0, fee: 4990 },
+  { minSubtotal: 25000, fee: 2990 },
+  { minSubtotal: 40000, fee: 0 }, // 400 ₺ üstü ücretsiz
+];
+
+/** Sepet ara toplamına göre teslimat ücreti (geçilen en yüksek eşik). */
+export function deliveryFee(subtotal: Kurus, tiers: DeliveryTier[] = DEFAULT_DELIVERY_TIERS): Kurus {
+  let fee = 0;
+  for (const t of [...tiers].sort((a, b) => a.minSubtotal - b.minSubtotal)) {
+    if (subtotal >= t.minSubtotal) fee = t.fee;
+  }
+  return fee;
+}
+
 /** Gerçek tartı bilindiğinde efektif birim maliyet ve kazanç/kayıp etkisi. */
 export function reconcileHalPurchase(p: HalPurchase): HalReconciliation {
   const recordedUnitCost = Math.round(p.totalPaid / p.recordedKg);

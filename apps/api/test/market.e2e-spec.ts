@@ -1,0 +1,91 @@
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { createTestApp, resetDb, authed } from './test-app';
+
+describe('Market (vitrin + sipariş)', () => {
+  let app: INestApplication;
+  let admin: ReturnType<typeof authed>;
+  let server: ReturnType<INestApplication['getHttpServer']>;
+  let orderId: string;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    await resetDb(app);
+    admin = authed(app);
+    server = app.getHttpServer();
+
+    // Katalog: 2 fiyatlı (domates, cilek) + 1 fiyatsız (taslak)
+    await admin.post('/api/v1/catalog/products').send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 });
+    await admin.post('/api/v1/catalog/products').send({ slug: 'cilek', name: 'Çilek', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 6400 });
+    await admin.post('/api/v1/catalog/products').send({ slug: 'taslak', name: 'Taslak', saleType: 'WEIGHT' }); // fiyatsız
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('vitrin: public, fiyatlı+yayında ürünler (auth gerekmez)', async () => {
+    const res = await request(server).get('/api/v1/storefront/products').expect(200);
+    const slugs = res.body.data.map((p: { slug: string }) => p.slug);
+    expect(slugs).toContain('domates');
+    expect(slugs).toContain('cilek');
+    expect(slugs).not.toContain('taslak'); // fiyatsız → vitrinde yok
+    // maliyet alanı sızmamalı
+    expect(res.body.data[0]).not.toHaveProperty('fireRate');
+  });
+
+  it('misafir sipariş: tutarlar sunucuda hesaplanır', async () => {
+    const res = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({
+        items: [{ slug: 'domates', qty: 2 }, { slug: 'cilek', qty: 0.5 }],
+        customer: { name: 'Ayşe Yılmaz', phone: '05555555555', address: 'Kadıköy, İstanbul' },
+        note: 'Zili çalmayın',
+      })
+      .expect(201);
+
+    orderId = res.body.id;
+    expect(res.body.code).toMatch(/^KM/);
+    expect(res.body.subtotal).toBe(10380); // 3590×2 + 6400×0.5
+    expect(res.body.deliveryFee).toBe(4990); // < 250 ₺
+    expect(res.body.grandTotal).toBe(15370);
+    expect(res.body.status).toBe('CONFIRMED');
+    expect(res.body.items).toHaveLength(2);
+  });
+
+  it('sipariş detayını id ile getir (public)', async () => {
+    const res = await request(server).get(`/api/v1/storefront/orders/${orderId}`).expect(200);
+    expect(res.body.customerName).toBe('Ayşe Yılmaz');
+  });
+
+  it('bilinmeyen ürünle sipariş → 400', async () => {
+    await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'yok', qty: 1 }], customer: { name: 'Ali', phone: '05551112233', address: 'Bir yer 1' } })
+      .expect(400);
+  });
+
+  it('fiyatsız ürünle sipariş → 400', async () => {
+    await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'taslak', qty: 1 }], customer: { name: 'Ali', phone: '05551112233', address: 'Bir yer 1' } })
+      .expect(400);
+  });
+
+  it('admin sipariş listesi: token gerekir', async () => {
+    await request(server).get('/api/v1/admin/orders').expect(401);
+    const res = await admin.get('/api/v1/admin/orders').expect(200);
+    expect(res.body.meta.total).toBeGreaterThanOrEqual(1);
+  });
+
+  it('admin durum güncelleme + geçersiz durum 400', async () => {
+    const res = await admin.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'PREPARING' }).expect(200);
+    expect(res.body.status).toBe('PREPARING');
+    await admin.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'YOK' }).expect(400);
+  });
+
+  it('VIEWER durum güncelleyemez → 403', async () => {
+    const viewer = authed(app, 'VIEWER');
+    await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);
+  });
+});

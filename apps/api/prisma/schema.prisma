@@ -51,10 +51,52 @@ model Product {
 
   category     Category?      @relation(fields: [categoryId], references: [id])
   priceHistory PriceHistory[]
+  orderItems   OrderItem[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, categoryId])
   @@map("products")
+}
+
+/// Müşteri siparişi (Market — Faz 1: misafir + kapıda ödeme). Tutarlar kuruş.
+model Order {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  code           String   @unique
+  customerName   String   @map("customer_name")
+  customerPhone  String   @map("customer_phone")
+  addressText    String   @map("address_text")
+  note           String?
+  status         String   @default("CONFIRMED")
+  paymentMethod  String   @default("COD") @map("payment_method")
+  subtotal       Int
+  deliveryFee    Int      @map("delivery_fee")
+  grandTotal     Int      @map("grand_total")
+  /// Tartılı ürünlerde ön provizyon tutarı (Faz 1: grandTotal ile aynı).
+  estimatedTotal Int      @map("estimated_total")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  items OrderItem[]
+
+  @@index([tenantId, status])
+  @@map("orders")
+}
+
+/// Sipariş kalemi. unit_price/product_name sipariş anındaki anlık görüntüdür.
+model OrderItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  orderId     String  @map("order_id") @db.Uuid
+  productId   String  @map("product_id") @db.Uuid
+  productName String  @map("product_name")
+  unitLabel   String? @map("unit_label")
+  unitPrice   Int     @map("unit_price")
+  orderedQty  Float   @map("ordered_qty")
+  lineTotal   Int     @map("line_total")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
 }
 
 /// Fiyat değişiklik geçmişi — append-only ("bu fiyat neden böyle?" izlenebilir).

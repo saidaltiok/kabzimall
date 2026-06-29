@@ -83,6 +83,10 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
   - **Katalog:** `GET|POST /catalog/categories` · `GET|POST|PATCH|DELETE /catalog/products`
     (ad/kategori/satış tipi/birim/fiyat/bayraklar; yazma → ADMIN|OPERATION). Ürünler
     artık gerçek (slug + ad + kategori); panelin omurgası, Market'in temeli.
+  - **Market (Faz 1):** `GET /storefront/categories|products[?search=&category=]|products/:slug`
+    (PUBLIC — yayında+fiyatlı ürünler, maliyet sızmaz); `POST /storefront/orders` misafir
+    sipariş (kapıda ödeme; tutarlar SUNUCUDA `lineTotal`/`deliveryFee` ile); `GET
+    /storefront/orders/:id`. Admin: `GET /admin/orders[?status=]`, `PATCH /admin/orders/:id/status`.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.
 
@@ -143,9 +147,12 @@ npm test                                             # Jest e2e (DB açık olmal
 6. ✅ **Admin panel (apps/admin):** 7 ekran + giriş, prototip tasarımı.
 7. ✅ **Ürün Kataloğu (omurga):** products genişletildi (ad/kategori/satış tipi/birim/
    bayraklar) + categories. CRUD API + panel "Ürün Kataloğu" ekranı. Market'in temeli.
-8. **SIRADAKİ — Market backend:** katalog üstüne müşteri tarafı (vitrin, sepet, sipariş,
-   tartılı pre-auth→capture). Ödeme başlangıçta kapıda ödeme ile bloklanmadan.
-9. Üretime alma + çoklu-kiracılık/RLS (lansmana yakın).
+8. ✅ **Market backend (Faz 1):** public vitrin + misafir sipariş (kapıda ödeme) +
+   panel "Siparişler" ekranı (durum yönetimi). Tutarlar packages/pricing'ten.
+9. **SIRADAKİ — Müşteri web vitrini (apps/web, Next.js):** storefront API üstüne
+   ürün listeleme + sepet + sipariş ekranı (müşterinin gerçekten sipariş verdiği yer).
+10. Sonra: ödeme sağlayıcı (iyzico/PayTR pre-auth→capture), OTP müşteri auth, mobil,
+    üretime alma + çoklu-kiracılık/RLS, otomatik veri (İBB/rakip).
 
 ## Açık kararlar (kod dışı)
 

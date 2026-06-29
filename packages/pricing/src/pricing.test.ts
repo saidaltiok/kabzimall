@@ -15,7 +15,21 @@ import {
   resolvePrice,
   reconcileHalPurchase,
   weightPrecisionRiskPct,
+  lineTotal,
+  deliveryFee,
 } from './pricing.ts';
+
+test('lineTotal: tartılı üründe birim × kg yuvarlanır', () => {
+  assert.equal(lineTotal(3590, 1.5), 5385); // 35,90 × 1,5 kg
+  assert.equal(lineTotal(3590, 0.333), 1195); // round(1195.47)
+});
+
+test('deliveryFee: kademeli + eşik üstü ücretsiz', () => {
+  assert.equal(deliveryFee(10000), 4990); // < 250 ₺
+  assert.equal(deliveryFee(30000), 2990); // 250–400 ₺ arası
+  assert.equal(deliveryFee(40000), 0); // 400 ₺ üstü ücretsiz
+  assert.equal(deliveryFee(55000), 0);
+});
 
 /** Teknik dokümandaki "Domates" referans vakası (Bölüm 4.3). */
 const domates: CostInput = {

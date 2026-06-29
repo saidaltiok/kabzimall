@@ -17,7 +17,10 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
   },
   {
     label: 'Operasyon',
-    links: [{ href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' }],
+    links: [
+      { href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' },
+      { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
+    ],
   },
 ];
 
