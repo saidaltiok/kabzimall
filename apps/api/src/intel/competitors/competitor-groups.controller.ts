@@ -1,13 +1,16 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { CompetitorsService } from './competitors.service';
 import { CreateCompetitorGroupDto } from './dto/create-competitor-group.dto';
 
+@ApiTags('intel: rakipler')
 @Controller('intel/competitor-groups')
 export class CompetitorGroupsController {
   constructor(private readonly service: CompetitorsService) {}
 
   /** POST /api/v1/intel/competitor-groups */
   @Post()
+  @ApiBody({ schema: { example: { name: 'Orta', sortOrder: 1 } } })
   create(@Body() dto: CreateCompetitorGroupDto) {
     return this.service.createGroup(dto);
   }

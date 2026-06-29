@@ -8,9 +8,11 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CostComponentsService } from './cost-components.service';
 import { UpsertCostComponentDto } from './dto/upsert-cost-component.dto';
 
+@ApiTags('intel: maliyet')
 @Controller('intel/cost-components')
 export class CostComponentsController {
   constructor(private readonly service: CostComponentsService) {}
@@ -18,6 +20,11 @@ export class CostComponentsController {
   /** PUT /api/v1/intel/cost-components — maliyet bileşeni oluştur/güncelle. */
   @Put()
   @HttpCode(200)
+  @ApiBody({
+    schema: {
+      example: { scope: 'GLOBAL', fireRate: 0.15, labor: 120, packaging: 70, fuel: 50, commissionRate: 0.03 },
+    },
+  })
   upsert(@Body() dto: UpsertCostComponentDto) {
     return this.service.upsert(dto);
   }
@@ -30,6 +37,7 @@ export class CostComponentsController {
   }
 }
 
+@ApiTags('intel: maliyet')
 @Controller('intel/cost')
 export class CostController {
   constructor(private readonly service: CostComponentsService) {}
@@ -40,6 +48,7 @@ export class CostController {
    * halAvg verilmezse ürünün en güncel günlük hal ortalaması kullanılır.
    */
   @Get(':productId')
+  @ApiQuery({ name: 'halAvg', required: false, example: 1870 })
   cost(@Param('productId') productId: string, @Query('halAvg') halAvg?: string) {
     let override: number | undefined;
     if (halAvg !== undefined) {

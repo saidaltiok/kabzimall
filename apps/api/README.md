@@ -27,6 +27,14 @@ npm run start:dev
 > yüklenir. Port `PORT` ile değişir (varsayılan 3001). Taban yol: `/api/v1`.
 > Şema: `prisma/schema.prisma`; `npm run prisma:studio` ile veriyi görsel inceleyebilirsiniz.
 
+## API konsolu (Swagger) — tarayıcıdan test
+
+Sunucu açıkken **http://localhost:3001/api/docs** adresini açın. Tüm uçlar
+gruplu listelenir; her ucu **"Try it out" → "Execute"** ile tarayıcıdan
+deneyebilirsiniz (curl gerekmez). Ana POST/PUT uçlarında **hazır örnek gövde**
+gelir. Önerilen akış: maliyet (`PUT /cost-components`) → hal (`POST /hal/entries`)
+→ rakip (gruplar/rakipler/fiyat) → **`POST /price/suggest-product`**.
+
 ## Uçlar (bu kesim — Devam Rehberi Bölüm 8)
 
 | Metot | Yol | Açıklama |
@@ -34,6 +42,8 @@ npm run start:dev
 | GET  | `/health` | Sağlık kontrolü |
 | POST | `/intel/price/resolve` | Hiyerarşik fiyat çözümü (`resolvePrice`) — rakip yoksa fallback zinciri |
 | POST | `/intel/price/suggest` | Tek strateji ile öneri (`suggestPrice`) — fallback yok |
+| POST | `/intel/price/suggest-product` | **Sadece `productId`** ile öneri (maliyet+hal+rakip DB'den) |
+| POST | `/intel/price/resolve-product` | `productId` ile hiyerarşik çözüm (girdiler DB'den) |
 | POST | `/intel/price/apply` | Fiyatı `base_price` olarak yayınla + `price_history`'e yaz |
 | GET  | `/intel/price/history` `?productId=` | Uygulanan fiyat geçmişi (append-only) |
 | POST | `/intel/hal/entries` | Günlük hal fiyatı ekle (append-only) |
@@ -66,6 +76,16 @@ curl -X POST http://localhost:3001/api/v1/intel/price/resolve \
 `chain` gönderilmezse motorun varsayılanı kullanılır:
 `COMP_AVG → MARGIN → HAL_MARKUP → FLOOR`. İsteğe bağlı `chain` ve `baseParams`
 ile zincir tamamen özelleştirilebilir. Tüm para alanları **kuruş** (3590 = 34,90 ₺).
+
+**productId ile öneri (maliyet + hal + rakip DB'den toplanır):**
+
+```bash
+# Önce veri: cost-components (GLOBAL) + hal + rakip girilmiş olmalı (yukarıdaki örnekler).
+curl -X POST http://localhost:3001/api/v1/intel/price/suggest-product \
+  -H 'Content-Type: application/json' \
+  -d '{"productId":"domates","strategy":"MARGIN","params":{"targetMargin":0.30}}'
+# → {"price":3590,"competitionIndex":82,"inputs":{"halAvg":1870,"directCost":2440,"competitorCount":1,"competitorAvg":4400},...}
+```
 
 **Tek strateji ile öner → uygula → geçmiş (fiyat döngüsü):**
 

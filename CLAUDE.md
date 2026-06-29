@@ -63,6 +63,8 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
   auth gelince token'dan). Uçlar:
   - `POST /api/v1/intel/price/resolve` — hiyerarşik fiyat çözümü.
   - `POST /api/v1/intel/price/suggest` — tek strateji ile öneri (fallback yok).
+  - `POST /api/v1/intel/price/suggest-product` · `.../resolve-product` — sadece
+    `productId` ile öneri; maliyet + günlük hal ort. + rakipler DB'den toplanır.
   - `POST /api/v1/intel/price/apply` — `base_price` yayınla + `price_history` (Bölüm 6.3).
   - `GET  /api/v1/intel/price/history` — uygulanan fiyat geçmişi (en yeni→eski).
   - `POST /api/v1/intel/hal/entries` · `POST .../hal/bulk` · `GET .../hal?date=` —
@@ -94,7 +96,8 @@ cp .env.example .env                                 # ilk kurulumda
 npx prisma migrate dev                               # şemayı uygula (ilk kez/şema değişince)
 npm run build && npm start                           # http://localhost:3001/api/v1
 # geliştirme: npm run start:dev
-npm test                                             # Jest e2e — 18/18 (DB açık olmalı)
+npm test                                             # Jest e2e (DB açık olmalı)
+# Tarayıcıdan test: http://localhost:3001/api/docs (Swagger)
 ```
 
 > Not: `apps/api` derlemesi `packages/pricing`'i birlikte derler (tsconfig include +

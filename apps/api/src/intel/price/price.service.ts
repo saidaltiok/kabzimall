@@ -11,25 +11,37 @@ import {
 } from '../../pricing-engine';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../../common/tenant';
+import { CostComponentsService } from '../cost-components/cost-components.service';
+import { CompetitorsService } from '../competitors/competitors.service';
 import { ResolvePriceDto, STRATEGIES } from './dto/resolve-price.dto';
 import { SuggestPriceDto } from './dto/suggest-price.dto';
 import { ApplyPriceDto } from './dto/apply-price.dto';
+import { SuggestProductDto } from './dto/suggest-product.dto';
+import { ResolveProductDto } from './dto/resolve-product.dto';
+
+/** productId ile öneride DB'den toplanan girdilerin özeti (panel gösterimi). */
+interface AssembledInputs {
+  halAvg: number;
+  costSource: 'PRODUCT' | 'GLOBAL';
+  directCost: number;
+  competitorCount: number;
+  competitorAvg: number | null;
+}
 
 @Injectable()
 export class PriceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly costs: CostComponentsService,
+    private readonly competitors: CompetitorsService,
+  ) {}
 
   /**
    * Hiyerarşik fiyat çözümü. Tüm hesap packages/pricing'te;
    * burada yalnızca girdi doğrulanır ve motora geçirilir.
    */
   resolve(dto: ResolvePriceDto): SuggestResult & { chainUsed: string[] } {
-    const chain = (dto.chain ?? DEFAULT_CHAIN).map((s) => {
-      if (!STRATEGIES.includes(s.strategy as Strategy)) {
-        throw new BadRequestException(`Geçersiz strateji: ${s.strategy}`);
-      }
-      return { strategy: s.strategy as Strategy, params: s.params as SuggestParams | undefined };
-    });
+    const chain = this.buildChain(dto.chain);
 
     const cost = dto.cost as CostInput;
     const competitors = (dto.competitors ?? []) as Competitor[];
@@ -127,6 +139,77 @@ export class PriceService {
     return this.prisma.priceHistory.findMany({
       where: { tenantId: DEV_TENANT_ID },
       orderBy: { changedAt: 'desc' },
+    });
+  }
+
+  /**
+   * productId ile öneri: maliyeti (cost-components + günlük hal ort.) ve
+   * rakipleri DB'den toplar, tek strateji uygular. Panel "öner" akışı.
+   */
+  async suggestForProduct(dto: SuggestProductDto): Promise<SuggestResult & { inputs: AssembledInputs }> {
+    const { cost, competitors, inputs } = await this.assemble(dto.productId, dto.halAvg, dto.date);
+    try {
+      return { ...suggestPrice(cost, competitors, dto.strategy, dto.params ?? {}), inputs };
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
+
+  /** productId ile hiyerarşik çözüm (fallback zinciri) — girdiler DB'den. */
+  async resolveForProduct(
+    dto: ResolveProductDto,
+  ): Promise<SuggestResult & { chainUsed: string[]; inputs: AssembledInputs }> {
+    const { cost, competitors, inputs } = await this.assemble(dto.productId, dto.halAvg, dto.date);
+    const chain = this.buildChain(dto.chain);
+    try {
+      const result = resolvePrice(cost, competitors, chain, dto.baseParams ?? {});
+      return { ...result, chainUsed: chain.map((c) => c.strategy), inputs };
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
+
+  /** cost-components + günlük hal ort. + rakipleri motor girdisine dönüştürür. */
+  private async assemble(
+    productId: string,
+    halAvgOverride?: number,
+    date?: string,
+  ): Promise<{ cost: CostInput; competitors: Competitor[]; inputs: AssembledInputs }> {
+    // Maliyet bileşeni yoksa costForProduct 404 fırlatır.
+    const cost = await this.costs.costForProduct(productId, halAvgOverride);
+    if (cost.breakdown == null || cost.halAvg == null || cost.directCost == null) {
+      throw new BadRequestException(
+        `Ürün için hal fiyatı yok (${productId}); halAvg gönderin ya da önce hal girişi yapın.`,
+      );
+    }
+
+    const comp = await this.competitors.pricesFor(productId, date);
+    const competitors: Competitor[] = comp.entries.map((e) => ({
+      name: e.competitor,
+      group: e.group,
+      price: e.price,
+    }));
+
+    return {
+      cost: cost.breakdown,
+      competitors,
+      inputs: {
+        halAvg: cost.halAvg,
+        costSource: cost.source,
+        directCost: cost.directCost,
+        competitorCount: comp.count,
+        competitorAvg: comp.average,
+      },
+    };
+  }
+
+  /** dto.chain (yoksa DEFAULT_CHAIN) → doğrulanmış strateji zinciri. */
+  private buildChain(chain?: { strategy: string; params?: unknown }[]) {
+    return (chain ?? DEFAULT_CHAIN).map((s) => {
+      if (!STRATEGIES.includes(s.strategy as Strategy)) {
+        throw new BadRequestException(`Geçersiz strateji: ${s.strategy}`);
+      }
+      return { strategy: s.strategy as Strategy, params: s.params as SuggestParams | undefined };
     });
   }
 }

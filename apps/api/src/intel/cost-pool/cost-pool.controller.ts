@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CostPoolService } from './cost-pool.service';
 import { CreateCostPoolDto } from './dto/create-cost-pool.dto';
 
+@ApiTags('intel: maliyet havuzu')
 @Controller('intel/cost-pool')
 export class CostPoolController {
   constructor(private readonly service: CostPoolService) {}
@@ -13,12 +15,24 @@ export class CostPoolController {
    * packages/pricing.directCost ile tam birim maliyet önizlemesi döner.
    */
   @Post()
+  @ApiBody({
+    schema: {
+      example: {
+        period: '2026-06',
+        totalLabor: 5000000,
+        totalFuel: 2000000,
+        totalVolumeKg: 10000,
+        previewProduct: { halAvg: 1870, fireRate: 0.15, packaging: 70, commissionRate: 0.03 },
+      },
+    },
+  })
   create(@Body() dto: CreateCostPoolDto) {
     return this.service.create(dto);
   }
 
   /** GET /api/v1/intel/cost-pool?period= */
   @Get()
+  @ApiQuery({ name: 'period', required: false, example: '2026-06' })
   async findAll(@Query('period') period?: string) {
     const data = await this.service.findAll(period);
     return { data, meta: { total: data.length } };
