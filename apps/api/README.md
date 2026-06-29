@@ -43,6 +43,8 @@ npm run start:dev
 | POST/GET | `/intel/competitors` | Rakip oluştur (grup FK) / listele |
 | POST | `/intel/competitor-prices/entries` | Rakip fiyatı ekle (append-only) |
 | GET  | `/intel/competitor-prices` `?productId=&date=` | Fiyatlar + min/max/avg/median (rakip başına en güncel) |
+| PUT/GET | `/intel/cost-components` | Maliyet bileşeni upsert (scope: GLOBAL/PRODUCT) / listele |
+| GET  | `/intel/cost/:productId` `?halAvg=` | Etkin maliyet + `directCost` kırılımı |
 | POST | `/intel/hal-purchases` | Hal alımı + ±500 g tartı mutabakatı (`reconcileHalPurchase`) |
 | GET  | `/intel/hal-purchases` `?productId=` | Kayıtlı alımları listele |
 | GET  | `/intel/hal-purchases/:id` | Tek alım |
@@ -110,6 +112,18 @@ C=$(curl -s -X POST http://localhost:3001/api/v1/intel/competitors -H 'Content-T
 curl -X POST http://localhost:3001/api/v1/intel/competitor-prices/entries -H 'Content-Type: application/json' -d "{\"productId\":\"domates\",\"competitorId\":\"$C\",\"price\":4200}"
 curl "http://localhost:3001/api/v1/intel/competitor-prices?productId=domates"
 # → {"count":1,"min":4200,"max":4200,"average":4200,"median":4200,"entries":[...]}
+```
+
+**Maliyet bileşeni → ürün maliyeti (directCost):**
+
+```bash
+# Genel (GLOBAL) maliyet bileşenleri
+curl -X PUT http://localhost:3001/api/v1/intel/cost-components -H 'Content-Type: application/json' \
+  -d '{"scope":"GLOBAL","fireRate":0.15,"labor":120,"packaging":70,"fuel":50,"commissionRate":0.03}'
+
+# Ürün maliyeti — halAvg verilmezse ürünün en güncel günlük hal ortalaması kullanılır
+curl "http://localhost:3001/api/v1/intel/cost/domates?halAvg=1870"
+# → {"source":"GLOBAL","halAvg":1870,"directCost":2440,"breakdown":{...}}
 ```
 
 **Hal alım mutabakatı:**

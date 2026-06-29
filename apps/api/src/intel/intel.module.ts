@@ -11,6 +11,11 @@ import { CompetitorsService } from './competitors/competitors.service';
 import { CompetitorGroupsController } from './competitors/competitor-groups.controller';
 import { CompetitorsController } from './competitors/competitors.controller';
 import { CompetitorPricesController } from './competitors/competitor-prices.controller';
+import { CostComponentsService } from './cost-components/cost-components.service';
+import {
+  CostComponentsController,
+  CostController,
+} from './cost-components/cost-components.controller';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
@@ -25,6 +30,8 @@ import { CompetitorPricesController } from './competitors/competitor-prices.cont
  *   GET  /intel/hal             — ürün × gün ızgarası + günlük ortalama
  *        /intel/competitor-groups · /intel/competitors — rakip tanımları
  *        /intel/competitor-prices — rakip fiyatı (append-only) + min/max/avg/median
+ *   PUT  /intel/cost-components — maliyet bileşeni (scope: GLOBAL/PRODUCT)
+ *   GET  /intel/cost/:productId — etkin maliyet + directCost kırılımı
  *        /intel/hal-purchases   — hal alımı + ±500 g tartı mutabakatı
  *        /intel/cost-pool       — havuz/dağıtımlı maliyet → birim (kg) tahsis
  */
@@ -35,6 +42,8 @@ import { CompetitorPricesController } from './competitors/competitor-prices.cont
     CompetitorGroupsController,
     CompetitorsController,
     CompetitorPricesController,
+    CostComponentsController,
+    CostController,
     HalPurchasesController,
     CostPoolController,
   ],
@@ -42,6 +51,7 @@ import { CompetitorPricesController } from './competitors/competitor-prices.cont
     PriceService,
     HalService,
     CompetitorsService,
+    CostComponentsService,
     HalPurchasesService,
     CostPoolService,
   ],

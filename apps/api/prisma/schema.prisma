@@ -122,6 +122,29 @@ model CompetitorPriceEntry {
   @@map("competitor_price_entries")
 }
 
+/// Maliyet bileşenleri (Teknik doküman Bölüm 3.3). scope ile kapsanır:
+/// GLOBAL (ref_id=''), PRODUCT (ref_id=slug), CATEGORY (ref_id=kategori).
+/// En-spesifik satır kazanır (PRODUCT > GLOBAL). Para alanları kuruş.
+model CostComponent {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  scope          String
+  refId          String   @default("") @map("ref_id")
+  fireRate       Float    @default(0) @map("fire_rate")
+  packaging      Int      @default(0)
+  labor          Int      @default(0)
+  fuel           Int      @default(0)
+  coldStorage    Int      @default(0) @map("cold_storage")
+  amortization   Int      @default(0)
+  commissionRate Float    @default(0) @map("commission_rate")
+  taxRate        Float    @default(0) @map("tax_rate")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, scope, refId])
+  @@map("cost_components")
+}
+
 /// Hal alımı + ±500 g tartı mutabakatı. Yalnızca ham girdiler saklanır;
 /// efektif maliyet/risk okuma anında packages/pricing ile hesaplanır.
 model HalPurchase {
