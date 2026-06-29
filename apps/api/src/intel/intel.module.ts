@@ -17,7 +17,7 @@ import {
   CostController,
 } from './cost-components/cost-components.controller';
 import { DashboardService } from './dashboard/dashboard.service';
-import { DashboardController } from './dashboard/dashboard.controller';
+import { DashboardController, ProductsTableController } from './dashboard/dashboard.controller';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
@@ -48,6 +48,7 @@ import { DashboardController } from './dashboard/dashboard.controller';
     CostComponentsController,
     CostController,
     DashboardController,
+    ProductsTableController,
     HalPurchasesController,
     CostPoolController,
   ],

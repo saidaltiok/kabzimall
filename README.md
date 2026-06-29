@@ -43,8 +43,8 @@ npm install
 npm run dev        # http://localhost:3000  (API 3001'de çalışıyor olmalı)
 ```
 
-Ekranlar: **Panel** (KPI + riskli ürünler), **Fiyat Öner** (productId ile öner →
-uygula), **Hal Girişi** (günlük fiyat + ızgara). API tabanı `NEXT_PUBLIC_API_BASE`
-(varsayılan `http://localhost:3001/api/v1`).
+Ekranlar (prototip tasarımıyla uyumlu): **Dashboard**, **Hal Fiyatları**,
+**Rakip Fiyatları**, **Maliyet & Fire**, **Fiyat Öneri Motoru**, **Ürünler & Marj**.
+API tabanı `NEXT_PUBLIC_API_BASE` (varsayılan `http://localhost:3001/api/v1`).
 
 Detaylı API kullanımı: [apps/api/README.md](apps/api/README.md).

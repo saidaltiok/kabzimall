@@ -10,7 +10,9 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
       { href: '/', icon: '📊', label: 'Dashboard' },
       { href: '/hal', icon: '🥬', label: 'Hal Fiyatları' },
       { href: '/rakip', icon: '🏷️', label: 'Rakip Fiyatları' },
+      { href: '/maliyet', icon: '💸', label: 'Maliyet & Fire' },
       { href: '/oner', icon: '🎯', label: 'Fiyat Öneri Motoru' },
+      { href: '/urunler', icon: '📦', label: 'Ürünler & Marj' },
     ],
   },
 ];

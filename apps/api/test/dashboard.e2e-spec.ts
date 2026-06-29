@@ -69,4 +69,14 @@ describe('Intel /dashboard', () => {
     const slugs = res.body.recentPriceChanges.map((r: { productId: string }) => r.productId);
     expect(slugs).toEqual(expect.arrayContaining(['domates', 'patates', 'kavun']));
   });
+
+  it('GET /intel/products: tüm fiyatlı ürünler metrikleriyle', async () => {
+    const res = await request(http).get(`/api/v1/intel/products?date=${DATE}`).expect(200);
+    expect(res.body.meta.total).toBe(3);
+    const byId: Record<string, any> = {};
+    for (const r of res.body.data) byId[r.productId] = r;
+    expect(byId['domates'].directCost).toBe(2440);
+    expect(byId['domates'].flags).toHaveLength(0); // sağlıklı
+    expect(byId['patates'].flags).toContain('ZARARINA');
+  });
 });

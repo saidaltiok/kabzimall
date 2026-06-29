@@ -23,7 +23,7 @@ Monorepo (Teknik doküman Bölüm 2.1):
 /apps
   /mobile   React Native (müşteri)        — henüz yok
   /web      Next.js (müşteri sitesi)      — henüz yok
-  /admin    Next.js (panel + Intelligence)— VAR (Dashboard/Öner/Hal ekranları)
+  /admin    Next.js (panel)               — VAR (6 ekran, prototip tasarımı)
   /api      NestJS backend                — VAR (Intelligence API tam)
 /packages
   /pricing  FİYAT MOTORU — tek kaynak     — VAR (test edilmiş)
@@ -76,6 +76,7 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
     maliyet bileşenleri (GLOBAL/PRODUCT) + etkin maliyet & directCost kırılımı.
   - `GET /api/v1/intel/dashboard?date=` — KPI'lar (fiyatlı ürün, ort. marj,
     zararına/düşük marj sayısı) + riskli ürünler (bayraklı) + son fiyat değişiklikleri.
+  - `GET /api/v1/intel/products?date=` — tüm fiyatlı ürünler metrikleriyle (Ürünler & Marj).
   - `POST /api/v1/intel/price/bulk-apply` — çok ürüne strateji uygula; varsayılan
     önizleme, `commit:true` ile base_price + price_history yazılır.
   - `POST|GET /api/v1/intel/hal-purchases` — hal alımı + ±500 g mutabakatı.
