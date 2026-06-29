@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { deliveryFee, lineTotal } from '../pricing-engine';
+import { deliveryFee, lineTotal, effectivePrice } from '../pricing-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
 import { dateOnly } from '../common/date';
@@ -16,6 +16,7 @@ const PUBLIC_PRODUCT_SELECT = {
   imageUrl: true,
   stockQty: true,
   basePrice: true,
+  discountedPrice: true,
   originRegion: true,
   isFeatured: true,
   isFreshDaily: true,
@@ -106,13 +107,14 @@ export class MarketService {
       if (p.stockQty != null && i.qty > p.stockQty) {
         throw new BadRequestException(`Yeterli stok yok: ${p.name} (kalan ${p.stockQty} ${p.unitLabel ?? ''})`);
       }
+      const unitPrice = effectivePrice(p.basePrice, p.discountedPrice);
       return {
         productId: p.id,
         productName: p.name,
         unitLabel: p.unitLabel,
-        unitPrice: p.basePrice,
+        unitPrice,
         orderedQty: i.qty,
-        lineTotal: lineTotal(p.basePrice, i.qty),
+        lineTotal: lineTotal(unitPrice, i.qty),
       };
     });
 

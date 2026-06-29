@@ -7,7 +7,7 @@ import { useCart } from '@/lib/cart';
 
 interface Product {
   slug: string; name: string; saleType: string; unitLabel: string | null;
-  imageUrl: string | null; basePrice: number; stockQty: number | null; originRegion: string | null;
+  imageUrl: string | null; basePrice: number; discountedPrice: number | null; stockQty: number | null; originRegion: string | null;
   isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { slug: string; name: string } | null;
 }
@@ -42,8 +42,11 @@ export default function HomePage() {
     });
   }, [products, cat, q]);
 
+  function effective(p: Product) {
+    return p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice ? p.discountedPrice : p.basePrice;
+  }
   function addToCart(p: Product) {
-    add({ slug: p.slug, name: p.name, unitPrice: p.basePrice, unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug) });
+    add({ slug: p.slug, name: p.name, unitPrice: effective(p), unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug) });
   }
 
   if (loading) return <div className="loading">Yükleniyor…</div>;
@@ -80,6 +83,9 @@ export default function HomePage() {
         <div className="grid">
           {filtered.map((p) => {
             const soldOut = p.stockQty != null && p.stockQty <= 0;
+            const eff = effective(p);
+            const discounted = eff < p.basePrice;
+            const discPct = discounted ? Math.round((1 - eff / p.basePrice) * 100) : 0;
             return (
               <div className="prod" key={p.slug} style={soldOut ? { opacity: 0.6 } : undefined}>
                 <div className="ph">
@@ -92,6 +98,8 @@ export default function HomePage() {
                 </div>
                 {soldOut ? (
                   <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: '#eee', color: 'var(--muted)' }}>TÜKENDİ</span>
+                ) : discounted ? (
+                  <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{discPct} İNDİRİM</span>
                 ) : p.isFreshDaily ? (
                   <span className="pill fresh">GÜNLÜK TAZE</span>
                 ) : p.isLocal ? (
@@ -102,7 +110,10 @@ export default function HomePage() {
                 )}
                 <div className="nm">{p.name}</div>
                 <div className="or">{p.originRegion ?? '—'}</div>
-                <div className="pr">{tl(p.basePrice)}</div>
+                <div className="pr">
+                  {tl(eff)}{' '}
+                  {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>}
+                </div>
                 <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
               </div>
             );

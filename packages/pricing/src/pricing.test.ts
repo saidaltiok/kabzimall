@@ -17,7 +17,15 @@ import {
   weightPrecisionRiskPct,
   lineTotal,
   deliveryFee,
+  effectivePrice,
 } from './pricing.ts';
+
+test('effectivePrice: indirimli < taban ise indirimli, değilse taban', () => {
+  assert.equal(effectivePrice(5200, 4490), 4490); // indirim geçerli
+  assert.equal(effectivePrice(5200, null), 5200); // indirim yok
+  assert.equal(effectivePrice(5200, 6000), 5200); // indirim tabandan büyük → yok say
+  assert.equal(effectivePrice(5200, 0), 5200); // 0 → yok say
+});
 
 test('lineTotal: tartılı üründe birim × kg yuvarlanır', () => {
   assert.equal(lineTotal(3590, 1.5), 5385); // 35,90 × 1,5 kg

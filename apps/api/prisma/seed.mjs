@@ -15,7 +15,7 @@ const PRODUCTS = [
   { slug: 'domates', name: 'Domates', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590, stockQty: 50, isFreshDaily: true, imageUrl: img('Domates') },
   { slug: 'cilek', name: 'Çilek', cat: 'meyve', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 6400, stockQty: 3, isFreshDaily: true, isLocal: true, imageUrl: img('Cilek') },
   { slug: 'muz', name: 'Muz', cat: 'meyve', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 5200, stockQty: 0, imageUrl: img('Muz') },
-  { slug: 'salatalik', name: 'Salatalık', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2250, stockQty: 40, imageUrl: img('Salatalik') },
+  { slug: 'salatalik', name: 'Salatalık', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2250, discountedPrice: 1790, stockQty: 40, imageUrl: img('Salatalik') },
 ];
 
 async function main() {

@@ -152,6 +152,23 @@ describe('Market (vitrin + sipariş)', () => {
     expect(packed.body.finalTotal).toBe(6642 + fee); // round(3590×1.85)=6642
   });
 
+  it('indirimli fiyat: sipariş indirimli fiyatı uygular', async () => {
+    await admin
+      .post('/api/v1/catalog/products')
+      .send({ slug: 'elma', name: 'Elma', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 5000, discountedPrice: 4000 })
+      .expect(201);
+
+    const sf = await request(server).get('/api/v1/storefront/products?search=elma').expect(200);
+    expect(sf.body.data[0].discountedPrice).toBe(4000);
+
+    const o = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'elma', qty: 1 }], customer: { name: 'Can', phone: '05551112233', address: 'Sokak 3' } })
+      .expect(201);
+    expect(o.body.items[0].unitPrice).toBe(4000); // taban 5000 değil indirimli 4000
+    expect(o.body.subtotal).toBe(4000);
+  });
+
   it('VIEWER durum güncelleyemez → 403', async () => {
     const viewer = authed(app, 'VIEWER');
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);

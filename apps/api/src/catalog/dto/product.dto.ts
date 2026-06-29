@@ -29,6 +29,10 @@ export class CreateProductDto {
   @IsOptional() @IsInt() @Min(0)
   basePrice?: number;
 
+  /** İndirimli fiyat (kuruş). Taban fiyatın altındaysa vitrinde geçerli olur. */
+  @IsOptional() @IsInt() @Min(0)
+  discountedPrice?: number;
+
   /** Stok (kg/adet). null/boş = takip yok (sınırsız). */
   @IsOptional() @IsNumber() @Min(0)
   stockQty?: number;
@@ -50,6 +54,7 @@ export class UpdateProductDto {
   @IsOptional() @IsString() unitLabel?: string;
   @IsOptional() @IsString() imageUrl?: string;
   @IsOptional() @IsInt() @Min(0) basePrice?: number;
+  @IsOptional() @IsInt() @Min(0) discountedPrice?: number;
   @IsOptional() @IsNumber() @Min(0) stockQty?: number;
   @IsOptional() @IsString() originRegion?: string;
   @IsOptional() @IsBoolean() isActive?: boolean;

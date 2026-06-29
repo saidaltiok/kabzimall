@@ -8,7 +8,7 @@ import Topbar from '@/components/Topbar';
 interface Category { id: string; name: string; slug: string }
 interface Product {
   id: string; slug: string; name: string; saleType: string; unitLabel: string | null;
-  imageUrl: string | null; basePrice: number | null; stockQty: number | null; originRegion: string | null;
+  imageUrl: string | null; basePrice: number | null; discountedPrice: number | null; stockQty: number | null; originRegion: string | null;
   isActive: boolean; isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { id: string; name: string } | null;
 }
@@ -23,7 +23,7 @@ const SALE_TYPES: [string, string][] = [
 
 const empty = {
   id: '', slug: '', name: '', categoryId: '', saleType: 'WEIGHT', unitLabel: 'kg',
-  priceTl: '', originRegion: '', imageUrl: '', stockQty: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
+  priceTl: '', discountedTl: '', originRegion: '', imageUrl: '', stockQty: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
 };
 
 export default function KatalogPage() {
@@ -57,6 +57,7 @@ export default function KatalogPage() {
     setForm({
       id: p.id, slug: p.slug, name: p.name, categoryId: p.category?.id ?? '', saleType: p.saleType,
       unitLabel: p.unitLabel ?? '', priceTl: p.basePrice != null ? (p.basePrice / 100).toFixed(2) : '',
+      discountedTl: p.discountedPrice != null ? (p.discountedPrice / 100).toFixed(2) : '',
       originRegion: p.originRegion ?? '', imageUrl: p.imageUrl ?? '', stockQty: p.stockQty != null ? String(p.stockQty) : '',
       isActive: p.isActive, isFeatured: p.isFeatured,
       isFreshDaily: p.isFreshDaily, isLocal: p.isLocal,
@@ -74,6 +75,7 @@ export default function KatalogPage() {
         unitLabel: form.unitLabel || undefined, categoryId: form.categoryId || undefined,
         basePrice, originRegion: form.originRegion || undefined, imageUrl: form.imageUrl || undefined,
         stockQty: form.stockQty === '' ? undefined : Number(form.stockQty),
+        discountedPrice: form.discountedTl === '' ? undefined : Math.round(parseFloat(form.discountedTl.replace(',', '.')) * 100),
         isActive: form.isActive, isFeatured: form.isFeatured, isFreshDaily: form.isFreshDaily, isLocal: form.isLocal,
       };
       if (editing) {
@@ -157,6 +159,10 @@ export default function KatalogPage() {
               <input value={form.priceTl} onChange={setF('priceTl')} placeholder="64,00" style={{ minWidth: 110 }} />
             </div>
             <div className="field">
+              <label>İndirimli (₺, boş=yok)</label>
+              <input value={form.discountedTl} onChange={setF('discountedTl')} placeholder="—" style={{ minWidth: 110 }} />
+            </div>
+            <div className="field">
               <label>Stok (boş=sınırsız)</label>
               <input value={form.stockQty} onChange={setF('stockQty')} placeholder="∞" style={{ minWidth: 90 }} />
             </div>
@@ -210,7 +216,13 @@ export default function KatalogPage() {
                     <td className="muted">{p.slug}</td>
                     <td>{p.category?.name ?? '—'}</td>
                     <td>{SALE_TYPES.find((s) => s[0] === p.saleType)?.[1] ?? p.saleType}</td>
-                    <td className="num savecell">{tl(p.basePrice)}</td>
+                    <td className="num savecell">
+                      {p.discountedPrice != null && p.basePrice != null && p.discountedPrice < p.basePrice ? (
+                        <>{tl(p.discountedPrice)} <s style={{ color: 'var(--muted)', fontWeight: 400 }}>{tl(p.basePrice)}</s></>
+                      ) : (
+                        tl(p.basePrice)
+                      )}
+                    </td>
                     <td className="num">
                       {p.stockQty == null ? <span className="muted">∞</span> : p.stockQty <= 0 ? <span className="tagp zararina">tükendi</span> : p.stockQty}
                     </td>

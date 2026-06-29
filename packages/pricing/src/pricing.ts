@@ -258,6 +258,11 @@ export function lineTotal(unitPrice: Kurus, qty: number): Kurus {
   return Math.round(unitPrice * qty);
 }
 
+/** Geçerli satış fiyatı: indirimli fiyat (varsa ve taban fiyatın altındaysa), yoksa taban. */
+export function effectivePrice(base: Kurus, discounted?: Kurus | null): Kurus {
+  return discounted != null && discounted > 0 && discounted < base ? discounted : base;
+}
+
 export interface DeliveryTier {
   /** Bu eşik ve üstündeki sepet tutarına uygulanan ücret. */
   minSubtotal: Kurus;

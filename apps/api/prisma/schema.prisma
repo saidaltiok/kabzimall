@@ -44,6 +44,8 @@ model Product {
   stockQty     Float?   @map("stock_qty")
   /// Yayınlanan mağaza fiyatı (kuruş). Henüz uygulanmadıysa null.
   basePrice    Int?     @map("base_price")
+  /// İndirimli fiyat (kuruş). Taban fiyatın altındaysa vitrinde geçerli olur.
+  discountedPrice Int?  @map("discounted_price")
   originRegion String?  @map("origin_region")
   isActive     Boolean  @default(true) @map("is_active")
   isFeatured   Boolean  @default(false) @map("is_featured")
