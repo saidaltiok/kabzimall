@@ -15,6 +15,9 @@ export default function Header() {
           📍 Teslimat · <b>Moda, Kadıköy</b>
         </div>
         <div className="spacer" />
+        <Link href="/siparislerim" style={{ fontSize: 13, fontWeight: 600, color: 'var(--forest)' }}>
+          Siparişlerim
+        </Link>
         <Link href="/sepet">
           <button className="cartbtn">
             🛒 Sepet

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { tl } from '@/lib/format';
+import OrderTimeline from '@/components/OrderTimeline';
 
 interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number }
 interface Order {
@@ -62,8 +63,14 @@ export default function OrderPage() {
         </p>
       </div>
 
+      <div className="success-card" style={{ marginTop: 16 }}>
+        <h3 className="serif" style={{ margin: '0 0 12px', fontSize: 16 }}>Sipariş durumu</h3>
+        <OrderTimeline status={order.status} />
+      </div>
+
       <p style={{ textAlign: 'center', marginTop: 22 }}>
-        <Link href="/" className="back">← Alışverişe devam et</Link>
+        <Link href="/siparislerim" className="back">Siparişlerim</Link>　·
+        <Link href="/" className="back">Alışverişe devam et →</Link>
       </p>
     </div>
   );

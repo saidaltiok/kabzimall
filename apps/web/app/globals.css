@@ -103,6 +103,22 @@ a { color: inherit; text-decoration: none; }
 .success-card { background: #fff; border-radius: 20px; padding: 22px; box-shadow: var(--shadow-sm); max-width: 460px; margin: 0 auto; }
 .success-card .ln { display: flex; justify-content: space-between; font-size: 14px; margin: 8px 0; }
 
+/* Sipariş takibi (zaman çizelgesi) */
+.track { padding: 6px 0; }
+.tstep { display: flex; gap: 14px; align-items: flex-start; position: relative; padding-bottom: 20px; }
+.tstep:before { content: ''; position: absolute; left: 13px; top: 26px; bottom: 0; width: 2px; background: var(--line); }
+.tstep:last-child:before { display: none; }
+.tdot { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 13px; flex: 0 0 auto; z-index: 2; }
+.tstep.done .tdot { background: var(--forest); border-color: var(--forest); color: #fff; }
+.tstep.cur .tdot { background: var(--persimmon); border-color: var(--persimmon); color: #fff; box-shadow: 0 0 0 5px rgba(232, 112, 58, 0.18); }
+.tstep .nm { font-size: 14px; font-weight: 600; }
+.tstep .sub { font-size: 11px; color: var(--muted); }
+.tstep.todo .nm { color: var(--muted); }
+.orow { background: #fff; border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow-sm); margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+.statusbadge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: #fff3e0; color: #a85b00; }
+.statusbadge.done { background: #e9f6ee; color: var(--forest); }
+.statusbadge.cancel { background: #fdecec; color: var(--berry); }
+
 @media (max-width: 760px) {
   .layout2 { grid-template-columns: 1fr; }
   .summary { position: static; }

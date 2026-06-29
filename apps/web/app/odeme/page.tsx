@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
+import { rememberOrder } from '@/lib/orders';
 
 interface Slot { date: string; window: string; label: string }
 
@@ -39,12 +40,13 @@ export default function CheckoutPage() {
     setError(null);
     try {
       const slot = slots.find((s) => `${s.date}|${s.window}` === slotKey);
-      const order = await apiPost<{ id: string }>('/storefront/orders', {
+      const order = await apiPost<{ id: string; code: string }>('/storefront/orders', {
         items: items.map((i) => ({ slug: i.slug, qty: i.qty })),
         customer: { name, phone, address },
         slot: slot ? { date: slot.date, window: slot.window } : undefined,
         note: note || undefined,
       });
+      rememberOrder(order.id, order.code);
       clear();
       router.push(`/siparis/${order.id}`);
     } catch (e) {
