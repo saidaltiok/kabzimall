@@ -1,5 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { CurrentUser, Roles } from '../../auth/decorators';
+import { PRICE_WRITERS, type JwtUser } from '../../auth/auth.constants';
 import { PriceService } from './price.service';
 import { ResolvePriceDto } from './dto/resolve-price.dto';
 import { SuggestPriceDto } from './dto/suggest-price.dto';
@@ -74,9 +76,11 @@ export class PriceController {
    */
   @Post('apply')
   @HttpCode(200)
+  @Roles(...PRICE_WRITERS)
   @ApiBody({ schema: { example: { productId: 'domates', price: 3590, strategy: 'MARGIN', netMargin: 0.29, reason: 'İlk yayın' } } })
-  apply(@Body() dto: ApplyPriceDto) {
-    return this.priceService.apply(dto);
+  apply(@Body() dto: ApplyPriceDto, @CurrentUser() user: JwtUser) {
+    // changedBy token'dan gelir (izlenebilirlik) — istemci gönderse de ezilir.
+    return this.priceService.apply({ ...dto, changedBy: user.email });
   }
 
   /**
@@ -85,6 +89,7 @@ export class PriceController {
    */
   @Post('bulk-apply')
   @HttpCode(200)
+  @Roles(...PRICE_WRITERS)
   @ApiBody({
     schema: {
       example: { productIds: ['domates', 'patates'], strategy: 'MARGIN', params: { targetMargin: 0.3 }, commit: false },

@@ -37,9 +37,16 @@ gelir. Önerilen akış: maliyet (`PUT /cost-components`) → hal (`POST /hal/en
 
 ## Uçlar (bu kesim — Devam Rehberi Bölüm 8)
 
+> **Kimlik:** `/intel/*` uçları JWT ister (`Authorization: Bearer <token>`).
+> `POST /auth/login` ile token alın. İlk açılışta admin seed edilir:
+> `admin@kabzimall.local` / `kabzimall123` (`.env` → `AUTH_SEED_*`). Swagger'da
+> sağ üstteki **Authorize** ile token girip tüm uçları deneyebilirsiniz.
+
 | Metot | Yol | Açıklama |
 |---|---|---|
-| GET  | `/health` | Sağlık kontrolü |
+| POST | `/auth/login` | E-posta+parola → `{ accessToken, user }` (public) |
+| GET  | `/auth/me` | Token'daki kullanıcı |
+| GET  | `/health` | Sağlık kontrolü (public) |
 | POST | `/intel/price/resolve` | Hiyerarşik fiyat çözümü (`resolvePrice`) — rakip yoksa fallback zinciri |
 | POST | `/intel/price/suggest` | Tek strateji ile öneri (`suggestPrice`) — fallback yok |
 | POST | `/intel/price/suggest-product` | **Sadece `productId`** ile öneri (maliyet+hal+rakip DB'den) |

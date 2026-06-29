@@ -132,10 +132,12 @@ npm test                                             # Jest e2e (DB açık olmal
    + `cost/:productId`, `suggest-product`/`resolve-product` (productId ile öneri),
    `bulk-apply` (önizlemeli toplu), `dashboard` (KPI + riskli ürünler).
 4. ✅ **Test altyapısı:** `apps/api` Jest + supertest e2e (52 test). **Swagger** `/api/docs`.
-5. **Auth & roller (SIRADAKİ):** JWT guard + policy (fiyat yöneticisi+ — Bölüm 7);
-   `changedBy` token'dan + gerçek `tenant_id` + Postgres RLS satır izolasyonu.
-6. **Admin panel (apps/admin, Next.js):** çalışan Intelligence API'ye bağlı gerçek UI
-   (prototip: `KabziMall_Panel_Prototip.html`).
+5. ✅ **Auth & roller kuruldu:** JWT (stateless) + global JwtAuthGuard/RolesGuard.
+   `POST /auth/login` → token; `/intel/*` giriş ister; apply/bulk-apply/cost-components
+   PUT → `@Roles(ADMIN, PRICE_MANAGER)`; `changedBy` token'dan. İlk açılışta admin seed
+   (`admin@kabzimall.local` / `kabzimall123` — .env AUTH_SEED_*). Panelde giriş ekranı.
+   **Kalan:** gerçek per-request `tenant_id` çözümü (şu an DEV sabiti) + Postgres RLS.
+6. ✅ **Admin panel (apps/admin):** 6 ekran + giriş, prototip tasarımı.
 7. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).
 
 ## Açık kararlar (kod dışı)

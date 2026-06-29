@@ -1,15 +1,15 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, resetDb } from './test-app';
+import { createTestApp, authed, resetDb } from './test-app';
 
 describe('Intel /hal-purchases uçları', () => {
   let app: INestApplication;
-  let http: ReturnType<INestApplication['getHttpServer']>;
+  let http: ReturnType<typeof authed>;
 
   beforeAll(async () => {
     app = await createTestApp();
     await resetDb(app);
-    http = app.getHttpServer();
+    http = authed(app);
   });
 
   afterAll(async () => {
@@ -18,7 +18,7 @@ describe('Intel /hal-purchases uçları', () => {
 
   it('POST → ±500 g mutabakatı: 50 kg yerine 49.6 kg gelince efektif maliyet artar', async () => {
     // 100000 kuruş / 50 kg = 2000/kg kayıtlı; gerçek 49.6 kg → 2016/kg.
-    const res = await request(http)
+    const res = await http
       .post('/api/v1/intel/hal-purchases')
       .send({ productId: 'domates', recordedKg: 50, actualKg: 49.6, totalPaid: 100000 })
       .expect(201);
@@ -31,7 +31,7 @@ describe('Intel /hal-purchases uçları', () => {
   });
 
   it('actualKg yoksa mutabakat alanları null, kayıt yine de oluşur', async () => {
-    const res = await request(http)
+    const res = await http
       .post('/api/v1/intel/hal-purchases')
       .send({ recordedKg: 10, totalPaid: 50000 })
       .expect(201);
@@ -42,7 +42,7 @@ describe('Intel /hal-purchases uçları', () => {
   });
 
   it('GET ?productId= ile filtreler', async () => {
-    const res = await request(http)
+    const res = await http
       .get('/api/v1/intel/hal-purchases?productId=domates')
       .expect(200);
 
@@ -51,11 +51,11 @@ describe('Intel /hal-purchases uçları', () => {
   });
 
   it('GET /:id bilinmeyen → 404', async () => {
-    await request(http).get('/api/v1/intel/hal-purchases/yok-boyle-id').expect(404);
+    await http.get('/api/v1/intel/hal-purchases/yok-boyle-id').expect(404);
   });
 
   it('geçersiz recordedKg (0) → 400', async () => {
-    await request(http)
+    await http
       .post('/api/v1/intel/hal-purchases')
       .send({ recordedKg: 0, totalPaid: 1000 })
       .expect(400);

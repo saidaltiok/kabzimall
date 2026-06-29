@@ -1,35 +1,35 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, resetDb } from './test-app';
+import { createTestApp, authed, resetDb } from './test-app';
 
 /** Girdileri (maliyet + hal + rakip) DB'ye kurup tek productId ile öneri. */
 describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
   let app: INestApplication;
-  let http: ReturnType<INestApplication['getHttpServer']>;
+  let http: ReturnType<typeof authed>;
 
   beforeAll(async () => {
     app = await createTestApp();
     await resetDb(app);
-    http = app.getHttpServer();
+    http = authed(app);
 
     // GLOBAL maliyet bileşenleri (referans Domates kalemleri)
-    await request(http)
+    await http
       .put('/api/v1/intel/cost-components')
       .send({ scope: 'GLOBAL', fireRate: 0.15, labor: 120, packaging: 70, fuel: 50, commissionRate: 0.03 })
       .expect(200);
 
     // domates: hal ort. 1870 + 2 rakip (ort 4400)
-    await request(http).post('/api/v1/intel/hal/entries').send({ productId: 'domates', price: 1850, date: '2026-06-29' });
-    await request(http).post('/api/v1/intel/hal/entries').send({ productId: 'domates', price: 1890, date: '2026-06-29' });
+    await http.post('/api/v1/intel/hal/entries').send({ productId: 'domates', price: 1850, date: '2026-06-29' });
+    await http.post('/api/v1/intel/hal/entries').send({ productId: 'domates', price: 1890, date: '2026-06-29' });
 
-    const g = await request(http).post('/api/v1/intel/competitor-groups').send({ name: 'Orta' });
-    const a = await request(http).post('/api/v1/intel/competitors').send({ name: 'A', groupId: g.body.id });
-    const b = await request(http).post('/api/v1/intel/competitors').send({ name: 'B', groupId: g.body.id });
-    await request(http).post('/api/v1/intel/competitor-prices/entries').send({ productId: 'domates', competitorId: a.body.id, price: 4200, date: '2026-06-29' });
-    await request(http).post('/api/v1/intel/competitor-prices/entries').send({ productId: 'domates', competitorId: b.body.id, price: 4600, date: '2026-06-29' });
+    const g = await http.post('/api/v1/intel/competitor-groups').send({ name: 'Orta' });
+    const a = await http.post('/api/v1/intel/competitors').send({ name: 'A', groupId: g.body.id });
+    const b = await http.post('/api/v1/intel/competitors').send({ name: 'B', groupId: g.body.id });
+    await http.post('/api/v1/intel/competitor-prices/entries').send({ productId: 'domates', competitorId: a.body.id, price: 4200, date: '2026-06-29' });
+    await http.post('/api/v1/intel/competitor-prices/entries').send({ productId: 'domates', competitorId: b.body.id, price: 4600, date: '2026-06-29' });
 
     // patates: sadece hal (rakip yok) → fallback testi
-    await request(http).post('/api/v1/intel/hal/entries').send({ productId: 'patates', price: 2000, date: '2026-06-29' });
+    await http.post('/api/v1/intel/hal/entries').send({ productId: 'patates', price: 2000, date: '2026-06-29' });
   });
 
   afterAll(async () => {
@@ -37,7 +37,7 @@ describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
   });
 
   it('suggest-product MARGIN → referans 3590, inputs DB\'den toplandı', async () => {
-    const res = await request(http)
+    const res = await http
       .post('/api/v1/intel/price/suggest-product')
       .send({ productId: 'domates', strategy: 'MARGIN', params: { targetMargin: 0.3 }, date: '2026-06-29' })
       .expect(200);
@@ -52,7 +52,7 @@ describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
   });
 
   it('suggest-product COMP_AVG → rakip ortalamasından 4390', async () => {
-    const res = await request(http)
+    const res = await http
       .post('/api/v1/intel/price/suggest-product')
       .send({ productId: 'domates', strategy: 'COMP_AVG', date: '2026-06-29' })
       .expect(200);
@@ -60,7 +60,7 @@ describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
   });
 
   it('resolve-product (rakipsiz patates) → COMP_AVG atlanır, MARGIN fallback', async () => {
-    const res = await request(http)
+    const res = await http
       .post('/api/v1/intel/price/resolve-product')
       .send({ productId: 'patates', date: '2026-06-29' })
       .expect(200);
@@ -72,7 +72,7 @@ describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
   });
 
   it('halAvg override → hal girişi olmayan ürün için bile çalışır', async () => {
-    const res = await request(http)
+    const res = await http
       .post('/api/v1/intel/price/suggest-product')
       .send({ productId: 'kiraz', strategy: 'MARGIN', halAvg: 5000 })
       .expect(200);
@@ -81,7 +81,7 @@ describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
   });
 
   it('maliyet var ama hal yok ve halAvg verilmedi → 400', async () => {
-    await request(http)
+    await http
       .post('/api/v1/intel/price/suggest-product')
       .send({ productId: 'erik', strategy: 'MARGIN' })
       .expect(400);
@@ -89,7 +89,7 @@ describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
 
   it('maliyet bileşeni hiç yoksa → 404', async () => {
     await resetDb(app);
-    await request(http)
+    await http
       .post('/api/v1/intel/price/suggest-product')
       .send({ productId: 'domates', strategy: 'MARGIN', halAvg: 1870 })
       .expect(404);

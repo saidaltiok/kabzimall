@@ -9,6 +9,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../auth/decorators';
+import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { CostComponentsService } from './cost-components.service';
 import { UpsertCostComponentDto } from './dto/upsert-cost-component.dto';
 
@@ -20,6 +22,7 @@ export class CostComponentsController {
   /** PUT /api/v1/intel/cost-components — maliyet bileşeni oluştur/güncelle. */
   @Put()
   @HttpCode(200)
+  @Roles(...PRICE_WRITERS)
   @ApiBody({
     schema: {
       example: { scope: 'GLOBAL', fireRate: 0.15, labor: 120, packaging: 70, fuel: 50, commissionRate: 0.03 },

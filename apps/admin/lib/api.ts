@@ -1,8 +1,19 @@
 // Intelligence API istemcisi (tarayıcı tarafı). CORS API'de açık (main.ts cors:true).
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3001/api/v1';
+import { getToken, clearSession } from './auth';
+
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3001/api/v1';
+
+function authHeaders(): Record<string, string> {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
 
 async function handle(res: Response) {
+  if (res.status === 401 && typeof window !== 'undefined') {
+    // Token geçersiz/yok → oturumu temizle, girişe yönlendir.
+    clearSession();
+    if (location.pathname !== '/login') location.href = '/login';
+  }
   const text = await res.text();
   const body = text ? JSON.parse(text) : null;
   if (!res.ok) {
@@ -13,7 +24,7 @@ async function handle(res: Response) {
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
-  return handle(await fetch(`${API_BASE}${path}`, { cache: 'no-store' }));
+  return handle(await fetch(`${API_BASE}${path}`, { cache: 'no-store', headers: { ...authHeaders() } }));
 }
 
 export async function apiSend<T = unknown>(
@@ -24,7 +35,7 @@ export async function apiSend<T = unknown>(
   return handle(
     await fetch(`${API_BASE}${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
   );

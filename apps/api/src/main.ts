@@ -28,6 +28,7 @@ async function bootstrap() {
         'Taban yol /api/v1. Uçları "Try it out" ile deneyebilirsiniz.',
     )
     .setVersion('0.1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);

@@ -1,7 +1,11 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { JWT_SECRET, type Role } from '../src/auth/auth.constants';
+import { DEV_TENANT_ID } from '../src/common/tenant';
 
 /**
  * Üretimdeki main.ts ile AYNI yapılandırmada bir test uygulaması kurar
@@ -44,6 +48,23 @@ export async function resetDb(app: INestApplication): Promise<void> {
   await prisma.costComponent.deleteMany();
   await prisma.halPurchase.deleteMany();
   await prisma.costPool.deleteMany();
+}
+
+/** Geçerli bir JWT üretir (DB kullanıcısı gerekmez — guard stateless). */
+export function tokenFor(app: INestApplication, role: Role = 'ADMIN'): string {
+  return app.get(JwtService).sign(
+    { sub: 'test-user', email: `${role.toLowerCase()}@test.local`, role, tenantId: DEV_TENANT_ID },
+    { secret: JWT_SECRET },
+  );
+}
+
+/** Authorization header'ı otomatik ekleyen supertest sarmalayıcısı. */
+export function authed(app: INestApplication, role: Role = 'ADMIN') {
+  const http = app.getHttpServer();
+  const token = tokenFor(app, role);
+  const wrap = (m: 'get' | 'post' | 'put' | 'delete') => (url: string) =>
+    request(http)[m](url).set('Authorization', `Bearer ${token}`);
+  return { get: wrap('get'), post: wrap('post'), put: wrap('put'), delete: wrap('delete'), http, token };
 }
 
 /** Referans Domates girdisi (Teknik doküman Bölüm 4.3). */

@@ -49,6 +49,21 @@ model PriceHistory {
   @@map("price_history")
 }
 
+/// Panel kullanıcısı (personel). Müşteri auth'u (OTP) ayrı gelecek — bu, admin/
+/// Intelligence girişidir. Rol: ADMIN | PRICE_MANAGER | OPERATION | VIEWER (Bölüm 7).
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  role         String   @default("VIEWER")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
+}
+
 /// Günlük hal fiyatı girişi — append-only (her giriş yeni satır, zaman damgalı).
 /// Günlük ortalama bu satırlardan hesaplanır; geçmiş asla üzerine yazılmaz.
 /// v1.1: hal günde 1 kez yayımlanır → time_slot nullable.

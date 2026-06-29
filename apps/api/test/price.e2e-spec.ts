@@ -1,15 +1,15 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, resetDb, DOMATES_COST } from './test-app';
+import { createTestApp, resetDb, authed, DOMATES_COST } from './test-app';
 
 describe('Intel /price uçları', () => {
   let app: INestApplication;
-  let http: ReturnType<INestApplication['getHttpServer']>;
+  let http: ReturnType<typeof authed>;
 
   beforeAll(async () => {
     app = await createTestApp();
     await resetDb(app);
-    http = app.getHttpServer();
+    http = authed(app);
   });
 
   afterAll(async () => {
@@ -18,7 +18,7 @@ describe('Intel /price uçları', () => {
 
   describe('POST /intel/price/resolve', () => {
     it('rakipsiz Domates → fallback ile MARGIN, referans 3590 / ~%29 / directCost 2440', async () => {
-      const res = await request(http)
+      const res = await http
         .post('/api/v1/intel/price/resolve')
         .send({ cost: DOMATES_COST, baseParams: { targetMargin: 0.3, floorMargin: 0.15 } })
         .expect(200);
@@ -35,7 +35,7 @@ describe('Intel /price uçları', () => {
 
   describe('POST /intel/price/suggest', () => {
     it('MARGIN (tek strateji, fallback yok) → 3590, usedFallback false', async () => {
-      const res = await request(http)
+      const res = await http
         .post('/api/v1/intel/price/suggest')
         .send({ cost: DOMATES_COST, strategy: 'MARGIN', params: { targetMargin: 0.3 } })
         .expect(200);
@@ -53,7 +53,7 @@ describe('Intel /price uçları', () => {
         { name: 'D', group: 'Orta', price: 4400 },
         { name: 'E', group: 'İndirim', price: 3990 },
       ];
-      const res = await request(http)
+      const res = await http
         .post('/api/v1/intel/price/suggest')
         .send({ cost: DOMATES_COST, competitors, strategy: 'COMP_AVG' })
         .expect(200);
@@ -63,21 +63,21 @@ describe('Intel /price uçları', () => {
     });
 
     it('geçersiz strateji → 400', async () => {
-      await request(http)
+      await http
         .post('/api/v1/intel/price/suggest')
         .send({ cost: DOMATES_COST, strategy: 'BOGUS' })
         .expect(400);
     });
 
     it('fireRate >= 1 → 400 (whitelist/range doğrulaması)', async () => {
-      await request(http)
+      await http
         .post('/api/v1/intel/price/suggest')
         .send({ cost: { ...DOMATES_COST, fireRate: 1 }, strategy: 'MARGIN' })
         .expect(400);
     });
 
     it('tanımsız alan gönderilince → 400 (forbidNonWhitelisted)', async () => {
-      await request(http)
+      await http
         .post('/api/v1/intel/price/suggest')
         .send({ cost: DOMATES_COST, strategy: 'MARGIN', hacker: true })
         .expect(400);
@@ -86,7 +86,7 @@ describe('Intel /price uçları', () => {
 
   describe('POST /intel/price/apply → GET /intel/price/history', () => {
     it('iki kez uygula → base_price güncellenir, price_history zincirlenir', async () => {
-      const first = await request(http)
+      const first = await http
         .post('/api/v1/intel/price/apply')
         .send({ productId: 'domates', price: 3590, strategy: 'MARGIN', netMargin: 0.29, reason: 'İlk yayın', changedBy: 'said' })
         .expect(200);
@@ -96,7 +96,7 @@ describe('Intel /price uçları', () => {
       expect(first.body.history.newPrice).toBe(3590);
       expect(first.body.history.reason).toBe('İlk yayın'); // UTF-8 korunur
 
-      const second = await request(http)
+      const second = await http
         .post('/api/v1/intel/price/apply')
         .send({ productId: 'domates', price: 4390, strategy: 'COMP_AVG' })
         .expect(200);
@@ -105,7 +105,7 @@ describe('Intel /price uçları', () => {
       expect(second.body.history.oldPrice).toBe(3590); // önceki fiyatı taşır
       expect(second.body.history.newPrice).toBe(4390);
 
-      const history = await request(http)
+      const history = await http
         .get('/api/v1/intel/price/history?productId=domates')
         .expect(200);
 
@@ -115,7 +115,7 @@ describe('Intel /price uçları', () => {
     });
 
     it('geçersiz fiyat (0) → 400', async () => {
-      await request(http)
+      await http
         .post('/api/v1/intel/price/apply')
         .send({ productId: 'x', price: 0, strategy: 'MANUAL' })
         .expect(400);
