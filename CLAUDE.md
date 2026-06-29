@@ -22,9 +22,9 @@ Monorepo (Teknik doküman Bölüm 2.1):
 ```
 /apps
   /mobile   React Native (müşteri)        — henüz yok
-  /web      Next.js (müşteri sitesi)      — henüz yok
-  /admin    Next.js (panel)               — VAR (6 ekran, prototip tasarımı)
-  /api      NestJS backend                — VAR (Intelligence API tam)
+  /web      Next.js (müşteri vitrini)     — VAR (vitrin/sepet/ödeme/sipariş, :3002)
+  /admin    Next.js (panel)               — VAR (8 ekran, prototip tasarımı, :3000)
+  /api      NestJS backend                — VAR (Intelligence + Katalog + Market, :3001)
 /packages
   /pricing  FİYAT MOTORU — tek kaynak     — VAR (test edilmiş)
   /types, /api-client, /ui, /i18n, /config — henüz yok
@@ -149,10 +149,12 @@ npm test                                             # Jest e2e (DB açık olmal
    bayraklar) + categories. CRUD API + panel "Ürün Kataloğu" ekranı. Market'in temeli.
 8. ✅ **Market backend (Faz 1):** public vitrin + misafir sipariş (kapıda ödeme) +
    panel "Siparişler" ekranı (durum yönetimi). Tutarlar packages/pricing'ten.
-9. **SIRADAKİ — Müşteri web vitrini (apps/web, Next.js):** storefront API üstüne
-   ürün listeleme + sepet + sipariş ekranı (müşterinin gerçekten sipariş verdiği yer).
-10. Sonra: ödeme sağlayıcı (iyzico/PayTR pre-auth→capture), OTP müşteri auth, mobil,
-    üretime alma + çoklu-kiracılık/RLS, otomatik veri (İBB/rakip).
+9. ✅ **Müşteri web vitrini (apps/web):** vitrin (kategori/arama) + sepet (client-side,
+   localStorage) + ödeme (misafir, kapıda) + sipariş onayı. Tam döngü kapandı:
+   web sipariş → panel Siparişler → Intelligence fiyat.
+10. **SIRADAKİ seçenekler:** ödeme sağlayıcı (iyzico/PayTR pre-auth→capture), OTP müşteri
+    auth + sipariş takibi, üretime alma (deploy/HTTPS/secret), çoklu-kiracılık+RLS,
+    mobil uygulama, otomatik veri (İBB/rakip), gelişmiş analiz.
 
 ## Açık kararlar (kod dışı)
 

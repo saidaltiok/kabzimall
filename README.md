@@ -10,10 +10,10 @@ kararlar `KabziMall_Guncelleme_v1_1.pdf`, API/veri modeli `KabziMall_Teknik_Teme
 ## Monorepo
 
 ```
-apps/api          NestJS backend (Intelligence API)  — VAR (52 test)
-apps/admin        Next.js (panel + Intelligence)     — VAR (Dashboard/Öner/Hal)
+apps/api          NestJS backend (Intelligence+Katalog+Market) — VAR (76 test)
+apps/admin        Next.js (yönetim paneli)           — VAR (8 ekran, :3000)
+apps/web          Next.js (müşteri vitrini)          — VAR (vitrin/sepet/ödeme, :3002)
 apps/mobile       React Native (müşteri)             — henüz yok
-apps/web          Next.js (müşteri sitesi)           — henüz yok
 packages/pricing  FİYAT MOTORU — tek kaynak (test edilmiş)
 ```
 
@@ -46,5 +46,16 @@ npm run dev        # http://localhost:3000  (API 3001'de çalışıyor olmalı)
 Ekranlar (prototip tasarımıyla uyumlu): **Dashboard**, **Hal Fiyatları**,
 **Rakip Fiyatları**, **Maliyet & Fire**, **Fiyat Öneri Motoru**, **Ürünler & Marj**.
 API tabanı `NEXT_PUBLIC_API_BASE` (varsayılan `http://localhost:3001/api/v1`).
+
+### Müşteri vitrini (apps/web)
+
+```bash
+cd apps/web
+npm install
+npm run dev        # http://localhost:3002  (API 3001'de çalışıyor olmalı)
+```
+
+Akış: ürünleri gez/ara → sepete ekle → adres/telefon gir → **kapıda ödeme** ile
+sipariş ver → onay/takip. Sipariş panelde **Siparişler** ekranında görünür.
 
 Detaylı API kullanımı: [apps/api/README.md](apps/api/README.md).
