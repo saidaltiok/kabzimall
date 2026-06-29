@@ -13,20 +13,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Katalog çekirdeği (skeleton): client `productId`'yi slug olarak gönderir;
-/// gerçek UUID burada üretilir. /intel/price/apply yalnızca base_price'ı yazar.
-model Product {
+/// Ürün kategorisi (Teknik doküman Bölüm 3.2).
+model Category {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   slug      String
-  /// Yayınlanan mağaza fiyatı (kuruş). Henüz uygulanmadıysa null.
-  basePrice Int?     @map("base_price")
+  name      String
+  sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  products Product[]
+
+  @@unique([tenantId, slug])
+  @@map("categories")
+}
+
+/// Katalog çekirdeği (Teknik doküman Bölüm 3.2). client `productId` = slug.
+/// /intel/price/apply base_price'ı yazar; katalog ekranı diğer alanları yönetir.
+model Product {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  slug         String
+  name         String   @default("")
+  categoryId   String?  @map("category_id") @db.Uuid
+  /// WEIGHT | PIECE | BUNCH | PACK | VARIABLE_WEIGHT_PACK
+  saleType     String   @default("WEIGHT") @map("sale_type")
+  unitLabel    String?  @map("unit_label")
+  /// Yayınlanan mağaza fiyatı (kuruş). Henüz uygulanmadıysa null.
+  basePrice    Int?     @map("base_price")
+  originRegion String?  @map("origin_region")
+  isActive     Boolean  @default(true) @map("is_active")
+  isFeatured   Boolean  @default(false) @map("is_featured")
+  isFreshDaily Boolean  @default(false) @map("is_fresh_daily")
+  isLocal      Boolean  @default(false) @map("is_local")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  category     Category?      @relation(fields: [categoryId], references: [id])
   priceHistory PriceHistory[]
 
   @@unique([tenantId, slug])
+  @@index([tenantId, categoryId])
   @@map("products")
 }
 

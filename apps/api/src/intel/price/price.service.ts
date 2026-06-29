@@ -103,7 +103,8 @@ export class PriceService {
             select: productSelect,
           })
         : await tx.product.create({
-            data: { tenantId: DEV_TENANT_ID, slug: dto.productId, basePrice: dto.price },
+            // Katalogda yoksa yer tutucu oluştur (ad = slug; katalogdan düzenlenebilir).
+            data: { tenantId: DEV_TENANT_ID, slug: dto.productId, name: dto.productId, basePrice: dto.price },
             select: productSelect,
           });
 

@@ -1,0 +1,60 @@
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
+
+export const SALE_TYPES = ['WEIGHT', 'PIECE', 'BUNCH', 'PACK', 'VARIABLE_WEIGHT_PACK'] as const;
+export type SaleType = (typeof SALE_TYPES)[number];
+
+const SLUG = /^[a-z0-9-]+$/;
+
+export class CreateProductDto {
+  @IsString() @Matches(SLUG, { message: 'slug yalnızca küçük harf, rakam ve tire içerebilir' })
+  slug!: string;
+
+  @IsString()
+  name!: string;
+
+  @IsOptional() @IsUUID()
+  categoryId?: string;
+
+  @IsIn(SALE_TYPES)
+  saleType!: SaleType;
+
+  @IsOptional() @IsString()
+  unitLabel?: string;
+
+  /** Mağaza fiyatı (kuruş). */
+  @IsOptional() @IsInt() @Min(0)
+  basePrice?: number;
+
+  @IsOptional() @IsString()
+  originRegion?: string;
+
+  @IsOptional() @IsBoolean() isActive?: boolean;
+  @IsOptional() @IsBoolean() isFeatured?: boolean;
+  @IsOptional() @IsBoolean() isFreshDaily?: boolean;
+  @IsOptional() @IsBoolean() isLocal?: boolean;
+}
+
+/** Güncelleme: tüm alanlar opsiyonel (slug değişmez). */
+export class UpdateProductDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsUUID() categoryId?: string;
+  @IsOptional() @IsIn(SALE_TYPES) saleType?: SaleType;
+  @IsOptional() @IsString() unitLabel?: string;
+  @IsOptional() @IsInt() @Min(0) basePrice?: number;
+  @IsOptional() @IsString() originRegion?: string;
+  @IsOptional() @IsBoolean() isActive?: boolean;
+  @IsOptional() @IsBoolean() isFeatured?: boolean;
+  @IsOptional() @IsBoolean() isFreshDaily?: boolean;
+  @IsOptional() @IsBoolean() isLocal?: boolean;
+}
+
+export class CreateCategoryDto {
+  @IsString() @Matches(SLUG, { message: 'slug yalnızca küçük harf, rakam ve tire içerebilir' })
+  slug!: string;
+
+  @IsString()
+  name!: string;
+
+  @IsOptional() @IsInt() @Min(0)
+  sortOrder?: number;
+}

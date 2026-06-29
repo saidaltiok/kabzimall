@@ -15,6 +15,10 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
       { href: '/urunler', icon: '📦', label: 'Ürünler & Marj' },
     ],
   },
+  {
+    label: 'Operasyon',
+    links: [{ href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' }],
+  },
 ];
 
 export default function Sidebar() {

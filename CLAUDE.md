@@ -80,6 +80,9 @@ Mobil/web/admin/backend hepsi aynı fonksiyonu çağırır. Formül asla kopyala
   - `POST /api/v1/intel/price/bulk-apply` — çok ürüne strateji uygula; varsayılan
     önizleme, `commit:true` ile base_price + price_history yazılır.
   - `POST|GET /api/v1/intel/hal-purchases` — hal alımı + ±500 g mutabakatı.
+  - **Katalog:** `GET|POST /catalog/categories` · `GET|POST|PATCH|DELETE /catalog/products`
+    (ad/kategori/satış tipi/birim/fiyat/bayraklar; yazma → ADMIN|OPERATION). Ürünler
+    artık gerçek (slug + ad + kategori); panelin omurgası, Market'in temeli.
   - `POST|GET /api/v1/intel/cost-pool` — havuz maliyeti → kg başına tahsis + directCost önizleme.
   - `GET /api/v1/health`.
 
@@ -137,8 +140,12 @@ npm test                                             # Jest e2e (DB açık olmal
    PUT → `@Roles(ADMIN, PRICE_MANAGER)`; `changedBy` token'dan. İlk açılışta admin seed
    (`admin@kabzimall.local` / `kabzimall123` — .env AUTH_SEED_*). Panelde giriş ekranı.
    **Kalan:** gerçek per-request `tenant_id` çözümü (şu an DEV sabiti) + Postgres RLS.
-6. ✅ **Admin panel (apps/admin):** 6 ekran + giriş, prototip tasarımı.
-7. Sonra Market tarafı (katalog, sepet, sipariş, tartılı pre-auth→capture).
+6. ✅ **Admin panel (apps/admin):** 7 ekran + giriş, prototip tasarımı.
+7. ✅ **Ürün Kataloğu (omurga):** products genişletildi (ad/kategori/satış tipi/birim/
+   bayraklar) + categories. CRUD API + panel "Ürün Kataloğu" ekranı. Market'in temeli.
+8. **SIRADAKİ — Market backend:** katalog üstüne müşteri tarafı (vitrin, sepet, sipariş,
+   tartılı pre-auth→capture). Ödeme başlangıçta kapıda ödeme ile bloklanmadan.
+9. Üretime alma + çoklu-kiracılık/RLS (lansmana yakın).
 
 ## Açık kararlar (kod dışı)
 

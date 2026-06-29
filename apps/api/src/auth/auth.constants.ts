@@ -5,6 +5,9 @@ export type Role = (typeof ROLES)[number];
 /** Intelligence yazma yetkisi olan roller (fiyat yöneticisi+). */
 export const PRICE_WRITERS: Role[] = ['ADMIN', 'PRICE_MANAGER'];
 
+/** Katalog (ürün/kategori) yazma yetkisi olan roller (operasyon+). */
+export const CATALOG_WRITERS: Role[] = ['ADMIN', 'OPERATION'];
+
 /** JWT içeriği. */
 export interface JwtUser {
   sub: string;

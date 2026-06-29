@@ -41,6 +41,7 @@ export async function resetDb(app: INestApplication): Promise<void> {
   const prisma = app.get(PrismaService);
   await prisma.priceHistory.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
   await prisma.halPriceEntry.deleteMany();
   await prisma.competitorPriceEntry.deleteMany();
   await prisma.competitor.deleteMany();
@@ -62,9 +63,9 @@ export function tokenFor(app: INestApplication, role: Role = 'ADMIN'): string {
 export function authed(app: INestApplication, role: Role = 'ADMIN') {
   const http = app.getHttpServer();
   const token = tokenFor(app, role);
-  const wrap = (m: 'get' | 'post' | 'put' | 'delete') => (url: string) =>
+  const wrap = (m: 'get' | 'post' | 'put' | 'patch' | 'delete') => (url: string) =>
     request(http)[m](url).set('Authorization', `Bearer ${token}`);
-  return { get: wrap('get'), post: wrap('post'), put: wrap('put'), delete: wrap('delete'), http, token };
+  return { get: wrap('get'), post: wrap('post'), put: wrap('put'), patch: wrap('patch'), delete: wrap('delete'), http, token };
 }
 
 /** Referans Domates girdisi (Teknik doküman Bölüm 4.3). */
