@@ -12,6 +12,7 @@ interface Order {
   estimatedTotal: number; finalTotal: number | null;
   deliveryDate: string | null; deliveryWindow: string | null;
   createdAt: string; items: OrderItem[];
+  notifications: { id: string; message: string; createdAt: string }[];
 }
 
 const STATUSES: [string, string][] = [
@@ -160,6 +161,14 @@ export default function SiparislerPage() {
                                 {o.finalTotal != null && <> · Kesinleşen: <b style={{ color: 'var(--forest)' }}>{tl(o.finalTotal)}</b></>}
                               </span>
                             </div>
+                            {o.notifications.length > 0 && (
+                              <div style={{ marginTop: 10 }}>
+                                <b style={{ fontSize: 12 }}>Gönderilen bildirimler:</b>
+                                <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
+                                  {o.notifications.map((n) => <li key={n.id}>🔔 {n.message}</li>)}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>

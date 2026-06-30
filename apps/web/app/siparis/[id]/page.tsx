@@ -12,6 +12,7 @@ interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
   deliveryDate: string | null; deliveryWindow: string | null;
   subtotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null; items: OrderItem[];
+  notifications: { id: string; message: string; createdAt: string }[];
 }
 
 const STATUS: Record<string, string> = {
@@ -74,6 +75,18 @@ export default function OrderPage() {
         <h3 className="serif" style={{ margin: '0 0 12px', fontSize: 16 }}>Sipariş durumu</h3>
         <OrderTimeline status={order.status} />
       </div>
+
+      {order.notifications.length > 0 && (
+        <div className="success-card" style={{ marginTop: 16 }}>
+          <h3 className="serif" style={{ margin: '0 0 12px', fontSize: 16 }}>Bildirimler</h3>
+          {order.notifications.map((n) => (
+            <div key={n.id} className="ln" style={{ alignItems: 'flex-start' }}>
+              <span>🔔 {n.message}</span>
+              <span className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(n.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <p style={{ textAlign: 'center', marginTop: 22 }}>
         <Link href="/siparislerim" className="back">Siparişlerim</Link>　·

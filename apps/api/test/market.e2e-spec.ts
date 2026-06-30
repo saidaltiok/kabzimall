@@ -193,6 +193,22 @@ describe('Market (vitrin + sipariş)', () => {
     expect(grid.body.data.some((p: { slug: string }) => p.slug === 'haftalik')).toBe(false);
   });
 
+  it('bildirim: sipariş + durum değişimi müşteri bildirimi üretir', async () => {
+    const o = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'domates', qty: 1 }], customer: { name: 'Nur', phone: '05551112233', address: 'Mahalle 9' } })
+      .expect(201);
+
+    const d1 = await request(server).get(`/api/v1/storefront/orders/${o.body.id}`).expect(200);
+    expect(d1.body.notifications).toHaveLength(1);
+    expect(d1.body.notifications[0].message).toContain('alındı');
+
+    await admin.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'PREPARING' }).expect(200);
+    const d2 = await request(server).get(`/api/v1/storefront/orders/${o.body.id}`).expect(200);
+    expect(d2.body.notifications).toHaveLength(2);
+    expect(d2.body.notifications[1].message).toContain('hazırlan');
+  });
+
   it('VIEWER durum güncelleyemez → 403', async () => {
     const viewer = authed(app, 'VIEWER');
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);

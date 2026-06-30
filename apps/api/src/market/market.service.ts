@@ -7,6 +7,18 @@ import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
+const fmtTL = (k: number) => (k / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+
+/** Sipariş durumu → müşteriye gidecek bildirim metni. */
+const STATUS_MSG: Record<string, string> = {
+  CONFIRMED: 'Siparişiniz onaylandı.',
+  PREPARING: 'Siparişiniz hazırlanıyor.',
+  READY: 'Siparişiniz hazır, yola çıkmak üzere.',
+  OUT_FOR_DELIVERY: 'Siparişiniz yola çıktı, kurye yolda.',
+  DELIVERED: 'Siparişiniz teslim edildi. Afiyet olsun!',
+  CANCELLED: 'Siparişiniz iptal edildi.',
+};
+
 /** Müşteriye açık ürün alanları (maliyet/marj ASLA sızmaz). */
 const PUBLIC_PRODUCT_SELECT = {
   slug: true,
@@ -201,7 +213,7 @@ export class MarketService {
           await tx.product.update({ where: { id: p.id }, data: { stockQty: { decrement: it.orderedQty } } });
         }
       }
-      return tx.order.create({
+      const order = await tx.order.create({
         data: {
           tenantId: DEV_TENANT_ID,
           code,
@@ -222,12 +234,14 @@ export class MarketService {
         },
         include: { items: true },
       });
+      await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: order.id, message: 'Siparişiniz alındı. En kısa sürede hazırlanacak.' } });
+      return order;
     });
   }
 
   async getOrder(id: string) {
     const order = await this.prisma.order
-      .findFirst({ where: { id, tenantId: DEV_TENANT_ID }, include: { items: true } })
+      .findFirst({ where: { id, tenantId: DEV_TENANT_ID }, include: { items: true, notifications: { orderBy: { createdAt: 'asc' } } } })
       .catch(() => null);
     if (!order) throw new NotFoundException(`Sipariş bulunamadı: ${id}`);
     return order;
@@ -239,7 +253,7 @@ export class MarketService {
     return this.prisma.order.findMany({
       where: { tenantId: DEV_TENANT_ID, ...(status ? { status } : {}) },
       orderBy: { createdAt: 'desc' },
-      include: { items: true },
+      include: { items: true, notifications: { orderBy: { createdAt: 'asc' } } },
     });
   }
 
@@ -266,11 +280,10 @@ export class MarketService {
           await tx.orderItem.update({ where: { id: it.id }, data: { pickedQty: picked.get(it.id)!, lineTotal: lt } });
         }
       }
-      return tx.order.update({
-        where: { id },
-        data: { finalTotal: finalSubtotal + order.deliveryFee, status: 'READY' },
-        include: { items: true },
-      });
+      const finalTotal = finalSubtotal + order.deliveryFee;
+      const updated = await tx.order.update({ where: { id }, data: { finalTotal, status: 'READY' }, include: { items: true } });
+      await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: `Siparişiniz paketlendi. Kesinleşen tutar: ${fmtTL(finalTotal)}.` } });
+      return updated;
     });
   }
 
@@ -279,6 +292,10 @@ export class MarketService {
       throw new BadRequestException(`Geçersiz durum: ${status}`);
     }
     await this.getOrder(id);
-    return this.prisma.order.update({ where: { id }, data: { status }, include: { items: true } });
+    await this.prisma.$transaction([
+      this.prisma.order.update({ where: { id }, data: { status } }),
+      this.prisma.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: STATUS_MSG[status] ?? `Durum: ${status}` } }),
+    ]);
+    return this.getOrder(id);
   }
 }
