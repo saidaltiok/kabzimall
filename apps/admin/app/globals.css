@@ -166,6 +166,11 @@ td .savecell, .savecell { font-weight: 700; color: var(--forest); }
 .ocard .oc-act { display: flex; gap: 6px; margin-top: 10px; }
 .ocard .oc-act .btn { flex: 1; font-size: 12px; padding: 7px 10px; }
 .ocard .oc-act .oc-cancel { flex: 0 0 auto; padding: 7px 11px; color: var(--berry); border-color: var(--line); }
+.ocard .oc-pack { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.ocard .oc-packrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; margin-bottom: 7px; }
+.ocard .oc-packrow span { flex: 1; }
+.ocard .oc-packrow em { display: block; color: var(--persimmon-d); font-style: italic; font-size: 10.5px; }
+.ocard .oc-packrow input.cell { width: 62px; flex: 0 0 auto; }
 
 .hint { font-size: 11.5px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
 .muted { color: var(--muted); }

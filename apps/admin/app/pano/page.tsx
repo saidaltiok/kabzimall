@@ -6,10 +6,10 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; note: string | null }
+interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; note: string | null }
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string;
-  status: string; grandTotal: number; finalTotal: number | null; note: string | null;
+  status: string; grandTotal: number; estimatedTotal: number; finalTotal: number | null; note: string | null;
   deliveryDate: string | null; deliveryWindow: string | null;
   createdAt: string; items: OrderItem[];
 }
@@ -27,6 +27,8 @@ export default function PanoPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [packOpen, setPackOpen] = useState<string | null>(null);
+  const [picks, setPicks] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     try {
@@ -51,6 +53,30 @@ export default function PanoPage() {
     setBusy(o.id);
     try {
       await apiSend('PATCH', `/admin/orders/${o.id}/status`, { status: next });
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function openPack(o: Order) {
+    setPackOpen(packOpen === o.id ? null : o.id);
+    setPicks({});
+  }
+
+  /** Tartılan gerçek gramajları işle → tutar kesinleşir, sipariş 'Hazır' olur. */
+  async function pack(o: Order) {
+    setBusy(o.id);
+    try {
+      const items = o.items.map((it) => ({
+        itemId: it.id,
+        pickedQty: picks[it.id] !== undefined && picks[it.id] !== '' ? Number(picks[it.id].replace(',', '.')) : it.orderedQty,
+      }));
+      await apiSend('POST', `/admin/orders/${o.id}/pack`, { items });
+      setPackOpen(null);
+      setPicks({});
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -108,16 +134,49 @@ export default function PanoPage() {
                           {hasNote && <span className="oc-note" title="Müşteri notu var">📝</span>}
                         </div>
                         <div className="oc-items">{o.items.map((it) => `${it.productName} ${it.orderedQty}${it.unitLabel === 'kg' ? 'kg' : ''}`).join(' · ')}</div>
-                        <div className="oc-act">
-                          {!isLast && (
-                            <button className="btn" disabled={busy === o.id} onClick={() => advance(o)}>
-                              {busy === o.id ? '…' : `${FLOW[i + 1][2]} İleri al`}
-                            </button>
-                          )}
-                          {status !== 'DELIVERED' && (
-                            <button className="btn ghost oc-cancel" disabled={busy === o.id} onClick={() => cancel(o)} title="Siparişi iptal et">✕</button>
-                          )}
-                        </div>
+
+                        {packOpen === o.id ? (
+                          <div className="oc-pack">
+                            {o.items.map((it) => (
+                              <div className="oc-packrow" key={it.id}>
+                                <span>
+                                  {it.productName} <span className="muted">({it.orderedQty} {it.unitLabel ?? ''})</span>
+                                  {it.note && <em>📝 {it.note}</em>}
+                                </span>
+                                <input
+                                  className="cell"
+                                  placeholder={String(it.orderedQty)}
+                                  value={picks[it.id] ?? ''}
+                                  onChange={(e) => setPicks((s) => ({ ...s, [it.id]: e.target.value }))}
+                                />
+                              </div>
+                            ))}
+                            <div className="oc-act">
+                              <button className="btn" disabled={busy === o.id} onClick={() => pack(o)}>
+                                {busy === o.id ? '…' : '✅ Onayla → Hazır'}
+                              </button>
+                              <button className="btn ghost" disabled={busy === o.id} onClick={() => setPackOpen(null)}>Vazgeç</button>
+                            </div>
+                            <div className="muted" style={{ fontSize: 10.5, marginTop: 6 }}>
+                              Boş bırakılan kalem istenen miktarla kapanır. Tahmini: {tl(o.estimatedTotal)}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="oc-act">
+                            {status === 'PREPARING' ? (
+                              <button className="btn" disabled={busy === o.id} onClick={() => openPack(o)}>⚖️ Paketle</button>
+                            ) : (
+                              !isLast && (
+                                <button className="btn" disabled={busy === o.id} onClick={() => advance(o)}>
+                                  {busy === o.id ? '…' : `${FLOW[i + 1][2]} İleri al`}
+                                </button>
+                              )
+                            )}
+                            {status !== 'DELIVERED' && (
+                              <button className="btn ghost oc-cancel" disabled={busy === o.id} onClick={() => cancel(o)} title="Siparişi iptal et">✕</button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })
@@ -139,7 +198,8 @@ export default function PanoPage() {
         )}
 
         <p className="note2" style={{ marginTop: 14 }}>
-          Tartılı ürünlerde tutar kesinleştirme (paketleme) <Link href="/siparisler" style={{ color: 'var(--forest)', fontWeight: 600 }}>Siparişler</Link> ekranından yapılır. Pano 15 sn&apos;de bir kendini tazeler.
+          <b>Hazırlanıyor</b> kolonunda <b>⚖️ Paketle</b> ile tartılan gramajları girip tutarı kesinleştir
+          (sipariş <b>Hazır</b>&apos;a geçer). Detaylı liste için <Link href="/siparisler" style={{ color: 'var(--forest)', fontWeight: 600 }}>Siparişler</Link>. Pano 15 sn&apos;de bir kendini tazeler.
         </p>
       </div>
     </>
