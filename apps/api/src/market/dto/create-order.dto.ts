@@ -19,6 +19,10 @@ export class OrderItemInput {
   /** Miktar — adet ya da kg (tartılı üründe ondalık). */
   @IsNumber() @Min(0.001)
   qty!: number;
+
+  /** Müşteri ürün notu (ör. "çok olgun olmasın"). */
+  @IsOptional() @IsString()
+  note?: string;
 }
 
 export const DELIVERY_WINDOWS = ['10:00-13:00', '13:00-16:00', '16:00-19:00'] as const;

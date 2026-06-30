@@ -9,6 +9,7 @@ export interface CartItem {
   unitLabel: string | null;
   emoji: string;
   qty: number;
+  note?: string; // müşteri ürün notu
   basketSlug?: string; // bir hazır sepetten geldiyse
   basketName?: string;
 }
@@ -22,6 +23,7 @@ interface CartCtx {
   subtotal: number;
   add: (item: Omit<CartItem, 'qty'>, qty?: number) => void;
   setQty: (key: string, qty: number) => void;
+  setNote: (key: string, note: string) => void;
   remove: (key: string) => void;
   clear: () => void;
   keyOf: (slug: string, basketSlug?: string) => string;
@@ -61,13 +63,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const setQty: CartCtx['setQty'] = (key, qty) =>
     setItems((cur) => (qty <= 0 ? cur.filter((x) => keyOf(x.slug, x.basketSlug) !== key) : cur.map((x) => (keyOf(x.slug, x.basketSlug) === key ? { ...x, qty } : x))));
 
+  const setNote: CartCtx['setNote'] = (key, note) =>
+    setItems((cur) => cur.map((x) => (keyOf(x.slug, x.basketSlug) === key ? { ...x, note: note.trim() || undefined } : x)));
+
   const remove: CartCtx['remove'] = (key) => setItems((cur) => cur.filter((x) => keyOf(x.slug, x.basketSlug) !== key));
   const clear = () => setItems([]);
 
   const count = items.reduce((a, b) => a + b.qty, 0);
   const subtotal = items.reduce((a, b) => a + Math.round(b.unitPrice * b.qty), 0);
 
-  return <Ctx.Provider value={{ items, count, subtotal, add, setQty, remove, clear, keyOf }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ items, count, subtotal, add, setQty, setNote, remove, clear, keyOf }}>{children}</Ctx.Provider>;
 }
 
 export function useCart(): CartCtx {

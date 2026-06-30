@@ -8,7 +8,7 @@ import { tl } from '@/lib/format';
 const FREE_THRESHOLD = 40000; // kuruş (400 ₺)
 
 export default function CartPage() {
-  const { items, setQty, remove, subtotal, keyOf } = useCart();
+  const { items, setQty, setNote, remove, subtotal, keyOf } = useCart();
   const router = useRouter();
 
   if (items.length === 0)
@@ -41,6 +41,14 @@ export default function CartPage() {
                   </div>
                   <div className="meta">{tl(it.unitPrice)} / {it.unitLabel ?? 'birim'}{it.basketSlug ? ' · paket fiyatı' : ''}</div>
                   <div className="pr">{tl(Math.round(it.unitPrice * it.qty))}</div>
+                  {!it.basketSlug && (
+                    <input
+                      className="notein"
+                      placeholder="📝 Ürün notu (ör. çok olgun olmasın)"
+                      defaultValue={it.note ?? ''}
+                      onBlur={(e) => setNote(k, e.target.value)}
+                    />
+                  )}
                 </div>
                 <div className="qbox">
                   <button onClick={() => setQty(k, +(it.qty - step).toFixed(3))}>−</button>

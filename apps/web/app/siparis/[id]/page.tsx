@@ -7,7 +7,7 @@ import { apiGet } from '@/lib/api';
 import { tl } from '@/lib/format';
 import OrderTimeline from '@/components/OrderTimeline';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number }
+interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number; note: string | null }
 interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
   deliveryDate: string | null; deliveryWindow: string | null;
@@ -42,8 +42,11 @@ export default function OrderPage() {
 
       <div className="success-card">
         {order.items.map((it) => (
-          <div className="ln" key={it.id}>
-            <span>{it.productName} <span className="muted">· {it.orderedQty} {it.unitLabel ?? ''}</span></span>
+          <div className="ln" key={it.id} style={{ alignItems: 'flex-start' }}>
+            <span>
+              {it.productName} <span className="muted">· {it.orderedQty} {it.unitLabel ?? ''}</span>
+              {it.note && <span className="muted" style={{ display: 'block', fontSize: 12, fontStyle: 'italic' }}>📝 {it.note}</span>}
+            </span>
             <b>{tl(it.lineTotal)}</b>
           </div>
         ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { tl, emojiFor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
@@ -138,14 +139,6 @@ export default function HomePage() {
             const discPct = discounted ? Math.round((1 - eff / p.basePrice) * 100) : 0;
             return (
               <div className="prod" key={p.slug} style={soldOut ? { opacity: 0.6 } : undefined}>
-                <div className="ph">
-                  {p.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
-                  ) : (
-                    emojiFor(p.slug, p.category?.slug)
-                  )}
-                </div>
                 {soldOut ? (
                   <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: '#eee', color: 'var(--muted)' }}>TÜKENDİ</span>
                 ) : discounted ? (
@@ -158,13 +151,23 @@ export default function HomePage() {
                 {!soldOut && (
                   <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
                 )}
-                <div className="nm">{p.name}</div>
-                <div className="or">{p.originRegion ?? '—'}</div>
-                <div className="pr">
-                  {tl(eff)}{' '}
-                  {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>}
-                </div>
-                <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
+                <Link href={`/urun/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                  <div className="ph">
+                    {p.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                    ) : (
+                      emojiFor(p.slug, p.category?.slug)
+                    )}
+                  </div>
+                  <div className="nm">{p.name}</div>
+                  <div className="or">{p.originRegion ?? '—'}</div>
+                  <div className="pr">
+                    {tl(eff)}{' '}
+                    {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>}
+                  </div>
+                  <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
+                </Link>
               </div>
             );
           })}

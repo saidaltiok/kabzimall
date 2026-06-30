@@ -58,6 +58,22 @@ describe('Market (vitrin + sipariş)', () => {
     expect(res.body.customerName).toBe('Ayşe Yılmaz');
   });
 
+  it('ürün notu: kalem bazında müşteri notu kaydedilir ve geri döner', async () => {
+    const res = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({
+        items: [{ slug: 'domates', qty: 1, note: '  Çok olgun olmasın  ' }, { slug: 'cilek', qty: 0.5 }],
+        customer: { name: 'Veli Kaya', phone: '05551112233', address: 'Kadıköy, İstanbul' },
+      })
+      .expect(201);
+
+    const detail = await request(server).get(`/api/v1/storefront/orders/${res.body.id}`).expect(200);
+    const domates = detail.body.items.find((i: { productName: string }) => i.productName === 'Domates');
+    const cilek = detail.body.items.find((i: { productName: string }) => i.productName === 'Çilek');
+    expect(domates.note).toBe('Çok olgun olmasın'); // trim uygulanır
+    expect(cilek.note).toBeNull(); // not yoksa null
+  });
+
   it('bilinmeyen ürünle sipariş → 400', async () => {
     await request(server)
       .post('/api/v1/storefront/orders')

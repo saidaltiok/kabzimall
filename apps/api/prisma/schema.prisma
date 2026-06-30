@@ -151,6 +151,8 @@ model OrderItem {
   orderedQty  Float   @map("ordered_qty")
   /// Paketlemede tartılan gerçek miktar (girilene dek null).
   pickedQty   Float?  @map("picked_qty")
+  /// Müşteri ürün notu (ör. "çok olgun olmasın") — paketleyene iletilir.
+  note        String?
   lineTotal   Int     @map("line_total")
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)

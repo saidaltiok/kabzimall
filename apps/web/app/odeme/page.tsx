@@ -44,7 +44,7 @@ export default function CheckoutPage() {
     try {
       const slot = slots.find((s) => `${s.date}|${s.window}` === slotKey);
       const order = await apiPost<{ id: string; code: string }>('/storefront/orders', {
-        items: items.map((i) => ({ slug: i.slug, qty: i.qty, basketSlug: i.basketSlug })),
+        items: items.map((i) => ({ slug: i.slug, qty: i.qty, basketSlug: i.basketSlug, note: i.note })),
         customer: { name, phone, address, district: district || undefined },
         slot: slot ? { date: slot.date, window: slot.window } : undefined,
         note: note || undefined,

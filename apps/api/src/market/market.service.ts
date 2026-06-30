@@ -186,6 +186,7 @@ export class MarketService {
         unitLabel: p.unitLabel,
         unitPrice,
         orderedQty: i.qty,
+        note: i.note?.trim() || null,
         lineTotal: lineTotal(unitPrice, i.qty),
       };
     });

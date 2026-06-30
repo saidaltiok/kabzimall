@@ -5,7 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; unitPrice: number; lineTotal: number }
+interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; unitPrice: number; lineTotal: number; note: string | null }
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string; addressText: string;
   status: string; subtotal: number; deliveryFee: number; grandTotal: number; note: string | null;
@@ -139,7 +139,10 @@ export default function SiparislerPage() {
                               <tbody>
                                 {o.items.map((it) => (
                                   <tr key={it.id}>
-                                    <td>{it.productName}</td>
+                                    <td>
+                                      {it.productName}
+                                      {it.note && <div style={{ fontSize: 11, color: 'var(--persimmon-d)', fontStyle: 'italic' }}>📝 {it.note}</div>}
+                                    </td>
                                     <td className="num">{it.orderedQty} {it.unitLabel ?? ''}</td>
                                     <td className="num">
                                       <input
