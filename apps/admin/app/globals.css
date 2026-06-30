@@ -149,6 +149,24 @@ td .savecell, .savecell { font-weight: 700; color: var(--forest); }
 .aibox { background: linear-gradient(135deg, rgba(232, 112, 58, 0.1), rgba(230, 180, 80, 0.08)); border: 1px solid rgba(230, 180, 80, 0.4); border-radius: 16px; padding: 15px 16px; font-size: 12.5px; line-height: 1.6; }
 .aibox .k { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--persimmon-d); font-weight: 700; display: block; margin-bottom: 5px; }
 
+/* ---- Operasyon panosu ---- */
+.board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+.col { flex: 0 0 264px; background: var(--cream-d); border-radius: 14px; padding: 10px 10px 4px; }
+.col h3 { display: flex; justify-content: space-between; align-items: center; font-family: 'Fraunces', serif; font-size: 14px; margin: 2px 4px 10px; }
+.col h3 .cnt { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; color: var(--muted); background: #fff; border-radius: 20px; padding: 2px 9px; }
+.colempty { text-align: center; color: var(--muted); font-size: 13px; padding: 18px 0; }
+.ocard { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; box-shadow: var(--shadow-sm); }
+.ocard .oc-top { display: flex; justify-content: space-between; align-items: baseline; }
+.ocard .oc-top b { font-size: 13px; }
+.ocard .oc-amt { font-weight: 700; color: var(--forest); font-size: 13px; }
+.ocard .oc-cust { font-size: 12.5px; margin-top: 3px; }
+.ocard .oc-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.ocard .oc-note { margin-left: 5px; }
+.ocard .oc-items { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; max-height: 44px; overflow: hidden; }
+.ocard .oc-act { display: flex; gap: 6px; margin-top: 10px; }
+.ocard .oc-act .btn { flex: 1; font-size: 12px; padding: 7px 10px; }
+.ocard .oc-act .oc-cancel { flex: 0 0 auto; padding: 7px 11px; color: var(--berry); border-color: var(--line); }
+
 .hint { font-size: 11.5px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
 .muted { color: var(--muted); }
 .error { background: #fdecec; color: var(--berry); padding: 10px 14px; border-radius: 12px; margin: 0 0 14px; font-size: 13px; }
