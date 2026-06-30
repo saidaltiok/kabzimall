@@ -303,6 +303,29 @@ export class MarketService {
     return order;
   }
 
+  /** Telefon eşleştirmesi için: yalnızca rakamlar, son 10 hane. */
+  private normalizePhone(p: string) {
+    const digits = (p ?? '').replace(/\D/g, '');
+    return digits.length > 10 ? digits.slice(-10) : digits;
+  }
+
+  /**
+   * Misafir sipariş sorgulama: kod + telefon eşleşmeli (UUID gerekmez).
+   * Güvenlik: ikisi de doğru olmadıkça hangi kısmın yanlış olduğu sızdırılmaz.
+   */
+  async lookupOrder(code: string, phone: string) {
+    const c = (code ?? '').trim().toUpperCase();
+    const ph = this.normalizePhone(phone);
+    if (!c || ph.length < 7) throw new NotFoundException('Sipariş bulunamadı');
+    const order = await this.prisma.order
+      .findFirst({ where: { code: c, tenantId: DEV_TENANT_ID }, include: { items: true, notifications: { orderBy: { createdAt: 'asc' } } } })
+      .catch(() => null);
+    if (!order || this.normalizePhone(order.customerPhone) !== ph) {
+      throw new NotFoundException('Sipariş bulunamadı. Kod ve telefon eşleşmiyor.');
+    }
+    return order;
+  }
+
   /* -------------------------- Admin sipariş -------------------------- */
 
   listOrders(status?: string) {

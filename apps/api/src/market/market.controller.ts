@@ -74,6 +74,14 @@ export class StorefrontController {
     return this.service.createOrder(dto);
   }
 
+  /** GET /storefront/orders/lookup?code=&phone= — misafir sipariş sorgulama. */
+  @Get('orders/lookup')
+  @ApiQuery({ name: 'code', required: true })
+  @ApiQuery({ name: 'phone', required: true })
+  lookup(@Query('code') code: string, @Query('phone') phone: string) {
+    return this.service.lookupOrder(code, phone);
+  }
+
   @Get('orders/:id')
   order(@Param('id') id: string) {
     return this.service.getOrder(id);

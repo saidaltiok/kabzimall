@@ -296,6 +296,24 @@ describe('Market (vitrin + sipariş)', () => {
     await admin.put('/api/v1/admin/settings').send({ minOrderTotal: 0 }).expect(200);
   });
 
+  it('sipariş sorgulama: kod + telefon eşleşirse 200, eşleşmezse 404', async () => {
+    const made = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'domates', qty: 1 }], customer: { name: 'Zeynep Ak', phone: '0532 444 55 66', address: 'Bir adres 1' } })
+      .expect(201);
+    const code = made.body.code;
+
+    // doğru kod + telefon (boşluklu format) → 200, aynı sipariş
+    const ok = await request(server).get(`/api/v1/storefront/orders/lookup?code=${code}&phone=${encodeURIComponent('0532 444 55 66')}`).expect(200);
+    expect(ok.body.id).toBe(made.body.id);
+    // farklı format (boşluksuz) → yine 200
+    await request(server).get(`/api/v1/storefront/orders/lookup?code=${code}&phone=05324445566`).expect(200);
+    // yanlış telefon → 404
+    await request(server).get(`/api/v1/storefront/orders/lookup?code=${code}&phone=05550000000`).expect(404);
+    // yanlış kod → 404
+    await request(server).get(`/api/v1/storefront/orders/lookup?code=KMYOKYOK&phone=05324445566`).expect(404);
+  });
+
   it('teslimat bölgesi: hizmet ilçesi varsa sipariş kontrol edilir', async () => {
     await admin.post('/api/v1/admin/delivery-zones').send({ name: 'Kadıköy' }).expect(201);
     const z = await request(server).get('/api/v1/storefront/zones').expect(200);
