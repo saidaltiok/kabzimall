@@ -69,6 +69,26 @@ describe('Katalog (ürün/kategori)', () => {
     expect(onlyActive.body.data.some((p: { id: string }) => p.id === productId)).toBe(false);
   });
 
+  it('opsiyonel alanlar null ile temizlenebilir (sinirsiz/yok durumuna donus)', async () => {
+    // limitli ürün
+    const c = await http
+      .post('/api/v1/catalog/products')
+      .send({ slug: 'limonata', name: 'Limonata', saleType: 'PIECE', unitLabel: 'adet', basePrice: 2500, discountedPrice: 1900, stockQty: 10, maxPerOrder: 3 })
+      .expect(201);
+    expect(c.body.stockQty).toBe(10);
+    expect(c.body.maxPerOrder).toBe(3);
+    expect(c.body.discountedPrice).toBe(1900);
+
+    // null göndererek temizle
+    const u = await http
+      .patch(`/api/v1/catalog/products/${c.body.id}`)
+      .send({ stockQty: null, maxPerOrder: null, discountedPrice: null })
+      .expect(200);
+    expect(u.body.stockQty).toBeNull();
+    expect(u.body.maxPerOrder).toBeNull();
+    expect(u.body.discountedPrice).toBeNull();
+  });
+
   it('geçmişi olmayan ürün silinir', async () => {
     const res = await http.delete(`/api/v1/catalog/products/${productId}`).expect(200);
     expect(res.body.deleted).toBe(true);

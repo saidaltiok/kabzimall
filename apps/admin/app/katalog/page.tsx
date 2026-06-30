@@ -70,14 +70,17 @@ export default function KatalogPage() {
   async function save() {
     setBusy(true); setError(null); setOk(null);
     try {
-      const basePrice = form.priceTl ? Math.round(parseFloat(form.priceTl.replace(',', '.')) * 100) : undefined;
+      // Boş bırakılan opsiyonel alan → null gönder (panelden "sınırsız/yok"a geri dönülebilsin).
+      const strOrNull = (v: string) => (v.trim() === '' ? null : v.trim());
+      const numOrNull = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
+      const kurusOrNull = (v: string) => (v.trim() === '' ? null : Math.round(parseFloat(v.replace(',', '.')) * 100));
       const payload: Record<string, unknown> = {
         name: form.name, saleType: form.saleType,
-        unitLabel: form.unitLabel || undefined, categoryId: form.categoryId || undefined,
-        basePrice, originRegion: form.originRegion || undefined, imageUrl: form.imageUrl || undefined,
-        stockQty: form.stockQty === '' ? undefined : Number(form.stockQty),
-        maxPerOrder: form.maxPerOrder === '' ? undefined : Number(form.maxPerOrder),
-        discountedPrice: form.discountedTl === '' ? undefined : Math.round(parseFloat(form.discountedTl.replace(',', '.')) * 100),
+        unitLabel: strOrNull(form.unitLabel), categoryId: strOrNull(form.categoryId),
+        basePrice: kurusOrNull(form.priceTl), originRegion: strOrNull(form.originRegion), imageUrl: strOrNull(form.imageUrl),
+        stockQty: numOrNull(form.stockQty),
+        maxPerOrder: numOrNull(form.maxPerOrder),
+        discountedPrice: kurusOrNull(form.discountedTl),
         isActive: form.isActive, isFeatured: form.isFeatured, isFreshDaily: form.isFreshDaily, isLocal: form.isLocal,
       };
       if (editing) {
