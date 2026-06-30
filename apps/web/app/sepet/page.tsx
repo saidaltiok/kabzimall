@@ -6,13 +6,12 @@ import { useRouter } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
-
-interface StoreSettings { minOrderTotal: number; deliveryFee: number; freeDeliveryThreshold: number }
+import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal, nextTier } from '@/lib/delivery';
 
 export default function CartPage() {
   const { items, setQty, setNote, remove, subtotal, keyOf } = useCart();
   const router = useRouter();
-  const [settings, setSettings] = useState<StoreSettings>({ minOrderTotal: 0, deliveryFee: 4990, freeDeliveryThreshold: 40000 });
+  const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
@@ -28,10 +27,9 @@ export default function CartPage() {
       </div>
     );
 
-  const { minOrderTotal, deliveryFee, freeDeliveryThreshold } = settings;
-  const freeEligible = freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold;
-  const fee = freeEligible ? 0 : deliveryFee;
-  const remaining = freeDeliveryThreshold - subtotal;
+  const { minOrderTotal, deliveryTiers } = settings;
+  const fee = feeForSubtotal(subtotal, deliveryTiers);
+  const next = nextTier(subtotal, deliveryTiers);
   const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
 
   return (
@@ -83,9 +81,9 @@ export default function CartPage() {
           </div>
           <div className="ln tot serif"><span>Toplam (tahmini)</span><span>{tl(subtotal + fee)}</span></div>
           <div className="note">
-            {freeDeliveryThreshold > 0 && (freeEligible
-              ? `${tl(freeDeliveryThreshold)} üstü teslimat ücretsiz. `
-              : `${tl(remaining)} daha ekle, teslimat ücretsiz olsun. `)}
+            {next && (next.fee === 0
+              ? `${tl(next.minSubtotal - subtotal)} daha ekle, teslimat ücretsiz olsun. `
+              : `${tl(next.minSubtotal - subtotal)} daha ekle, teslimat ${tl(next.fee)}'ye insin. `)}
             Tartılı ürünlerde nihai tutar paketlemede gramajla kesinleşir.
           </div>
           {belowMin && (

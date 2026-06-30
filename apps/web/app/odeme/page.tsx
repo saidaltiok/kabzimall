@@ -7,6 +7,7 @@ import { apiGet, apiPost } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 import { rememberOrder } from '@/lib/orders';
+import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal } from '@/lib/delivery';
 
 interface Slot { date: string; window: string; label: string }
 
@@ -21,14 +22,14 @@ export default function CheckoutPage() {
   const [slotKey, setSlotKey] = useState('');
   const [zones, setZones] = useState<string[]>([]);
   const [district, setDistrict] = useState('');
-  const [settings, setSettings] = useState({ minOrderTotal: 0, deliveryFee: 4990, freeDeliveryThreshold: 40000 });
+  const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<{ data: Slot[] }>('/storefront/slots').then((r) => setSlots(r.data)).catch(() => {});
     apiGet<{ data: { name: string }[] }>('/storefront/zones').then((r) => setZones(r.data.map((z) => z.name))).catch(() => {});
-    apiGet<typeof settings>('/storefront/settings').then(setSettings).catch(() => {});
+    apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
   }, []);
 
   if (items.length === 0)
@@ -61,8 +62,8 @@ export default function CheckoutPage() {
     }
   }
 
-  const { minOrderTotal, deliveryFee, freeDeliveryThreshold } = settings;
-  const fee = freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold ? 0 : deliveryFee;
+  const { minOrderTotal, deliveryTiers } = settings;
+  const fee = feeForSubtotal(subtotal, deliveryTiers);
   const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
   const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district) && !belowMin;
 

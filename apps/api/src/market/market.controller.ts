@@ -131,7 +131,7 @@ export class AdminSettingsController {
   /** PUT /admin/settings — asgari tutar + teslimat ücreti/eşiği (kuruş; verilen alanlar güncellenir). */
   @Put()
   @Roles(...CATALOG_WRITERS)
-  @ApiBody({ schema: { example: { minOrderTotal: 15000, deliveryFee: 4990, freeDeliveryThreshold: 40000 } } })
+  @ApiBody({ schema: { example: { minOrderTotal: 15000, deliveryTiers: [{ minSubtotal: 0, fee: 8000 }, { minSubtotal: 200000, fee: 0 }] } } })
   update(@Body() dto: UpdateStoreSettingsDto) {
     return this.service.updateStoreSettings(dto);
   }

@@ -8,9 +8,13 @@ import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
-/** Mağaza ayarı yoksa teslimat varsayılanları (kuruş). */
-const DEFAULT_DELIVERY_FEE = 4990;
-const DEFAULT_FREE_THRESHOLD = 40000;
+interface DeliveryTier { minSubtotal: number; fee: number }
+
+/** Mağaza ayarı yoksa kademeli teslimat tarifesi (kuruş). */
+const DEFAULT_DELIVERY_TIERS: DeliveryTier[] = [
+  { minSubtotal: 0, fee: 4990 },
+  { minSubtotal: 40000, fee: 0 },
+];
 
 const fmtTL = (k: number) => (k / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
 
@@ -94,37 +98,42 @@ export class MarketService {
 
   /* ----------------------------- Ayarlar ----------------------------- */
 
+  /** Gelen tarifeyi doğrula/normalize et: geçerli kademeler, artan eşik; boşsa varsayılan. */
+  private normalizeTiers(raw: unknown): DeliveryTier[] {
+    if (!Array.isArray(raw)) return DEFAULT_DELIVERY_TIERS;
+    const tiers = (raw as DeliveryTier[])
+      .filter((t) => t && typeof t.minSubtotal === 'number' && typeof t.fee === 'number' && t.minSubtotal >= 0 && t.fee >= 0)
+      .map((t) => ({ minSubtotal: Math.round(t.minSubtotal), fee: Math.round(t.fee) }))
+      .sort((a, b) => a.minSubtotal - b.minSubtotal);
+    // En az bir 0+ temel kademe olsun (yoksa küçük sepetler ücretsiz görünür).
+    if (!tiers.length) return DEFAULT_DELIVERY_TIERS;
+    if (tiers[0].minSubtotal > 0) tiers.unshift({ minSubtotal: 0, fee: tiers[0].fee });
+    return tiers;
+  }
+
   /** Mağaza ayarları (tenant başına tek satır; yoksa varsayılan). */
   async getStoreSettings() {
     const s = await this.prisma.storeSetting.findUnique({ where: { tenantId: DEV_TENANT_ID } });
     return {
       minOrderTotal: s?.minOrderTotal ?? 0,
-      deliveryFee: s?.deliveryFee ?? DEFAULT_DELIVERY_FEE,
-      freeDeliveryThreshold: s?.freeDeliveryThreshold ?? DEFAULT_FREE_THRESHOLD,
+      deliveryTiers: this.normalizeTiers(s?.deliveryTiers),
     };
   }
 
   /** Verilen alanları günceller; verilmeyenler korunur. */
-  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryFee?: number; freeDeliveryThreshold?: number }) {
+  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[] }) {
     const cur = await this.getStoreSettings();
     const next = {
       minOrderTotal: patch.minOrderTotal ?? cur.minOrderTotal,
-      deliveryFee: patch.deliveryFee ?? cur.deliveryFee,
-      freeDeliveryThreshold: patch.freeDeliveryThreshold ?? cur.freeDeliveryThreshold,
+      deliveryTiers: patch.deliveryTiers ? this.normalizeTiers(patch.deliveryTiers) : cur.deliveryTiers,
     };
+    const tiersJson = next.deliveryTiers as unknown as Prisma.InputJsonValue;
     const s = await this.prisma.storeSetting.upsert({
       where: { tenantId: DEV_TENANT_ID },
-      create: { tenantId: DEV_TENANT_ID, ...next },
-      update: next,
+      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson },
+      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson },
     });
-    return { minOrderTotal: s.minOrderTotal, deliveryFee: s.deliveryFee, freeDeliveryThreshold: s.freeDeliveryThreshold };
-  }
-
-  /** Mağaza ayarlarından kademeli teslimat ücreti tarifesi (tek kaynak: packages/pricing). */
-  private deliveryTiers(s: { deliveryFee: number; freeDeliveryThreshold: number }) {
-    const tiers = [{ minSubtotal: 0, fee: s.deliveryFee }];
-    if (s.freeDeliveryThreshold > 0) tiers.push({ minSubtotal: s.freeDeliveryThreshold, fee: 0 });
-    return tiers;
+    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers) };
   }
 
   /* --------------------------- Teslimat bölgesi -------------------------- */
@@ -262,7 +271,7 @@ export class MarketService {
       throw new BadRequestException(`Asgari sipariş tutarı ${fmtTL(settings.minOrderTotal)}. Sepet ara toplamı: ${fmtTL(subtotal)}.`);
     }
 
-    const fee = deliveryFee(subtotal, this.deliveryTiers(settings));
+    const fee = deliveryFee(subtotal, settings.deliveryTiers);
     const grandTotal = subtotal + fee;
     const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);
 
