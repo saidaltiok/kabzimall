@@ -21,14 +21,14 @@ export default function CheckoutPage() {
   const [slotKey, setSlotKey] = useState('');
   const [zones, setZones] = useState<string[]>([]);
   const [district, setDistrict] = useState('');
-  const [minOrderTotal, setMinOrderTotal] = useState(0);
+  const [settings, setSettings] = useState({ minOrderTotal: 0, deliveryFee: 4990, freeDeliveryThreshold: 40000 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<{ data: Slot[] }>('/storefront/slots').then((r) => setSlots(r.data)).catch(() => {});
     apiGet<{ data: { name: string }[] }>('/storefront/zones').then((r) => setZones(r.data.map((z) => z.name))).catch(() => {});
-    apiGet<{ minOrderTotal: number }>('/storefront/settings').then((s) => setMinOrderTotal(s.minOrderTotal)).catch(() => {});
+    apiGet<typeof settings>('/storefront/settings').then(setSettings).catch(() => {});
   }, []);
 
   if (items.length === 0)
@@ -61,6 +61,8 @@ export default function CheckoutPage() {
     }
   }
 
+  const { minOrderTotal, deliveryFee, freeDeliveryThreshold } = settings;
+  const fee = freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold ? 0 : deliveryFee;
   const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
   const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district) && !belowMin;
 
@@ -115,9 +117,9 @@ export default function CheckoutPage() {
 
         <div className="summary">
           <div className="ln"><span>Ara toplam ({items.length} ürün)</span><span>{tl(subtotal)}</span></div>
-          <div className="ln"><span>Teslimat</span><span className="save">{subtotal >= 40000 ? 'Ücretsiz' : 'Onayda hesaplanır'}</span></div>
-          <div className="ln tot serif"><span>Tahmini toplam</span><span>{tl(subtotal)}+</span></div>
-          <div className="note">Kesin tutar (teslimat ücreti dâhil) sipariş onayında gösterilir. Tartılı üründe gramajla kesinleşir.</div>
+          <div className="ln"><span>Teslimat</span><span className="save">{fee === 0 ? 'Ücretsiz' : tl(fee)}</span></div>
+          <div className="ln tot serif"><span>Tahmini toplam</span><span>{tl(subtotal + fee)}</span></div>
+          <div className="note">Kesin tutar tartılı üründe paketlemede gramajla kesinleşir.</div>
           {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
           <button className="cta" onClick={placeOrder} disabled={busy || !valid}>
             {busy ? 'Gönderiliyor…' : 'Siparişi onayla'}

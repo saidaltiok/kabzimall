@@ -296,6 +296,28 @@ describe('Market (vitrin + sipariş)', () => {
     await admin.put('/api/v1/admin/settings').send({ minOrderTotal: 0 }).expect(200);
   });
 
+  it('teslimat ücreti ayarlanabilir: eşik altı temel ücret, eşik üstü ücretsiz', async () => {
+    // temel 1000, eşik 8000 (yalnız bu alanlar; minOrderTotal korunur)
+    const up = await admin.put('/api/v1/admin/settings').send({ deliveryFee: 1000, freeDeliveryThreshold: 8000 }).expect(200);
+    expect(up.body.deliveryFee).toBe(1000);
+    expect(up.body.freeDeliveryThreshold).toBe(8000);
+    expect(up.body.minOrderTotal).toBe(0); // önceki değer korundu
+    expect((await request(server).get('/api/v1/storefront/settings')).body.deliveryFee).toBe(1000);
+
+    const cust = { name: 'Veli', phone: '05551112233', address: 'Mahalle 1' };
+    // 3590 < 8000 → temel ücret 1000
+    const below = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 1 }], customer: cust }).expect(201);
+    expect(below.body.deliveryFee).toBe(1000);
+    expect(below.body.grandTotal).toBe(4590);
+    // 3590×3 = 10770 ≥ 8000 → ücretsiz
+    const above = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 3 }], customer: cust }).expect(201);
+    expect(above.body.deliveryFee).toBe(0);
+    expect(above.body.grandTotal).toBe(10770);
+
+    // varsayılana döndür
+    await admin.put('/api/v1/admin/settings').send({ deliveryFee: 4990, freeDeliveryThreshold: 40000 }).expect(200);
+  });
+
   it('sipariş sorgulama: kod + telefon eşleşirse 200, eşleşmezse 404', async () => {
     const made = await request(server)
       .post('/api/v1/storefront/orders')

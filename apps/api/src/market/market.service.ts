@@ -8,6 +8,10 @@ import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
+/** Mağaza ayarı yoksa teslimat varsayılanları (kuruş). */
+const DEFAULT_DELIVERY_FEE = 4990;
+const DEFAULT_FREE_THRESHOLD = 40000;
+
 const fmtTL = (k: number) => (k / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
 
 /** Sipariş durumu → müşteriye gidecek bildirim metni. */
@@ -93,16 +97,34 @@ export class MarketService {
   /** Mağaza ayarları (tenant başına tek satır; yoksa varsayılan). */
   async getStoreSettings() {
     const s = await this.prisma.storeSetting.findUnique({ where: { tenantId: DEV_TENANT_ID } });
-    return { minOrderTotal: s?.minOrderTotal ?? 0 };
+    return {
+      minOrderTotal: s?.minOrderTotal ?? 0,
+      deliveryFee: s?.deliveryFee ?? DEFAULT_DELIVERY_FEE,
+      freeDeliveryThreshold: s?.freeDeliveryThreshold ?? DEFAULT_FREE_THRESHOLD,
+    };
   }
 
-  async updateStoreSettings(minOrderTotal: number) {
+  /** Verilen alanları günceller; verilmeyenler korunur. */
+  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryFee?: number; freeDeliveryThreshold?: number }) {
+    const cur = await this.getStoreSettings();
+    const next = {
+      minOrderTotal: patch.minOrderTotal ?? cur.minOrderTotal,
+      deliveryFee: patch.deliveryFee ?? cur.deliveryFee,
+      freeDeliveryThreshold: patch.freeDeliveryThreshold ?? cur.freeDeliveryThreshold,
+    };
     const s = await this.prisma.storeSetting.upsert({
       where: { tenantId: DEV_TENANT_ID },
-      create: { tenantId: DEV_TENANT_ID, minOrderTotal },
-      update: { minOrderTotal },
+      create: { tenantId: DEV_TENANT_ID, ...next },
+      update: next,
     });
-    return { minOrderTotal: s.minOrderTotal };
+    return { minOrderTotal: s.minOrderTotal, deliveryFee: s.deliveryFee, freeDeliveryThreshold: s.freeDeliveryThreshold };
+  }
+
+  /** Mağaza ayarlarından kademeli teslimat ücreti tarifesi (tek kaynak: packages/pricing). */
+  private deliveryTiers(s: { deliveryFee: number; freeDeliveryThreshold: number }) {
+    const tiers = [{ minSubtotal: 0, fee: s.deliveryFee }];
+    if (s.freeDeliveryThreshold > 0) tiers.push({ minSubtotal: s.freeDeliveryThreshold, fee: 0 });
+    return tiers;
   }
 
   /* --------------------------- Teslimat bölgesi -------------------------- */
@@ -234,13 +256,13 @@ export class MarketService {
 
     const subtotal = items.reduce((s, it) => s + it.lineTotal, 0);
 
-    // Asgari sipariş tutarı (mağaza ayarı; 0 = sınır yok).
-    const { minOrderTotal } = await this.getStoreSettings();
-    if (minOrderTotal > 0 && subtotal < minOrderTotal) {
-      throw new BadRequestException(`Asgari sipariş tutarı ${fmtTL(minOrderTotal)}. Sepet ara toplamı: ${fmtTL(subtotal)}.`);
+    // Mağaza ayarları: asgari tutar + teslimat ücreti tarifesi.
+    const settings = await this.getStoreSettings();
+    if (settings.minOrderTotal > 0 && subtotal < settings.minOrderTotal) {
+      throw new BadRequestException(`Asgari sipariş tutarı ${fmtTL(settings.minOrderTotal)}. Sepet ara toplamı: ${fmtTL(subtotal)}.`);
     }
 
-    const fee = deliveryFee(subtotal);
+    const fee = deliveryFee(subtotal, this.deliveryTiers(settings));
     const grandTotal = subtotal + fee;
     const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);
 

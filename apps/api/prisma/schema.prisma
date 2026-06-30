@@ -102,6 +102,10 @@ model StoreSetting {
   tenantId      String   @unique @map("tenant_id") @db.Uuid
   /// Asgari sipariş ara toplamı (kuruş). 0 = sınır yok.
   minOrderTotal Int      @default(0) @map("min_order_total")
+  /// Temel teslimat ücreti (kuruş).
+  deliveryFee   Int      @default(4990) @map("delivery_fee")
+  /// Bu ara toplam ve üstünde teslimat ücretsiz (kuruş). 0 = hiç ücretsiz değil.
+  freeDeliveryThreshold Int @default(40000) @map("free_delivery_threshold")
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("store_settings")

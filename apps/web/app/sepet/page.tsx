@@ -7,15 +7,15 @@ import { apiGet } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 
-const FREE_THRESHOLD = 40000; // kuruş (400 ₺)
+interface StoreSettings { minOrderTotal: number; deliveryFee: number; freeDeliveryThreshold: number }
 
 export default function CartPage() {
   const { items, setQty, setNote, remove, subtotal, keyOf } = useCart();
   const router = useRouter();
-  const [minOrderTotal, setMinOrderTotal] = useState(0);
+  const [settings, setSettings] = useState<StoreSettings>({ minOrderTotal: 0, deliveryFee: 4990, freeDeliveryThreshold: 40000 });
 
   useEffect(() => {
-    apiGet<{ minOrderTotal: number }>('/storefront/settings').then((s) => setMinOrderTotal(s.minOrderTotal)).catch(() => {});
+    apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
   }, []);
 
   if (items.length === 0)
@@ -28,7 +28,10 @@ export default function CartPage() {
       </div>
     );
 
-  const remaining = FREE_THRESHOLD - subtotal;
+  const { minOrderTotal, deliveryFee, freeDeliveryThreshold } = settings;
+  const freeEligible = freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold;
+  const fee = freeEligible ? 0 : deliveryFee;
+  const remaining = freeDeliveryThreshold - subtotal;
   const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
 
   return (
@@ -76,13 +79,13 @@ export default function CartPage() {
           <div className="ln"><span>Ara toplam</span><span>{tl(subtotal)}</span></div>
           <div className="ln">
             <span>Teslimat</span>
-            <span className="save">{subtotal >= FREE_THRESHOLD ? 'Ücretsiz 🎉' : 'Ödeme adımında'}</span>
+            <span className="save">{fee === 0 ? 'Ücretsiz 🎉' : tl(fee)}</span>
           </div>
-          <div className="ln tot serif"><span>Toplam</span><span>{tl(subtotal)}+</span></div>
+          <div className="ln tot serif"><span>Toplam (tahmini)</span><span>{tl(subtotal + fee)}</span></div>
           <div className="note">
-            {subtotal >= FREE_THRESHOLD
-              ? '400 ₺ üstü teslimat ücretsiz.'
-              : `${tl(remaining)} daha ekle, teslimat ücretsiz olsun. `}
+            {freeDeliveryThreshold > 0 && (freeEligible
+              ? `${tl(freeDeliveryThreshold)} üstü teslimat ücretsiz. `
+              : `${tl(remaining)} daha ekle, teslimat ücretsiz olsun. `)}
             Tartılı ürünlerde nihai tutar paketlemede gramajla kesinleşir.
           </div>
           {belowMin && (
