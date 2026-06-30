@@ -193,6 +193,36 @@ describe('Market (vitrin + sipariş)', () => {
     expect(grid.body.data.some((p: { slug: string }) => p.slug === 'haftalik')).toBe(false);
   });
 
+  it('stok bütünlüğü: sepet satışı içeriği düşürür + iptal geri yükler', async () => {
+    const elma = await admin
+      .post('/api/v1/catalog/products')
+      .send({ slug: 'elma-st', name: 'Elma', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 4000, stockQty: 10 })
+      .expect(201);
+    await admin
+      .post('/api/v1/catalog/baskets')
+      .send({ slug: 'kutu', name: 'Elma Kutusu', basePrice: 7000, components: [{ productSlug: 'elma-st', qty: 2 }] })
+      .expect(201);
+
+    // sepet sipariş (qty 1) → elma 10 → 8
+    const o = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'kutu', qty: 1 }], customer: { name: 'Ada', phone: '05551112233', address: 'Mahalle 5' } })
+      .expect(201);
+    let p = await admin.get(`/api/v1/catalog/products/${elma.body.id}`).expect(200);
+    expect(p.body.stockQty).toBe(8);
+
+    // iptal → stok geri 10
+    await admin.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'CANCELLED' }).expect(200);
+    p = await admin.get(`/api/v1/catalog/products/${elma.body.id}`).expect(200);
+    expect(p.body.stockQty).toBe(10);
+
+    // içerik stoğu yetmezse → 400 (6×2=12 > 10)
+    await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'kutu', qty: 6 }], customer: { name: 'Ada', phone: '05551112233', address: 'Mahalle 5' } })
+      .expect(400);
+  });
+
   it('bildirim: sipariş + durum değişimi müşteri bildirimi üretir', async () => {
     const o = await request(server)
       .post('/api/v1/storefront/orders')

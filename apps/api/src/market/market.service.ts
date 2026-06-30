@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { deliveryFee, lineTotal, effectivePrice } from '../pricing-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
@@ -159,6 +160,7 @@ export class MarketService {
     const slugs = [...new Set(dto.items.map((i) => i.slug))];
     const products = await this.prisma.product.findMany({
       where: { tenantId: DEV_TENANT_ID, slug: { in: slugs }, isActive: true },
+      include: { components: { include: { component: { select: { id: true, name: true, stockQty: true, unitLabel: true } } } } },
     });
     const bySlug = new Map(products.map((p) => [p.slug, p]));
 
@@ -168,6 +170,14 @@ export class MarketService {
       if (p.basePrice == null) throw new BadRequestException(`Ürün fiyatlandırılmamış: ${i.slug}`);
       if (p.stockQty != null && i.qty > p.stockQty) {
         throw new BadRequestException(`Yeterli stok yok: ${p.name} (kalan ${p.stockQty} ${p.unitLabel ?? ''})`);
+      }
+      // Hazır sepet: içindeki ürünlerin stoğu da yetmeli.
+      if (p.kind === 'BASKET') {
+        for (const c of p.components) {
+          if (c.component.stockQty != null && c.qty * i.qty > c.component.stockQty) {
+            throw new BadRequestException(`Yeterli stok yok: ${c.component.name} (${p.name} içeriği, kalan ${c.component.stockQty})`);
+          }
+        }
       }
       const unitPrice = effectivePrice(p.basePrice, p.discountedPrice);
       return {
@@ -205,13 +215,11 @@ export class MarketService {
     const grandTotal = subtotal + fee;
     const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);
 
-    // Sipariş oluşturma + stok düşme atomik (takip edilen ürünlerde).
+    // Sipariş oluşturma + stok düşme atomik (ürün + sepet içeriği).
     return this.prisma.$transaction(async (tx) => {
       for (const it of items) {
         const p = products.find((x) => x.id === it.productId)!;
-        if (p.stockQty != null) {
-          await tx.product.update({ where: { id: p.id }, data: { stockQty: { decrement: it.orderedQty } } });
-        }
+        await this.adjustStock(tx, p, it.orderedQty, -1);
       }
       const order = await tx.order.create({
         data: {
@@ -237,6 +245,25 @@ export class MarketService {
       await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: order.id, message: 'Siparişiniz alındı. En kısa sürede hazırlanacak.' } });
       return order;
     });
+  }
+
+  /** Stok ayarı: ürünün kendi stoğu + (BASKET ise) içeriği. dir=-1 düş, +1 geri yükle. */
+  private async adjustStock(
+    tx: Prisma.TransactionClient,
+    product: { id: string; stockQty: number | null; kind: string; components: { qty: number; component: { id: string; stockQty: number | null } }[] },
+    qty: number,
+    dir: 1 | -1,
+  ) {
+    if (product.stockQty != null) {
+      await tx.product.update({ where: { id: product.id }, data: { stockQty: { increment: dir * qty } } });
+    }
+    if (product.kind === 'BASKET') {
+      for (const c of product.components) {
+        if (c.component.stockQty != null) {
+          await tx.product.update({ where: { id: c.component.id }, data: { stockQty: { increment: dir * c.qty * qty } } });
+        }
+      }
+    }
   }
 
   async getOrder(id: string) {
@@ -291,11 +318,24 @@ export class MarketService {
     if (!ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number])) {
       throw new BadRequestException(`Geçersiz durum: ${status}`);
     }
-    await this.getOrder(id);
-    await this.prisma.$transaction([
-      this.prisma.order.update({ where: { id }, data: { status } }),
-      this.prisma.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: STATUS_MSG[status] ?? `Durum: ${status}` } }),
-    ]);
+    const order = await this.getOrder(id);
+    const restoreStock = status === 'CANCELLED' && order.status !== 'CANCELLED';
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id }, data: { status } });
+      await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: STATUS_MSG[status] ?? `Durum: ${status}` } });
+      if (restoreStock) {
+        const prods = await tx.product.findMany({
+          where: { id: { in: order.items.map((i) => i.productId) } },
+          include: { components: { include: { component: { select: { id: true, stockQty: true } } } } },
+        });
+        const byId = new Map(prods.map((p) => [p.id, p]));
+        for (const it of order.items) {
+          const p = byId.get(it.productId);
+          if (p) await this.adjustStock(tx, p, it.orderedQty, 1);
+        }
+      }
+    });
     return this.getOrder(id);
   }
 }
