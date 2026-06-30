@@ -8,7 +8,7 @@ import { useCart } from '@/lib/cart';
 
 interface Product {
   slug: string; name: string; saleType: string; unitLabel: string | null;
-  imageUrl: string | null; basePrice: number; discountedPrice: number | null; stockQty: number | null; originRegion: string | null;
+  imageUrl: string | null; basePrice: number; discountedPrice: number | null; stockQty: number | null; maxPerOrder: number | null; originRegion: string | null;
   isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { slug: string; name: string } | null;
 }
@@ -61,7 +61,7 @@ export default function HomePage() {
     return p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice ? p.discountedPrice : p.basePrice;
   }
   function addToCart(p: Product) {
-    add({ slug: p.slug, name: p.name, unitPrice: effective(p), unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug) });
+    add({ slug: p.slug, name: p.name, unitPrice: effective(p), unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug), maxPerOrder: p.maxPerOrder ?? undefined });
     flash(`${p.name} sepete eklendi ✓`);
   }
   function addBasket(b: Basket) {

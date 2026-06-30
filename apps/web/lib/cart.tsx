@@ -10,9 +10,13 @@ export interface CartItem {
   emoji: string;
   qty: number;
   note?: string; // müşteri ürün notu
+  maxPerOrder?: number; // sipariş başına azami miktar (varsa)
   basketSlug?: string; // bir hazır sepetten geldiyse
   basketName?: string;
 }
+
+/** Miktarı varsa maxPerOrder ile sınırla. */
+const capQty = (qty: number, max?: number) => (max != null && qty > max ? max : qty);
 
 /** Aynı ürün hem normal hem sepetten gelebilir → bileşik kimlik. */
 const keyOf = (slug: string, basketSlug?: string) => `${slug}|${basketSlug ?? ''}`;
@@ -54,14 +58,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((cur) => {
       const k = keyOf(item.slug, item.basketSlug);
       const i = cur.findIndex((x) => keyOf(x.slug, x.basketSlug) === k);
-      if (i === -1) return [...cur, { ...item, qty }];
+      if (i === -1) return [...cur, { ...item, qty: capQty(qty, item.maxPerOrder) }];
       const next = [...cur];
-      next[i] = { ...next[i], qty: +(next[i].qty + qty).toFixed(3) };
+      next[i] = { ...next[i], qty: capQty(+(next[i].qty + qty).toFixed(3), next[i].maxPerOrder) };
       return next;
     });
 
   const setQty: CartCtx['setQty'] = (key, qty) =>
-    setItems((cur) => (qty <= 0 ? cur.filter((x) => keyOf(x.slug, x.basketSlug) !== key) : cur.map((x) => (keyOf(x.slug, x.basketSlug) === key ? { ...x, qty } : x))));
+    setItems((cur) =>
+      qty <= 0
+        ? cur.filter((x) => keyOf(x.slug, x.basketSlug) !== key)
+        : cur.map((x) => (keyOf(x.slug, x.basketSlug) === key ? { ...x, qty: capQty(qty, x.maxPerOrder) } : x)),
+    );
 
   const setNote: CartCtx['setNote'] = (key, note) =>
     setItems((cur) => cur.map((x) => (keyOf(x.slug, x.basketSlug) === key ? { ...x, note: note.trim() || undefined } : x)));

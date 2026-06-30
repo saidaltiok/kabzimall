@@ -22,6 +22,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
       { href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' },
       { href: '/sepetler', icon: '🧺', label: 'Hazır Sepetler' },
       { href: '/bolgeler', icon: '📍', label: 'Teslimat Bölgeleri' },
+      { href: '/ayarlar', icon: '⚙️', label: 'Mağaza Ayarları' },
       { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
     ],
   },

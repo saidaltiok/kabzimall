@@ -260,6 +260,42 @@ describe('Market (vitrin + sipariş)', () => {
     await viewer.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'READY' }).expect(403);
   });
 
+  it('maks miktar: ürün başına sipariş limiti aşılırsa 400, limitte 201', async () => {
+    await admin.post('/api/v1/catalog/products').send({ slug: 'sinirli', name: 'Sınırlı Ürün', saleType: 'PIECE', unitLabel: 'adet', basePrice: 1000, maxPerOrder: 3 }).expect(201);
+    // vitrinde maxPerOrder görünür
+    const p = await request(server).get('/api/v1/storefront/products/sinirli').expect(200);
+    expect(p.body.maxPerOrder).toBe(3);
+
+    const cust = { name: 'Veli', phone: '05551112233', address: 'Mahalle 1' };
+    // 4 > 3 → 400
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'sinirli', qty: 4 }], customer: cust }).expect(400);
+    // 3 = limit → 201
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'sinirli', qty: 3 }], customer: cust }).expect(201);
+  });
+
+  it('asgari sipariş: ayar altındaki sepet 400, ayar üstü 201; sadece yazarlar ayarlar', async () => {
+    // varsayılan 0 (sınır yok)
+    const s0 = await request(server).get('/api/v1/storefront/settings').expect(200);
+    expect(s0.body.minOrderTotal).toBe(0);
+
+    // VIEWER ayar değiştiremez
+    await authed(app, 'VIEWER').put('/api/v1/admin/settings').send({ minOrderTotal: 5000 }).expect(403);
+
+    // ADMIN asgari tutarı 100 ₺ yapar
+    const up = await admin.put('/api/v1/admin/settings').send({ minOrderTotal: 10000 }).expect(200);
+    expect(up.body.minOrderTotal).toBe(10000);
+    expect((await request(server).get('/api/v1/storefront/settings')).body.minOrderTotal).toBe(10000);
+
+    const cust = { name: 'Veli', phone: '05551112233', address: 'Mahalle 1' };
+    // 35,90 ₺ < 100 ₺ → 400
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 1 }], customer: cust }).expect(400);
+    // 3590×3 = 107,70 ₺ ≥ 100 ₺ → 201
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 3 }], customer: cust }).expect(201);
+
+    // sonraki testler etkilenmesin diye sıfırla
+    await admin.put('/api/v1/admin/settings').send({ minOrderTotal: 0 }).expect(200);
+  });
+
   it('teslimat bölgesi: hizmet ilçesi varsa sipariş kontrol edilir', async () => {
     await admin.post('/api/v1/admin/delivery-zones').send({ name: 'Kadıköy' }).expect(201);
     const z = await request(server).get('/api/v1/storefront/zones').expect(200);

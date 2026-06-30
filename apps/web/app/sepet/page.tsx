@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { apiGet } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 
@@ -10,6 +12,11 @@ const FREE_THRESHOLD = 40000; // kuruş (400 ₺)
 export default function CartPage() {
   const { items, setQty, setNote, remove, subtotal, keyOf } = useCart();
   const router = useRouter();
+  const [minOrderTotal, setMinOrderTotal] = useState(0);
+
+  useEffect(() => {
+    apiGet<{ minOrderTotal: number }>('/storefront/settings').then((s) => setMinOrderTotal(s.minOrderTotal)).catch(() => {});
+  }, []);
 
   if (items.length === 0)
     return (
@@ -22,6 +29,7 @@ export default function CartPage() {
     );
 
   const remaining = FREE_THRESHOLD - subtotal;
+  const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
 
   return (
     <>
@@ -53,8 +61,11 @@ export default function CartPage() {
                 <div className="qbox">
                   <button onClick={() => setQty(k, +(it.qty - step).toFixed(3))}>−</button>
                   <b>{it.qty} {it.unitLabel === 'kg' ? 'kg' : ''}</b>
-                  <button onClick={() => setQty(k, +(it.qty + step).toFixed(3))}>+</button>
+                  <button disabled={it.maxPerOrder != null && it.qty >= it.maxPerOrder} onClick={() => setQty(k, +(it.qty + step).toFixed(3))}>+</button>
                 </div>
+                {it.maxPerOrder != null && it.qty >= it.maxPerOrder && (
+                  <div className="meta" style={{ flexBasis: '100%', color: 'var(--persimmon-d)' }}>Maks {it.maxPerOrder} {it.unitLabel === 'kg' ? 'kg' : 'adet'}</div>
+                )}
                 <button className="rm" onClick={() => remove(k)}>Kaldır</button>
               </div>
             );
@@ -74,7 +85,14 @@ export default function CartPage() {
               : `${tl(remaining)} daha ekle, teslimat ücretsiz olsun. `}
             Tartılı ürünlerde nihai tutar paketlemede gramajla kesinleşir.
           </div>
-          <button className="cta" onClick={() => router.push('/odeme')}>Teslimat & ödemeye geç →</button>
+          {belowMin && (
+            <div className="note" style={{ color: 'var(--honey)' }}>
+              ⚠️ Asgari sipariş tutarı {tl(minOrderTotal)}. {tl(minOrderTotal - subtotal)} daha eklemelisin.
+            </div>
+          )}
+          <button className="cta" disabled={belowMin} onClick={() => router.push('/odeme')}>
+            {belowMin ? `Asgari ${tl(minOrderTotal)}` : 'Teslimat & ödemeye geç →'}
+          </button>
         </div>
       </div>
     </>

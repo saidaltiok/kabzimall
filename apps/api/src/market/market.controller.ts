@@ -1,10 +1,11 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Public, Roles } from '../auth/decorators';
 import { CATALOG_WRITERS } from '../auth/auth.constants';
 import { MarketService } from './market.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
+import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
 
 @ApiTags('market: vitrin (public)')
 @Public()
@@ -50,6 +51,12 @@ export class StorefrontController {
   async zones() {
     const data = await this.service.listActiveZones();
     return { data };
+  }
+
+  /** GET /storefront/settings — vitrin için mağaza kuralları (asgari sipariş). */
+  @Get('settings')
+  settings() {
+    return this.service.getStoreSettings();
   }
 
   /** POST /storefront/orders — misafir sipariş (fiyatlar sunucuda hesaplanır). */
@@ -100,6 +107,25 @@ export class AdminOrdersController {
   @ApiBody({ schema: { example: { items: [{ itemId: '<kalem-uuid>', pickedQty: 1.85 }] } } })
   pack(@Param('id') id: string, @Body() dto: PackOrderDto) {
     return this.service.packOrder(id, dto.items);
+  }
+}
+
+@ApiTags('market: ayarlar (admin)')
+@Controller('admin/settings')
+export class AdminSettingsController {
+  constructor(private readonly service: MarketService) {}
+
+  @Get()
+  get() {
+    return this.service.getStoreSettings();
+  }
+
+  /** PUT /admin/settings { minOrderTotal } — asgari sipariş tutarı (kuruş). */
+  @Put()
+  @Roles(...CATALOG_WRITERS)
+  @ApiBody({ schema: { example: { minOrderTotal: 15000 } } })
+  update(@Body() dto: UpdateStoreSettingsDto) {
+    return this.service.updateStoreSettings(dto.minOrderTotal);
   }
 }
 

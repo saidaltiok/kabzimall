@@ -37,6 +37,10 @@ export class CreateProductDto {
   @IsOptional() @IsNumber() @Min(0)
   stockQty?: number;
 
+  /** Sipariş başına azami miktar (kg/adet). null/boş = sınır yok. */
+  @IsOptional() @IsNumber() @Min(0)
+  maxPerOrder?: number;
+
   @IsOptional() @IsString()
   originRegion?: string;
 
@@ -56,6 +60,7 @@ export class UpdateProductDto {
   @IsOptional() @IsInt() @Min(0) basePrice?: number;
   @IsOptional() @IsInt() @Min(0) discountedPrice?: number;
   @IsOptional() @IsNumber() @Min(0) stockQty?: number;
+  @IsOptional() @IsNumber() @Min(0) maxPerOrder?: number;
   @IsOptional() @IsString() originRegion?: string;
   @IsOptional() @IsBoolean() isActive?: boolean;
   @IsOptional() @IsBoolean() isFeatured?: boolean;

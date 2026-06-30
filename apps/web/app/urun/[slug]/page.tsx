@@ -9,7 +9,7 @@ import { useCart } from '@/lib/cart';
 
 interface Product {
   slug: string; name: string; unitLabel: string | null; imageUrl: string | null;
-  stockQty: number | null; basePrice: number; discountedPrice: number | null; originRegion: string | null;
+  stockQty: number | null; maxPerOrder: number | null; basePrice: number; discountedPrice: number | null; originRegion: string | null;
   isFreshDaily: boolean; isLocal: boolean; category: { slug: string; name: string } | null;
 }
 
@@ -33,10 +33,12 @@ export default function ProductDetailPage() {
   const discounted = eff < p.basePrice;
   const soldOut = p.stockQty != null && p.stockQty <= 0;
   const step = p.unitLabel === 'kg' ? 0.5 : 1;
+  const max = p.maxPerOrder ?? undefined;
+  const atMax = max != null && qty >= max;
 
   function addToCart() {
     if (!p) return;
-    add({ slug: p.slug, name: p.name, unitPrice: eff, unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug), note: note.trim() || undefined }, qty);
+    add({ slug: p.slug, name: p.name, unitPrice: eff, unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug), note: note.trim() || undefined, maxPerOrder: max }, qty);
     router.push('/sepet');
   }
 
@@ -84,14 +86,19 @@ export default function ProductDetailPage() {
                 <div className="qbox">
                   <button onClick={() => setQty((q) => Math.max(step, +(q - step).toFixed(3)))}>−</button>
                   <b>{qty} {p.unitLabel === 'kg' ? 'kg' : 'adet'}</b>
-                  <button onClick={() => setQty((q) => +(q + step).toFixed(3))}>+</button>
+                  <button disabled={atMax} onClick={() => setQty((q) => (max != null ? Math.min(max, +(q + step).toFixed(3)) : +(q + step).toFixed(3)))}>+</button>
                 </div>
                 <button className="cta" style={{ flex: 1, marginTop: 0 }} onClick={addToCart}>
                   Sepete ekle · {tl(Math.round(eff * qty))}
                 </button>
               </div>
-              {p.unitLabel === 'kg' && (
+              {max != null && (
                 <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+                  ⛔ Sipariş başına en fazla {max} {p.unitLabel === 'kg' ? 'kg' : 'adet'} alınabilir.
+                </p>
+              )}
+              {p.unitLabel === 'kg' && (
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                   ⚖️ Tartılı üründe nihai tutar paketlemede gerçek gramajla kesinleşir.
                 </p>
               )}

@@ -21,12 +21,14 @@ export default function CheckoutPage() {
   const [slotKey, setSlotKey] = useState('');
   const [zones, setZones] = useState<string[]>([]);
   const [district, setDistrict] = useState('');
+  const [minOrderTotal, setMinOrderTotal] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<{ data: Slot[] }>('/storefront/slots').then((r) => setSlots(r.data)).catch(() => {});
     apiGet<{ data: { name: string }[] }>('/storefront/zones').then((r) => setZones(r.data.map((z) => z.name))).catch(() => {});
+    apiGet<{ minOrderTotal: number }>('/storefront/settings').then((s) => setMinOrderTotal(s.minOrderTotal)).catch(() => {});
   }, []);
 
   if (items.length === 0)
@@ -59,7 +61,8 @@ export default function CheckoutPage() {
     }
   }
 
-  const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district);
+  const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
+  const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district) && !belowMin;
 
   return (
     <>
@@ -119,7 +122,8 @@ export default function CheckoutPage() {
           <button className="cta" onClick={placeOrder} disabled={busy || !valid}>
             {busy ? 'Gönderiliyor…' : 'Siparişi onayla'}
           </button>
-          {!valid && <p className="note">Ad, telefon, adresi doldurun ve teslimat saatini seçin.</p>}
+          {belowMin && <p className="note" style={{ color: 'var(--honey)' }}>Asgari sipariş tutarı {tl(minOrderTotal)}. Sepete {tl(minOrderTotal - subtotal)} daha ekleyin.</p>}
+          {!valid && !belowMin && <p className="note">Ad, telefon, adresi doldurun ve teslimat saatini seçin.</p>}
         </div>
       </div>
     </>

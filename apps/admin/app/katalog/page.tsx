@@ -8,7 +8,7 @@ import Topbar from '@/components/Topbar';
 interface Category { id: string; name: string; slug: string }
 interface Product {
   id: string; slug: string; name: string; kind: string; saleType: string; unitLabel: string | null;
-  imageUrl: string | null; basePrice: number | null; discountedPrice: number | null; stockQty: number | null; originRegion: string | null;
+  imageUrl: string | null; basePrice: number | null; discountedPrice: number | null; stockQty: number | null; maxPerOrder: number | null; originRegion: string | null;
   isActive: boolean; isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { id: string; name: string } | null;
 }
@@ -23,7 +23,7 @@ const SALE_TYPES: [string, string][] = [
 
 const empty = {
   id: '', slug: '', name: '', categoryId: '', saleType: 'WEIGHT', unitLabel: 'kg',
-  priceTl: '', discountedTl: '', originRegion: '', imageUrl: '', stockQty: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
+  priceTl: '', discountedTl: '', originRegion: '', imageUrl: '', stockQty: '', maxPerOrder: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
 };
 
 export default function KatalogPage() {
@@ -59,6 +59,7 @@ export default function KatalogPage() {
       unitLabel: p.unitLabel ?? '', priceTl: p.basePrice != null ? (p.basePrice / 100).toFixed(2) : '',
       discountedTl: p.discountedPrice != null ? (p.discountedPrice / 100).toFixed(2) : '',
       originRegion: p.originRegion ?? '', imageUrl: p.imageUrl ?? '', stockQty: p.stockQty != null ? String(p.stockQty) : '',
+      maxPerOrder: p.maxPerOrder != null ? String(p.maxPerOrder) : '',
       isActive: p.isActive, isFeatured: p.isFeatured,
       isFreshDaily: p.isFreshDaily, isLocal: p.isLocal,
     });
@@ -75,6 +76,7 @@ export default function KatalogPage() {
         unitLabel: form.unitLabel || undefined, categoryId: form.categoryId || undefined,
         basePrice, originRegion: form.originRegion || undefined, imageUrl: form.imageUrl || undefined,
         stockQty: form.stockQty === '' ? undefined : Number(form.stockQty),
+        maxPerOrder: form.maxPerOrder === '' ? undefined : Number(form.maxPerOrder),
         discountedPrice: form.discountedTl === '' ? undefined : Math.round(parseFloat(form.discountedTl.replace(',', '.')) * 100),
         isActive: form.isActive, isFeatured: form.isFeatured, isFreshDaily: form.isFreshDaily, isLocal: form.isLocal,
       };
@@ -165,6 +167,10 @@ export default function KatalogPage() {
             <div className="field">
               <label>Stok (boş=sınırsız)</label>
               <input value={form.stockQty} onChange={setF('stockQty')} placeholder="∞" style={{ minWidth: 90 }} />
+            </div>
+            <div className="field">
+              <label>Maks/sipariş (boş=yok)</label>
+              <input value={form.maxPerOrder} onChange={setF('maxPerOrder')} placeholder="∞" style={{ minWidth: 90 }} />
             </div>
             <div className="field">
               <label>Menşei / yöre</label>

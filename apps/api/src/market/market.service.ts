@@ -28,6 +28,7 @@ const PUBLIC_PRODUCT_SELECT = {
   unitLabel: true,
   imageUrl: true,
   stockQty: true,
+  maxPerOrder: true,
   basePrice: true,
   discountedPrice: true,
   isActive: true,
@@ -85,6 +86,23 @@ export class MarketService {
     });
     if (!p) throw new NotFoundException(`Ürün bulunamadı: ${slug}`);
     return p;
+  }
+
+  /* ----------------------------- Ayarlar ----------------------------- */
+
+  /** Mağaza ayarları (tenant başına tek satır; yoksa varsayılan). */
+  async getStoreSettings() {
+    const s = await this.prisma.storeSetting.findUnique({ where: { tenantId: DEV_TENANT_ID } });
+    return { minOrderTotal: s?.minOrderTotal ?? 0 };
+  }
+
+  async updateStoreSettings(minOrderTotal: number) {
+    const s = await this.prisma.storeSetting.upsert({
+      where: { tenantId: DEV_TENANT_ID },
+      create: { tenantId: DEV_TENANT_ID, minOrderTotal },
+      update: { minOrderTotal },
+    });
+    return { minOrderTotal: s.minOrderTotal };
   }
 
   /* --------------------------- Teslimat bölgesi -------------------------- */
@@ -168,6 +186,9 @@ export class MarketService {
       const p = bySlug.get(i.slug);
       if (!p) throw new BadRequestException(`Ürün bulunamadı veya yayında değil: ${i.slug}`);
       if (p.basePrice == null) throw new BadRequestException(`Ürün fiyatlandırılmamış: ${i.slug}`);
+      if (p.maxPerOrder != null && i.qty > p.maxPerOrder) {
+        throw new BadRequestException(`Sipariş başına en fazla ${p.maxPerOrder} ${p.unitLabel ?? ''} alınabilir: ${p.name}`);
+      }
       if (p.stockQty != null && i.qty > p.stockQty) {
         throw new BadRequestException(`Yeterli stok yok: ${p.name} (kalan ${p.stockQty} ${p.unitLabel ?? ''})`);
       }
@@ -212,6 +233,13 @@ export class MarketService {
     }
 
     const subtotal = items.reduce((s, it) => s + it.lineTotal, 0);
+
+    // Asgari sipariş tutarı (mağaza ayarı; 0 = sınır yok).
+    const { minOrderTotal } = await this.getStoreSettings();
+    if (minOrderTotal > 0 && subtotal < minOrderTotal) {
+      throw new BadRequestException(`Asgari sipariş tutarı ${fmtTL(minOrderTotal)}. Sepet ara toplamı: ${fmtTL(subtotal)}.`);
+    }
+
     const fee = deliveryFee(subtotal);
     const grandTotal = subtotal + fee;
     const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);

@@ -71,6 +71,8 @@ model Product {
   imageUrl     String?  @map("image_url")
   /// Mevcut stok (kg/adet). null = stok takibi yok (sınırsız); 0 = tükendi.
   stockQty     Float?   @map("stock_qty")
+  /// Sipariş başına azami miktar (kg/adet). null = sınır yok.
+  maxPerOrder  Float?   @map("max_per_order")
   /// Yayınlanan mağaza fiyatı (kuruş). Henüz uygulanmadıysa null.
   basePrice    Int?     @map("base_price")
   /// İndirimli fiyat (kuruş). Taban fiyatın altındaysa vitrinde geçerli olur.
@@ -92,6 +94,17 @@ model Product {
   @@unique([tenantId, slug])
   @@index([tenantId, categoryId])
   @@map("products")
+}
+
+/// Mağaza geneli ayarlar (tenant başına tek satır). Faz 1: asgari sipariş tutarı.
+model StoreSetting {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @unique @map("tenant_id") @db.Uuid
+  /// Asgari sipariş ara toplamı (kuruş). 0 = sınır yok.
+  minOrderTotal Int      @default(0) @map("min_order_total")
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("store_settings")
 }
 
 /// Müşteri siparişi (Market — Faz 1: misafir + kapıda ödeme). Tutarlar kuruş.
