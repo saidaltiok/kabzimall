@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../../common/tenant';
 
@@ -56,7 +57,35 @@ export function parseIbbTable(html: string): IbbRow[] {
 
 @Injectable()
 export class IbbHalService {
+  private readonly logger = new Logger(IbbHalService.name);
   constructor(private readonly prisma: PrismaService) {}
+
+  /** İstanbul saatiyle bugünün tarihi (YYYY-MM-DD). */
+  private istanbulToday(): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  }
+
+  /**
+   * Günlük otomatik İBB içe aktarım. İBB verisi yalnızca gündüz yayın penceresinde
+   * dolu olduğundan öğleden sonra üç kez denenir; gün içinde zaten alındıysa atlanır
+   * (mükerrer kayıt olmaz), boşsa sessizce loglanır (hata fırlatmaz).
+   */
+  @Cron('0 11,13,15 * * *', { timeZone: 'Europe/Istanbul' })
+  async dailyAutoImport() {
+    const date = this.istanbulToday();
+    const day = new Date(`${date}T00:00:00.000Z`);
+    const already = await this.prisma.halPriceEntry.count({ where: { tenantId: DEV_TENANT_ID, source: 'IBB', date: day } });
+    if (already > 0) {
+      this.logger.log(`İBB otomatik içe aktarım (${date}): bugün zaten ${already} kayıt var, atlandı.`);
+      return;
+    }
+    try {
+      const r = await this.importAll(date, { createMissing: true, side: 'avrupa' });
+      this.logger.log(`İBB otomatik içe aktarım (${date}): ${r.priced} fiyat yazıldı, ${r.created} yeni ürün, ${r.totalRows} satır tarandı.`);
+    } catch (e) {
+      this.logger.warn(`İBB otomatik içe aktarım atlandı (${date}): ${(e as Error).message}`);
+    }
+  }
 
   /** Sayfadan güncel erişim token'larını çeker (rotasyona dayanıklı). */
   private async fetchTokens(): Promise<{ tUsr: string; tPas: string; tVal: string }> {
