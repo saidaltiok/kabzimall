@@ -10,6 +10,7 @@ import { DEV_TENANT_ID } from '../../common/tenant';
 import { dateOnly } from '../../common/date';
 import { CostComponentsService } from '../cost-components/cost-components.service';
 import { CompetitorsService } from '../competitors/competitors.service';
+import { PricingRulesService } from '../pricing-rules/pricing-rules.service';
 
 type RiskFlag =
   | 'ZARARINA'
@@ -17,6 +18,16 @@ type RiskFlag =
   | 'RAKIPTEN_PAHALI'
   | 'MALIYET_TANIMSIZ'
   | 'HAL_VERISI_YOK';
+
+export interface Alert {
+  productId: string;
+  code: RiskFlag;
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+}
+
+const fmtTL = (k: number | null) => (k == null ? '—' : (k / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺');
+const fmtPct = (r: number | null) => (r == null ? '—' : '%' + Math.round(r * 100));
 
 export interface ProductRow {
   productId: string;
@@ -27,6 +38,8 @@ export interface ProductRow {
   competitorAvg: number | null;
   competitionIndex: number | null;
   costSource: 'PRODUCT' | 'GLOBAL' | null;
+  /** Bu ürün için geçerli taban marj (kural varsa ondan, yoksa varsayılan). */
+  floorUsed: number;
   flags: RiskFlag[];
 }
 
@@ -36,7 +49,28 @@ export class DashboardService {
     private readonly prisma: PrismaService,
     private readonly costs: CostComponentsService,
     private readonly competitors: CompetitorsService,
+    private readonly rules: PricingRulesService,
   ) {}
+
+  /** Bir ürün satırını okunur uyarı mesajlarına çevirir (PRD §8.9). */
+  private buildAlerts(r: ProductRow): Alert[] {
+    const out: Alert[] = [];
+    for (const f of r.flags) {
+      if (f === 'ZARARINA') {
+        out.push({ productId: r.productId, code: f, severity: 'high', message: `${r.productId} maliyetinin ALTINDA satılıyor (${fmtTL(r.basePrice)} < maliyet ${fmtTL(r.directCost)}). Fiyatı yükselt.` });
+      } else if (f === 'DUSUK_MARJ') {
+        out.push({ productId: r.productId, code: f, severity: 'medium', message: `${r.productId} taban marjın altında (net ${fmtPct(r.netMargin)} < taban ${fmtPct(r.floorUsed)}).` });
+      } else if (f === 'RAKIPTEN_PAHALI') {
+        const pct = r.competitionIndex != null ? r.competitionIndex - 100 : null;
+        out.push({ productId: r.productId, code: f, severity: 'medium', message: `${r.productId} rakiplerden %${pct} pahalı (endeks ${r.competitionIndex}). Satış düşebilir.` });
+      } else if (f === 'MALIYET_TANIMSIZ') {
+        out.push({ productId: r.productId, code: f, severity: 'low', message: `${r.productId} için maliyet bileşeni tanımlı değil; marj hesaplanamıyor.` });
+      } else if (f === 'HAL_VERISI_YOK') {
+        out.push({ productId: r.productId, code: f, severity: 'low', message: `${r.productId} için güncel hal fiyatı yok; maliyet/marj eksik.` });
+      }
+    }
+    return out;
+  }
 
   /** Fiyatı uygulanmış tüm ürünlerin metrik satırları (Ürünler & Marj tablosu). */
   async productsTable(dateStr?: string): Promise<ProductRow[]> {
@@ -76,6 +110,12 @@ export class DashboardService {
     const belowFloorCount = rows.filter((r) => r.flags.includes('DUSUK_MARJ')).length;
     const riskyProducts = rows.filter((r) => r.flags.length > 0);
 
+    // Okunur uyarılar — önem sırasıyla (high → low).
+    const sevRank = { high: 0, medium: 1, low: 2 } as const;
+    const alerts = rows
+      .flatMap((r) => this.buildAlerts(r))
+      .sort((a, b) => sevRank[a.severity] - sevRank[b.severity]);
+
     return {
       date: date.toISOString().slice(0, 10),
       kpis: {
@@ -91,6 +131,7 @@ export class DashboardService {
         riskyProductCount: riskyProducts.length,
       },
       riskyProducts,
+      alerts,
       recentPriceChanges: recent.map((r) => ({
         productId: r.product.slug,
         oldPrice: r.oldPrice,
@@ -110,6 +151,10 @@ export class DashboardService {
     let halAvg: number | null = null;
     let costSource: 'PRODUCT' | 'GLOBAL' | null = null;
 
+    // Ürün için geçerli taban marj: kural varsa ondan, yoksa varsayılan.
+    const rule = await this.rules.resolveEffective(slug).catch(() => null);
+    const floorUsed = rule?.floorMargin ?? DEFAULT_FLOOR_MARGIN;
+
     const cost = await this.costs.costForProduct(slug).catch(() => null);
     if (!cost) {
       flags.push('MALIYET_TANIMSIZ');
@@ -122,7 +167,7 @@ export class DashboardService {
         directCost = cost.directCost;
         nm = netMargin(cost.breakdown, basePrice);
         if (basePrice < directCost) flags.push('ZARARINA');
-        else if (nm < DEFAULT_FLOOR_MARGIN) flags.push('DUSUK_MARJ');
+        else if (nm < floorUsed) flags.push('DUSUK_MARJ');
       }
     }
 
@@ -134,6 +179,6 @@ export class DashboardService {
       if (ci != null && ci > 110) flags.push('RAKIPTEN_PAHALI');
     }
 
-    return { productId: slug, basePrice, halAvg, directCost, netMargin: nm, competitorAvg, competitionIndex: ci, costSource, flags };
+    return { productId: slug, basePrice, halAvg, directCost, netMargin: nm, competitorAvg, competitionIndex: ci, costSource, floorUsed, flags };
   }
 }

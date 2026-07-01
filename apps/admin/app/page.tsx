@@ -43,8 +43,15 @@ interface Dashboard {
     riskyProductCount: number;
   };
   riskyProducts: RiskyProduct[];
+  alerts: { productId: string; code: string; severity: 'high' | 'medium' | 'low'; message: string }[];
   recentPriceChanges: { productId: string; oldPrice: number | null; newPrice: number; strategy: string; changedAt: string }[];
 }
+
+const SEV_META: Record<string, { cls: string; icon: string }> = {
+  high: { cls: 'zararina', icon: '🔴' },
+  medium: { cls: 'risk', icon: '🟠' },
+  low: { cls: 'info', icon: '🔵' },
+};
 
 const FLAG_META: Record<string, { label: string; cls: string }> = {
   ZARARINA: { label: 'Zararına', cls: 'zararina' },
@@ -149,6 +156,22 @@ function Content({ data }: { data: Dashboard }) {
         <Kpi l="Zararına satılan" v={String(k.belowCostCount)} d="maliyet altı" alert={k.belowCostCount > 0} />
         <Kpi l="Riskli ürün" v={String(k.riskyProductCount)} d="aksiyon gerek" alert={k.riskyProductCount > 0} />
       </div>
+
+      {data.alerts.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="ct">⚠️ Uyarılar <span>{data.alerts.length}</span></div>
+          {data.alerts.slice(0, 12).map((a, i) => {
+            const m = SEV_META[a.severity] ?? SEV_META.low;
+            return (
+              <div key={i} className="frow" style={{ alignItems: 'center' }}>
+                <span>{m.icon} {a.message}</span>
+                <span className={`tagp ${m.cls}`} style={{ marginLeft: 'auto' }}>{a.productId}</span>
+              </div>
+            );
+          })}
+          {data.alerts.length > 12 && <p className="note2">+{data.alerts.length - 12} uyarı daha…</p>}
+        </div>
+      )}
 
       <div className="grid2">
         <div className="card">
