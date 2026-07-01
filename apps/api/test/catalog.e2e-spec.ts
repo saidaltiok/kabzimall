@@ -89,6 +89,18 @@ describe('Katalog (ürün/kategori)', () => {
     expect(u.body.discountedPrice).toBeNull();
   });
 
+  it('görsel: data URL (yüklenen görsel) kaydedilir ve geri döner', async () => {
+    const dataUrl = 'data:image/jpeg;base64,/9j/4AAQSkZJR0'; // küçük örnek data URL
+    const c = await http
+      .post('/api/v1/catalog/products')
+      .send({ slug: 'gorselli', name: 'Görselli', saleType: 'PIECE', unitLabel: 'adet', basePrice: 1000, imageUrl: dataUrl })
+      .expect(201);
+    expect(c.body.imageUrl).toBe(dataUrl);
+    // vitrinde de görünür
+    const p = await http.get('/api/v1/catalog/products?search=gorselli').expect(200);
+    expect(p.body.data.find((x: { slug: string }) => x.slug === 'gorselli').imageUrl).toBe(dataUrl);
+  });
+
   it('geçmişi olmayan ürün silinir', async () => {
     const res = await http.delete(`/api/v1/catalog/products/${productId}`).expect(200);
     expect(res.body.deleted).toBe(true);

@@ -13,6 +13,32 @@ interface Product {
   category: { id: string; name: string } | null;
 }
 
+/** Görseli tarayıcıda küçült/sıkıştır → JPEG data URL (harici depolama gerekmez). */
+async function resizeImage(file: File, maxSide: number, quality: number): Promise<string> {
+  const dataUrl = await new Promise<string>((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result as string);
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = dataUrl;
+  });
+  const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
 const SALE_TYPES: [string, string][] = [
   ['WEIGHT', 'Kilo (kg)'],
   ['PIECE', 'Adet'],
@@ -121,6 +147,17 @@ export default function KatalogPage() {
     }
   }
 
+    async function pickImage(file: File) {
+    setError(null);
+    if (!file.type.startsWith('image/')) { setError('Lütfen bir görsel dosyası seçin.'); return; }
+    try {
+      const dataUrl = await resizeImage(file, 800, 0.72);
+      setForm((s) => ({ ...s, imageUrl: dataUrl }));
+    } catch {
+      setError('Görsel okunamadı.');
+    }
+  }
+
   const setF = (k: keyof typeof empty) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((s) => ({ ...s, [k]: e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value }));
 
@@ -180,8 +217,16 @@ export default function KatalogPage() {
               <input value={form.originRegion} onChange={setF('originRegion')} placeholder="Aydın" style={{ minWidth: 110 }} />
             </div>
             <div className="field" style={{ flex: 1 }}>
-              <label>Görsel URL</label>
-              <input value={form.imageUrl} onChange={setF('imageUrl')} placeholder="https://… .jpg" style={{ minWidth: 200 }} />
+              <label>Görsel (dosya yükle ya da URL)</label>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                {form.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={form.imageUrl} alt="önizleme" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+                )}
+                <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) pickImage(f); e.target.value = ''; }} style={{ fontSize: 12 }} />
+                {form.imageUrl && <button type="button" className="btn ghost" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => setForm((s) => ({ ...s, imageUrl: '' }))}>Kaldır</button>}
+              </div>
+              <input value={form.imageUrl.startsWith('data:') ? '' : form.imageUrl} onChange={setF('imageUrl')} placeholder="…ya da https://… .jpg" style={{ minWidth: 200, marginTop: 6 }} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', margin: '14px 0', fontSize: 13 }}>
