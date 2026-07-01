@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { avg, median } from '../../pricing-engine';
+import { avg, median, stddev, competitionIndex, effectivePrice } from '../../pricing-engine';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../../common/tenant';
 import { dateOnly } from '../../common/date';
@@ -16,6 +16,14 @@ export interface CompetitorPricesResult {
   max: number | null;
   average: number | null;
   median: number | null;
+  /** Fiyat dağılımının standart sapması (kuruş). */
+  stdDev: number | null;
+  /** Bizim güncel efektif satış fiyatımız (kuruş; fiyatsızsa null). */
+  ourPrice: number | null;
+  /** Rekabet endeksi: 100 = rakip ort. ile eşit, >100 pahalı, <100 ucuz. */
+  competitionIndex: number | null;
+  /** Grup bazlı ortalama (Premium/İndirim… kırılımı). */
+  byGroup: { group: string; count: number; average: number }[];
   /** Rakip başına EN GÜNCEL fiyat (aggregate bunlar üzerinden). */
   entries: {
     competitorId: string;
@@ -119,6 +127,23 @@ export class CompetitorsService {
     const list = [...latest.values()];
     const prices = list.map((r) => r.price);
 
+    // Bizim güncel fiyatımız → rekabet endeksi.
+    const product = await this.prisma.product
+      .findFirst({ where: { tenantId: DEV_TENANT_ID, slug: productId }, select: { basePrice: true, discountedPrice: true } })
+      .catch(() => null);
+    const ourPrice = product?.basePrice != null ? effectivePrice(product.basePrice, product.discountedPrice) : null;
+    const competitorObjs = list.map((r) => ({ name: r.competitor.name, group: r.competitor.group.name, price: r.price }));
+
+    // Grup bazlı ortalama.
+    const groups = new Map<string, number[]>();
+    for (const r of list) {
+      const g = r.competitor.group.name;
+      (groups.get(g) ?? groups.set(g, []).get(g)!).push(r.price);
+    }
+    const byGroup = [...groups.entries()]
+      .map(([group, ps]) => ({ group, count: ps.length, average: Math.round(avg(ps)) }))
+      .sort((a, b) => a.group.localeCompare(b.group, 'tr'));
+
     return {
       productId,
       date: date.toISOString().slice(0, 10),
@@ -127,6 +152,10 @@ export class CompetitorsService {
       max: prices.length ? Math.max(...prices) : null,
       average: prices.length ? Math.round(avg(prices)) : null,
       median: prices.length ? Math.round(median(prices)) : null,
+      stdDev: prices.length ? Math.round(stddev(prices)) : null,
+      ourPrice,
+      competitionIndex: ourPrice != null ? competitionIndex(ourPrice, competitorObjs) : null,
+      byGroup,
       entries: list.map((r) => ({
         competitorId: r.competitorId,
         competitor: r.competitor.name,

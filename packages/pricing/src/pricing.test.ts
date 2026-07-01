@@ -10,6 +10,7 @@ import {
   psych,
   avg,
   median,
+  stddev,
   competitionIndex,
   suggestPrice,
   resolvePrice,
@@ -99,6 +100,13 @@ test('avg & median rakip fiyatları', () => {
   const prices = rakipler.map((r) => r.price);
   assert.equal(avg(prices), 4418);
   assert.equal(median(prices), 4400);
+});
+
+test('stddev: dağılım genişliği (0/1 eleman → 0)', () => {
+  assert.equal(stddev([]), 0);
+  assert.equal(stddev([5000]), 0);
+  assert.equal(stddev([100, 100, 100]), 0); // sapma yok
+  assert.equal(Math.round(stddev([2000, 4000])), 1000); // popülasyon std
 });
 
 /* ------------------------ Strateji motoru ----------------------- */

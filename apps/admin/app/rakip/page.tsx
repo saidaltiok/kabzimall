@@ -14,6 +14,10 @@ interface Prices {
   max: number | null;
   average: number | null;
   median: number | null;
+  stdDev: number | null;
+  ourPrice: number | null;
+  competitionIndex: number | null;
+  byGroup: { group: string; count: number; average: number }[];
   entries: { competitorId: string; competitor: string; group: string; price: number }[];
 }
 
@@ -163,12 +167,34 @@ export default function RakipPage() {
             </table>
           )}
           {prices && prices.count > 0 && (
-            <div className="miniinfo" style={{ marginTop: 12 }}>
-              <span>Min <b>{tl(prices.min)}</b></span>
-              <span>Maks <b>{tl(prices.max)}</b></span>
-              <span>Ortalama <b>{tl(prices.average)}</b></span>
-              <span>Medyan <b>{tl(prices.median)}</b></span>
-            </div>
+            <>
+              <div className="miniinfo" style={{ marginTop: 12 }}>
+                <span>Min <b>{tl(prices.min)}</b></span>
+                <span>Maks <b>{tl(prices.max)}</b></span>
+                <span>Ortalama <b>{tl(prices.average)}</b></span>
+                <span>Medyan <b>{tl(prices.median)}</b></span>
+                <span>Std. sapma <b>{tl(prices.stdDev)}</b></span>
+              </div>
+              <div className="miniinfo" style={{ marginTop: 8 }}>
+                <span>Bizim fiyat <b>{prices.ourPrice != null ? tl(prices.ourPrice) : '—'}</b></span>
+                {prices.competitionIndex != null && (
+                  <span>
+                    Rekabet endeksi{' '}
+                    <b className={`tagp ${prices.competitionIndex > 100 ? 'zararina' : 'ok'}`}>
+                      {prices.competitionIndex} · {prices.competitionIndex > 100 ? `rakipten %${prices.competitionIndex - 100} pahalı` : prices.competitionIndex < 100 ? `rakipten %${100 - prices.competitionIndex} ucuz` : 'rakiple aynı'}
+                    </b>
+                  </span>
+                )}
+              </div>
+              {prices.byGroup.length > 1 && (
+                <div className="miniinfo" style={{ marginTop: 8 }}>
+                  <span className="muted">Grup ort.:</span>
+                  {prices.byGroup.map((g) => (
+                    <span key={g.group}>{g.group} <b>{tl(g.average)}</b> <span className="muted">({g.count})</span></span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 

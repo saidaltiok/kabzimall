@@ -131,6 +131,13 @@ export function median(nums: number[]): number {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
+/** Popülasyon standart sapması (fiyat dağılımı ne kadar geniş). */
+export function stddev(nums: number[]): number {
+  if (nums.length < 2) return 0;
+  const m = avg(nums);
+  return Math.sqrt(avg(nums.map((n) => (n - m) ** 2)));
+}
+
 export function competitionIndex(price: Kurus, competitors: Competitor[]): number | null {
   if (!competitors.length) return null;
   return Math.round((price / avg(competitors.map((x) => x.price))) * 100);

@@ -82,7 +82,20 @@ describe('Intel rakip uçları (gruplar, rakipler, fiyatlar)', () => {
     expect(res.body.max).toBe(4600);
     expect(res.body.average).toBe(4400); // (4200+4600)/2
     expect(res.body.median).toBe(4400);
+    expect(res.body.stdDev).toBe(200); // popülasyon std [4200,4600]
+    expect(res.body.byGroup).toEqual([{ group: 'Orta', count: 2, average: 4400 }]);
+    expect(res.body.ourPrice).toBeNull(); // bu testte 'domates' ürünü yok
+    expect(res.body.competitionIndex).toBeNull();
     expect(res.body.entries).toHaveLength(2);
+  });
+
+  it('rekabet endeksi: bizim fiyatımız rakip ortalamasına göre konumlanır', async () => {
+    // 'domates' ürününü fiyatla (catalog yazarı ADMIN)
+    await http.post('/api/v1/catalog/products').send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 4400 }).expect(201);
+    const res = await http.get('/api/v1/intel/competitor-prices?productId=domates&date=2026-06-29').expect(200);
+    expect(res.body.ourPrice).toBe(4400);
+    // rakip ort: (4200+4600)/2 = 4400 → index = round(4400/4400*100) = 100 (rakiple aynı)
+    expect(res.body.competitionIndex).toBe(100);
   });
 
   it('aynı rakibin yeni girişi → aggregate en güncel fiyatı kullanır (tek sayar)', async () => {
