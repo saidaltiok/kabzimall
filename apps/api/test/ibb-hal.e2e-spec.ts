@@ -53,5 +53,34 @@ describe('İBB hal — parser (saf) + eşleme uçları', () => {
     it('İBB içe aktarım: VIEWER yetkisiz (403, ağa çıkmadan reddedilir)', async () => {
       await authed(app, 'VIEWER').post('/api/v1/intel/hal/ibb/import').send({ date: '2026-07-01' }).expect(403);
     });
+
+    it('ingest: dışarıdan gelen satırlar → eksik ürünler oluşur + tarih damgalı hal fiyatı + eşleme', async () => {
+      const rows = [
+        { sourceName: 'Domates', unit: 'Kilogram', low: 3000, high: 4000, price: 3500 },
+        { sourceName: 'Taze Fasulye', unit: 'Kilogram', low: 8000, high: 10000, price: 9000 },
+      ];
+      const r = await http.post('/api/v1/intel/hal/ibb/ingest').send({ date: '2026-07-05', rows }).expect(201);
+      expect(r.body.priced).toBe(2);
+      expect(r.body.created).toBe(2); // domates + taze-fasulye (resetDb sonrası katalog boş)
+
+      // katalogda oluştu (yayın dışı)
+      const cat = await http.get('/api/v1/catalog/products?search=fasulye').expect(200);
+      const tf = cat.body.data.find((p: { slug: string }) => p.slug === 'taze-fasulye');
+      expect(tf).toBeTruthy();
+      expect(tf.isActive).toBe(false);
+
+      // hal ızgarasında tarih damgalı fiyat
+      const grid = await http.get('/api/v1/intel/hal?date=2026-07-05').expect(200);
+      const dom = grid.body.data.find((g: { productId: string }) => g.productId === 'domates');
+      expect(dom.dailyAverage).toBe(3500);
+
+      // eşleme kalıcılaştı → ikinci ingest yeni ürün oluşturmaz
+      const again = await http.post('/api/v1/intel/hal/ibb/ingest').send({ date: '2026-07-06', rows }).expect(201);
+      expect(again.body.created).toBe(0); // eşleme kalıcı → yeni ürün yok
+      expect(again.body.priced).toBe(2);
+
+      // VIEWER yazamaz
+      await authed(app, 'VIEWER').post('/api/v1/intel/hal/ibb/ingest').send({ date: '2026-07-05', rows }).expect(403);
+    });
   });
 });

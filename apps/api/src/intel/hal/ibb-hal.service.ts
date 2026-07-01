@@ -137,6 +137,23 @@ export class IbbHalService {
     for (const c of cats) if (!CATEGORIES[c]) throw new BadRequestException(`Geçersiz kategori: ${c}`);
 
     const tokens = await this.fetchTokens();
+    const all: IbbRow[] = [];
+    for (const c of cats) all.push(...(await this.fetchCategory(date, c, halTurId, tokens)));
+    return this.ingestRows(date, all, createMissing);
+  }
+
+  /**
+   * Dışarıdan (ör. tarayıcıdan) getirilen İBB satırlarını sisteme yazar — İBB'ye
+   * sunucudan çıkmadan. importAll ile aynı oluştur/eşle/yaz mantığını paylaşır.
+   */
+  async ingest(date: string, rows: IbbRow[], createMissing = true) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException('tarih YYYY-MM-DD olmalı');
+    if (!Array.isArray(rows) || rows.length === 0) throw new BadRequestException('İçe alınacak satır yok.');
+    return this.ingestRows(date, rows, createMissing);
+  }
+
+  /** Ortak: satırları → (eksikse) ürün oluştur + eşleme + tarih damgalı hal fiyatı. */
+  private async ingestRows(date: string, rows: IbbRow[], createMissing: boolean) {
     const [mappings, products] = await Promise.all([
       this.prisma.halSourceMapping.findMany({ where: { tenantId: DEV_TENANT_ID, source: 'IBB' } }),
       this.prisma.product.findMany({ where: { tenantId: DEV_TENANT_ID }, select: { slug: true } }),
@@ -149,37 +166,31 @@ export class IbbHalService {
     const entries: { tenantId: string; productSlug: string; price: number; date: Date; unit: string | null; source: string }[] = [];
     const usedSlug = new Set<string>();
     const day = new Date(`${date}T00:00:00.000Z`);
-    let totalRows = 0;
 
-    for (const c of cats) {
-      const rows = await this.fetchCategory(date, c, halTurId, tokens);
-      totalRows += rows.length;
-      for (const r of rows) {
-        const slug = mapBySource.get(r.sourceName) ?? slugifyTr(r.sourceName);
-        if (!slug) continue;
-        if (!existing.has(slug)) {
-          if (!createMissing) continue;
-          try {
-            await this.prisma.product.create({
-              data: { tenantId: DEV_TENANT_ID, slug, name: r.sourceName, kind: 'SIMPLE', saleType: 'WEIGHT', unitLabel: this.mapUnit(r.unit), isActive: false },
-            });
-            existing.add(slug);
-            created.push(slug);
-          } catch {
-            continue; // slug çakışması (farklı İBB adı aynı slug) → atla
-          }
+    for (const r of rows) {
+      if (!r.sourceName) continue;
+      const slug = mapBySource.get(r.sourceName) ?? slugifyTr(r.sourceName);
+      if (!slug) continue;
+      if (!existing.has(slug)) {
+        if (!createMissing) continue;
+        try {
+          await this.prisma.product.create({
+            data: { tenantId: DEV_TENANT_ID, slug, name: r.sourceName, kind: 'SIMPLE', saleType: 'WEIGHT', unitLabel: this.mapUnit(r.unit), isActive: false },
+          });
+          existing.add(slug);
+          created.push(slug);
+        } catch {
+          continue; // slug çakışması → atla
         }
-        if (!mapBySource.has(r.sourceName)) { mapBySource.set(r.sourceName, slug); newMappings.push({ sourceName: r.sourceName, productSlug: slug }); }
-        if (usedSlug.has(slug)) continue; // aynı gün aynı slug'a tek fiyat
-        usedSlug.add(slug);
-        entries.push({ tenantId: DEV_TENANT_ID, productSlug: slug, price: r.price, date: day, unit: r.unit, source: 'IBB' });
       }
+      if (!mapBySource.has(r.sourceName)) { mapBySource.set(r.sourceName, slug); newMappings.push({ sourceName: r.sourceName, productSlug: slug }); }
+      if (usedSlug.has(slug)) continue; // aynı gün aynı slug'a tek fiyat
+      usedSlug.add(slug);
+      entries.push({ tenantId: DEV_TENANT_ID, productSlug: slug, price: r.price, date: day, unit: r.unit, source: 'IBB' });
     }
 
-    if (totalRows === 0) {
-      throw new BadRequestException(
-        'İBB bu tarih için fiyat döndürmedi (yayın penceresi ya da geçici erişim kısıtı olabilir). Biraz sonra ya da yakın bir iş günü tarihini deneyin.',
-      );
+    if (rows.length === 0 || (entries.length === 0 && created.length === 0)) {
+      throw new BadRequestException('İBB bu tarih için fiyat döndürmedi (yayın penceresi ya da geçici erişim kısıtı olabilir).');
     }
 
     await this.prisma.$transaction([
@@ -187,7 +198,7 @@ export class IbbHalService {
       ...(entries.length ? [this.prisma.halPriceEntry.createMany({ data: entries })] : []),
     ]);
 
-    return { date, totalRows, created: created.length, createdSlugs: created, priced: entries.length };
+    return { date, totalRows: rows.length, created: created.length, createdSlugs: created, priced: entries.length };
   }
 
   listMappings() {

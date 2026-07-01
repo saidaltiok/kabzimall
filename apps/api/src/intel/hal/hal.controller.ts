@@ -29,6 +29,14 @@ export class HalController {
     return this.ibb.importAll(date, { category, createMissing, side });
   }
 
+  /** POST /intel/hal/ibb/ingest { date, rows:[{sourceName,unit,price}] } — dışarıdan (tarayıcı) getirilen İBB satırlarını içeri al. */
+  @Post('ibb/ingest')
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ schema: { example: { date: '2026-07-01', rows: [{ sourceName: 'Domates', unit: 'Kilogram', price: 3500 }] } } })
+  ibbIngest(@Body('date') date: string, @Body('rows') rows: { sourceName: string; unit: string | null; low: number; high: number; price: number }[], @Body('createMissing') createMissing?: boolean) {
+    return this.ibb.ingest(date, rows, createMissing ?? true);
+  }
+
   /** GET /intel/hal/ibb/mappings — İBB ürün adı → slug eşlemeleri. */
   @Get('ibb/mappings')
   async ibbMappings() {
