@@ -231,6 +231,23 @@ model User {
   @@map("users")
 }
 
+/// Hal veri kaynağı → katalog eşlemesi. Dış kaynak (İBB) ürün adını bizim
+/// ürün slug'ımıza bağlar; otomatik çekimde fiyat doğru ürüne yazılır.
+model HalSourceMapping {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  /// Kaynak: 'IBB' vb.
+  source      String   @default("IBB")
+  /// Kaynaktaki ürün adı (ör. "Çilek", "Domates (Sera)").
+  sourceName  String   @map("source_name")
+  /// Bizim katalog slug'ımız.
+  productSlug String   @map("product_slug")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, source, sourceName])
+  @@map("hal_source_mappings")
+}
+
 /// Günlük hal fiyatı girişi — append-only (her giriş yeni satır, zaman damgalı).
 /// Günlük ortalama bu satırlardan hesaplanır; geçmiş asla üzerine yazılmaz.
 /// v1.1: hal günde 1 kez yayımlanır → time_slot nullable.

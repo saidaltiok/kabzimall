@@ -7,6 +7,7 @@ import { CostPoolController } from './cost-pool/cost-pool.controller';
 import { CostPoolService } from './cost-pool/cost-pool.service';
 import { HalController } from './hal/hal.controller';
 import { HalService } from './hal/hal.service';
+import { IbbHalService } from './hal/ibb-hal.service';
 import { CompetitorsService } from './competitors/competitors.service';
 import { CompetitorGroupsController } from './competitors/competitor-groups.controller';
 import { CompetitorsController } from './competitors/competitors.controller';
@@ -61,6 +62,7 @@ import { AnalyticsController } from './analytics/analytics.controller';
   providers: [
     PriceService,
     HalService,
+    IbbHalService,
     CompetitorsService,
     CostComponentsService,
     DashboardService,

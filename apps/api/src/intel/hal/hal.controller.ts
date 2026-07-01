@@ -1,13 +1,45 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../auth/decorators';
+import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { HalService } from './hal.service';
+import { IbbHalService } from './ibb-hal.service';
 import { CreateHalEntryDto } from './dto/create-hal-entry.dto';
 import { BulkHalDto } from './dto/bulk-hal.dto';
 
 @ApiTags('intel: hal (günlük fiyat)')
 @Controller('intel/hal')
 export class HalController {
-  constructor(private readonly service: HalService) {}
+  constructor(private readonly service: HalService, private readonly ibb: IbbHalService) {}
+
+  /** GET /intel/hal/ibb/preview?date=&category= — İBB günlük fiyatları + slug eşleme önizleme. */
+  @Get('ibb/preview')
+  @ApiQuery({ name: 'date', required: true })
+  @ApiQuery({ name: 'category', required: false, description: '5=Meyve, 6=Sebze, 7=İthal (boş=hepsi)' })
+  ibbPreview(@Query('date') date: string, @Query('category') category?: string) {
+    return this.ibb.preview(date, category);
+  }
+
+  /** GET /intel/hal/ibb/mappings — İBB ürün adı → slug eşlemeleri. */
+  @Get('ibb/mappings')
+  async ibbMappings() {
+    const data = await this.ibb.listMappings();
+    return { data, meta: { total: data.length } };
+  }
+
+  /** PUT /intel/hal/ibb/mappings { sourceName, productSlug } */
+  @Put('ibb/mappings')
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ schema: { example: { sourceName: 'Çilek', productSlug: 'cilek' } } })
+  ibbUpsertMapping(@Body('sourceName') sourceName: string, @Body('productSlug') productSlug: string) {
+    return this.ibb.upsertMapping(sourceName, productSlug);
+  }
+
+  @Delete('ibb/mappings/:id')
+  @Roles(...PRICE_WRITERS)
+  ibbRemoveMapping(@Param('id') id: string) {
+    return this.ibb.removeMapping(id);
+  }
 
   /**
    * POST /api/v1/intel/hal/entries

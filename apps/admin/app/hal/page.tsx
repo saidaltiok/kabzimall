@@ -9,11 +9,14 @@ interface Product { slug: string; name: string; kind: string; unitLabel: string 
 interface GridRow { productId: string; count: number; dailyAverage: number }
 interface Grid { date: string; data: GridRow[] }
 interface Prev { date: string; data: { productId: string; price: number }[] }
+interface IbbRow { sourceName: string; unit: string | null; low: number; high: number; price: number; category: string; matchedSlug: string | null; matchedName: string | null }
+interface IbbPreview { date: string; rows: IbbRow[]; unmatched: number }
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 const OUTLIER_PCT = 0.4;
+const IBB_CATS: [string, string][] = [['', 'Hepsi'], ['6', 'Sebze'], ['5', 'Meyve'], ['7', 'İthal']];
 
 export default function HalPage() {
   const [date, setDate] = useState(today());
@@ -27,6 +30,11 @@ export default function HalPage() {
   // ad-hoc tek ürün (katalogda olmayan)
   const [adhocSlug, setAdhocSlug] = useState('');
   const [adhocPrice, setAdhocPrice] = useState('');
+  // İBB otomatik çekim
+  const [ibbCat, setIbbCat] = useState('6');
+  const [ibbRows, setIbbRows] = useState<IbbRow[] | null>(null);
+  const [ibbSlugs, setIbbSlugs] = useState<Record<string, string>>({}); // sourceName → slug (düzenlenebilir)
+  const [ibbBusy, setIbbBusy] = useState(false);
 
   const load = useCallback(async (d: string) => {
     setError(null);
@@ -92,6 +100,44 @@ export default function HalPage() {
     }
   }
 
+  async function fetchIbb() {
+    setIbbBusy(true); setError(null); setOk(null); setIbbRows(null);
+    try {
+      const q = new URLSearchParams({ date });
+      if (ibbCat) q.set('category', ibbCat);
+      const p = await apiGet<IbbPreview>(`/intel/hal/ibb/preview?${q.toString()}`);
+      setIbbRows(p.rows);
+      setIbbSlugs(Object.fromEntries(p.rows.map((r) => [r.sourceName, r.matchedSlug ?? ''])));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setIbbBusy(false);
+    }
+  }
+
+  async function saveIbb() {
+    if (!ibbRows) return;
+    const chosen = ibbRows.map((r) => ({ r, slug: (ibbSlugs[r.sourceName] ?? '').trim() })).filter((x) => x.slug);
+    if (chosen.length === 0) { setError('Eşleşen ürün yok — satırlara slug girin ya da katalogla eşleşen ürünleri kullan.'); return; }
+    setIbbBusy(true); setError(null); setOk(null);
+    try {
+      // Yeni/değişen eşlemeleri kaydet (sonraki çekimde otomatik eşleşsin).
+      await Promise.all(
+        chosen.filter((x) => x.r.matchedSlug !== x.slug).map((x) =>
+          apiSend('PUT', '/intel/hal/ibb/mappings', { sourceName: x.r.sourceName, productSlug: x.slug }).catch(() => {})),
+      );
+      const entries = chosen.map((x) => ({ productId: x.slug, price: x.r.price, source: 'IBB' }));
+      await apiSend('POST', '/intel/hal/bulk', { date, entries });
+      setOk(`✓ İBB'den ${entries.length} ürün fiyatı ${date} tarihine kaydedildi.`);
+      setIbbRows(null);
+      await load(date);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setIbbBusy(false);
+    }
+  }
+
   function exportCsv() {
     const header = ['Ürün', 'Slug', 'Birim', 'Dün (₺)', 'Bugün ort (₺)', 'Giriş', 'Değişim %'];
     const cell = (v: string | number) => {
@@ -128,6 +174,44 @@ export default function HalPage() {
           günün fiyatlarını getir, gerekenleri değiştir, <b>Tümünü kaydet</b>. %40+ sapmada uyarılırsın.
           Günlük ortalama otomatik hesaplanır ve maliyet → fiyat öneri zincirini besler. <b>Excel'e aktar</b> ile CSV indir.
         </p>
+
+        <div className="card" style={{ borderLeft: '3px solid var(--persimmon)' }}>
+          <div className="ct">🏛️ İBB'den otomatik çek <span>Avrupa Yakası Hali · {date}</span></div>
+          <div className="form-row" style={{ alignItems: 'flex-end' }}>
+            <div className="field"><label>Kategori</label>
+              <select value={ibbCat} onChange={(e) => setIbbCat(e.target.value)}>
+                {IBB_CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <button className="btn" onClick={fetchIbb} disabled={ibbBusy}>{ibbBusy ? 'Çekiliyor…' : 'İBB\'den çek'}</button>
+            {ibbRows && <button className="btn ghost" onClick={saveIbb} disabled={ibbBusy}>Eşleşenleri hal&apos;e yaz</button>}
+          </div>
+          {ibbRows && (
+            <>
+              <p className="note2" style={{ marginTop: 8 }}>
+                {ibbRows.length} ürün geldi · {ibbRows.filter((r) => (ibbSlugs[r.sourceName] ?? '').trim()).length} eşleşti.
+                Fiyat = (en düşük + en yüksek) / 2. Eşleşmeyen satırlara slug yaz (kaydedince kalıcı eşleşir).
+              </p>
+              <table>
+                <thead><tr><th>İBB ürünü</th><th>Kat.</th><th className="num">Düşük–Yüksek</th><th className="num">Fiyat (ort)</th><th>Ürün slug</th></tr></thead>
+                <tbody>
+                  {ibbRows.map((r) => {
+                    const slug = ibbSlugs[r.sourceName] ?? '';
+                    return (
+                      <tr key={r.category + r.sourceName} style={slug ? undefined : { opacity: 0.55 }}>
+                        <td>{r.sourceName}</td>
+                        <td className="muted" style={{ fontSize: 11 }}>{r.category}</td>
+                        <td className="num muted" style={{ fontSize: 11 }}>{tl(r.low)} – {tl(r.high)}</td>
+                        <td className="num savecell">{tl(r.price)}</td>
+                        <td><input className="cell" style={{ width: 130, textAlign: 'left' }} value={slug} placeholder="eşleşmedi" onChange={(e) => setIbbSlugs((s) => ({ ...s, [r.sourceName]: e.target.value }))} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
 
         <div className="form-row" style={{ marginBottom: 14, alignItems: 'flex-end' }}>
           <div className="field"><label>Gün</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
