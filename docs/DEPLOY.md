@@ -94,6 +94,18 @@ cd apps/web && npm run build && npm run start      # :3002
 
 ---
 
+## 5b. İBB hal fiyatı otomatik çekimi (kurulu — zamanlama notu)
+- Kaynak: `tarim.ibb.istanbul` günlük hal fiyatları (Avrupa=HalTurId 2, doğrulandı; Anadolu=1 deneysel).
+  Panel → Hal Fiyatları → "🏛️ İBB'den çek / ⤵ Tümünü içeri al" ile eksik ürünleri oluşturur + fiyat yazar.
+- **ÖNEMLİ — zamanlama:** İBB günlük fiyatı **gündüz yayında**, akşam servis boşalıyor (öğlen 59 satır,
+  22:24'te 0). İçe aktarımı/scheduler'ı **iş saatinde** çalıştır (öneri: cron ~11:00, market günü).
+- Alternatif kaynak `halfiyatlaripublicdata.ibb.gov.tr` (swagger) daha zengin (geçmiş fiyat) ama spec ucu
+  tarayıcı-dışı istemcileri resetliyor; gündüz erişilebiliyorsa değerlendirilebilir.
+- Rakip fiyatları (Migros/Carrefour web'den okunabiliyor; Getir/Trendyol app-gated): otomatik sunucu
+  toplama ToS/anti-bot nedeniyle önerilmez → tarayıcı-destekli/manuel giriş ya da ücretli API.
+
+---
+
 ## 6. Sonraki faz (altyapı/sağlayıcı kararı gerektirir — bugün DEĞİL)
 | Özellik | Gereken |
 |---|---|
