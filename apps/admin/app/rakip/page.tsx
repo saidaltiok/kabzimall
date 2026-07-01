@@ -86,6 +86,20 @@ export default function RakipPage() {
     }
   }
 
+  async function mfImport() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await apiSend<{ matched: number; recorded: number; note?: string }>('POST', '/intel/competitor-prices/marketfiyati/import', { productId });
+      if (r.recorded === 0) setError(r.note || 'marketfiyati bu ürün için taze eşleşme döndürmedi.');
+      await loadPrices(productId);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addCompetitor() {
     if (!newComp || !newGroup) return;
     setBusy(true);
@@ -120,6 +134,13 @@ export default function RakipPage() {
           Seçili ürün için rakip fiyatlarını gir; <b>min · maks · ortalama · medyan</b> anında güncellenir
           (rakip başına en güncel fiyat). Fiyatlar append-only kaydedilir.
         </p>
+
+        <div className="form-row" style={{ marginBottom: 12, alignItems: 'center' }}>
+          <button className="btn" style={{ background: 'var(--persimmon)' }} onClick={mfImport} disabled={busy}>
+            {busy ? '…' : '🛒 marketfiyati’ndan çek (A101/BİM/ŞOK/Migros/Carrefour)'}
+          </button>
+          <span className="muted" style={{ fontSize: 12 }}>Resmî Ticaret Bakanlığı kaynağı · taze meyve-sebze eşleşenler yazılır</span>
+        </div>
 
         {error && <div className="error">{error}</div>}
 
