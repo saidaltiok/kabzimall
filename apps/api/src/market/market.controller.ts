@@ -86,6 +86,12 @@ export class StorefrontController {
   order(@Param('id') id: string) {
     return this.service.getOrder(id);
   }
+
+  /** POST /storefront/orders/:id/cancel — müşteri kendi siparişini iptal eder (erken aşama). */
+  @Post('orders/:id/cancel')
+  cancel(@Param('id') id: string) {
+    return this.service.cancelByCustomer(id);
+  }
 }
 
 @ApiTags('market: sipariş (admin)')

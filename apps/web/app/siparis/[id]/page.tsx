@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { tl } from '@/lib/format';
 import OrderTimeline from '@/components/OrderTimeline';
 
@@ -20,14 +20,32 @@ const STATUS: Record<string, string> = {
   OUT_FOR_DELIVERY: 'Yolda', DELIVERED: 'Teslim edildi', CANCELLED: 'İptal',
 };
 
+const CANCELLABLE = ['CONFIRMED', 'PREPARING'];
+
 export default function OrderPage() {
   const params = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelErr, setCancelErr] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<Order>(`/storefront/orders/${params.id}`).then(setOrder).catch((e) => setError(e.message));
   }, [params.id]);
+
+  async function cancelOrder() {
+    if (!window.confirm('Siparişini iptal etmek istediğine emin misin?')) return;
+    setCancelling(true);
+    setCancelErr(null);
+    try {
+      const updated = await apiPost<Order>(`/storefront/orders/${params.id}/cancel`, {});
+      setOrder(updated);
+    } catch (e) {
+      setCancelErr((e as Error).message);
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   if (error) return <div className="error" style={{ marginTop: 24 }}>Sipariş bulunamadı: {error}</div>;
   if (!order) return <div className="loading">Yükleniyor…</div>;
@@ -77,6 +95,15 @@ export default function OrderPage() {
       <div className="success-card" style={{ marginTop: 16 }}>
         <h3 className="serif" style={{ margin: '0 0 12px', fontSize: 16 }}>Sipariş durumu</h3>
         <OrderTimeline status={order.status} />
+        {CANCELLABLE.includes(order.status) && (
+          <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+            {cancelErr && <div className="error" style={{ marginBottom: 8 }}>{cancelErr}</div>}
+            <button className="rm" onClick={cancelOrder} disabled={cancelling}>
+              {cancelling ? 'İptal ediliyor…' : 'Siparişi iptal et'}
+            </button>
+            <span className="muted" style={{ fontSize: 12, marginLeft: 10 }}>Hazırlanmaya başlamadan önce iptal edebilirsin.</span>
+          </div>
+        )}
       </div>
 
       {order.notifications.length > 0 && (

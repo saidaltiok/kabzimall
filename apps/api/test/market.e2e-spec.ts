@@ -337,6 +337,27 @@ describe('Market (vitrin + sipariş)', () => {
     expect(res.body.lowStock.some((p: { slug: string }) => p.slug === 'az-stok')).toBe(true);
   });
 
+  it('müşteri iptali: erken aşamada iptal + stok geri yükleme; geç aşamada 400', async () => {
+    // stoklu ürün
+    await admin.post('/api/v1/catalog/products').send({ slug: 'iptal-test', name: 'İptal Test', saleType: 'PIECE', unitLabel: 'adet', basePrice: 1000, stockQty: 10 }).expect(201);
+    const cust = { name: 'Veli', phone: '05551112233', address: 'Mahalle 1' };
+
+    // CONFIRMED sipariş → müşteri iptal edebilir; stok geri döner
+    const o1 = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'iptal-test', qty: 3 }], customer: cust }).expect(201);
+    expect((await request(server).get('/api/v1/storefront/products/iptal-test')).body.stockQty).toBe(7);
+    const c1 = await request(server).post(`/api/v1/storefront/orders/${o1.body.id}/cancel`).expect(201);
+    expect(c1.body.status).toBe('CANCELLED');
+    expect((await request(server).get('/api/v1/storefront/products/iptal-test')).body.stockQty).toBe(10); // geri yüklendi
+
+    // zaten iptal → tekrar iptal 400
+    await request(server).post(`/api/v1/storefront/orders/${o1.body.id}/cancel`).expect(400);
+
+    // READY aşamasındaki sipariş müşteri tarafından iptal edilemez → 400
+    const o2 = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'iptal-test', qty: 1 }], customer: cust }).expect(201);
+    await admin.patch(`/api/v1/admin/orders/${o2.body.id}/status`).send({ status: 'READY' }).expect(200);
+    await request(server).post(`/api/v1/storefront/orders/${o2.body.id}/cancel`).expect(400);
+  });
+
   it('sipariş sorgulama: kod + telefon eşleşirse 200, eşleşmezse 404', async () => {
     const made = await request(server)
       .post('/api/v1/storefront/orders')

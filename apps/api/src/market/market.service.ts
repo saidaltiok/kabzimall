@@ -59,6 +59,9 @@ export const ORDER_STATUSES = [
 /** Aksiyon bekleyen (aktif) sipariş durumları. */
 const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'] as const;
 
+/** Müşterinin kendi iptal edebileceği erken aşamalar (hazırlanmadan önce). */
+const CUSTOMER_CANCELLABLE = ['CONFIRMED', 'PREPARING'] as const;
+
 /** Bu ve altı stok "düşük" sayılır (dashboard uyarısı). */
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -338,6 +341,18 @@ export class MarketService {
       .catch(() => null);
     if (!order) throw new NotFoundException(`Sipariş bulunamadı: ${id}`);
     return order;
+  }
+
+  /**
+   * Müşteri kendi siparişini iptal eder — yalnızca erken aşamada (hazırlanmadan/
+   * yola çıkmadan önce). Stok geri yüklenir + bildirim üretilir (updateStatus üzerinden).
+   */
+  async cancelByCustomer(id: string) {
+    const order = await this.getOrder(id);
+    if (!CUSTOMER_CANCELLABLE.includes(order.status as (typeof CUSTOMER_CANCELLABLE)[number])) {
+      throw new BadRequestException('Sipariş bu aşamada iptal edilemez. Lütfen bizimle iletişime geçin.');
+    }
+    return this.updateStatus(id, 'CANCELLED');
   }
 
   /** Telefon eşleştirmesi için: yalnızca rakamlar, son 10 hane. */
