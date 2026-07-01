@@ -49,5 +49,9 @@ describe('İBB hal — parser (saf) + eşleme uçları', () => {
       await http.delete(`/api/v1/intel/hal/ibb/mappings/${list.body.data[0].id}`).expect(200);
       expect((await http.get('/api/v1/intel/hal/ibb/mappings')).body.meta.total).toBe(0);
     });
+
+    it('İBB içe aktarım: VIEWER yetkisiz (403, ağa çıkmadan reddedilir)', async () => {
+      await authed(app, 'VIEWER').post('/api/v1/intel/hal/ibb/import').send({ date: '2026-07-01' }).expect(403);
+    });
   });
 });

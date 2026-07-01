@@ -115,6 +115,22 @@ export default function HalPage() {
     }
   }
 
+  async function importAllIbb() {
+    if (!confirm(`İBB'deki TÜM ürünler ${date} için içeri alınacak. Sistemde olmayanlar katalogda (yayın dışı) oluşturulacak. Devam?`)) return;
+    setIbbBusy(true); setError(null); setOk(null); setIbbRows(null);
+    try {
+      const body: Record<string, unknown> = { date, createMissing: true };
+      if (ibbCat) body.category = ibbCat;
+      const r = await apiSend<{ totalRows: number; created: number; priced: number }>('POST', '/intel/hal/ibb/import', body);
+      setOk(`✓ İBB içe aktarım: ${r.priced} ürün fiyatı yazıldı, ${r.created} yeni ürün oluşturuldu (${r.totalRows} satır tarandı).`);
+      await load(date);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setIbbBusy(false);
+    }
+  }
+
   async function saveIbb() {
     if (!ibbRows) return;
     const chosen = ibbRows.map((r) => ({ r, slug: (ibbSlugs[r.sourceName] ?? '').trim() })).filter((x) => x.slug);
@@ -183,7 +199,8 @@ export default function HalPage() {
                 {IBB_CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
-            <button className="btn" onClick={fetchIbb} disabled={ibbBusy}>{ibbBusy ? 'Çekiliyor…' : 'İBB\'den çek'}</button>
+            <button className="btn" onClick={fetchIbb} disabled={ibbBusy}>{ibbBusy ? 'Çekiliyor…' : 'İBB\'den çek (önizle)'}</button>
+            <button className="btn" onClick={importAllIbb} disabled={ibbBusy} style={{ background: 'var(--persimmon)' }}>{ibbBusy ? '…' : '⤵ Tümünü içeri al (eksikleri oluştur)'}</button>
             {ibbRows && <button className="btn ghost" onClick={saveIbb} disabled={ibbBusy}>Eşleşenleri hal&apos;e yaz</button>}
           </div>
           {ibbRows && (

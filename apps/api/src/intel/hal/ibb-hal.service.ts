@@ -7,6 +7,9 @@ const DAILY_URL = 'https://tarim.ibb.istanbul/inc/halfiyatlari/gunluk_fiyatlar.a
 const HAL_TUR_ID = '2'; // Avrupa Yakası hali
 const CATEGORIES: Record<string, string> = { '5': 'Meyve', '6': 'Sebze', '7': 'İthal' };
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
+// Sayfada gömülü, herkese açık (oturuma bağlı değil) erişim anahtarları.
+// Öncelik canlı scrape'te; başarısızsa (bot-stripped sayfa) bunlara düşülür.
+const FALLBACK_TOKENS = { tUsr: 'M3yV353bZe', tPas: 'LA74sBcXERpdBaz', tVal: '881f3dc3-7d08-40db-b45a-1275c0245685' };
 
 export interface IbbRow { sourceName: string; unit: string | null; low: number; high: number; price: number }
 export interface PreviewRow extends IbbRow { category: string; matchedSlug: string | null; matchedName: string | null }
@@ -56,13 +59,18 @@ export class IbbHalService {
 
   /** Sayfadan güncel erişim token'larını çeker (rotasyona dayanıklı). */
   private async fetchTokens(): Promise<{ tUsr: string; tPas: string; tVal: string }> {
-    const res = await fetch(PAGE_URL, { headers: { 'User-Agent': UA } });
-    if (!res.ok) throw new BadRequestException(`İBB sayfasına ulaşılamadı (${res.status})`);
-    const html = await res.text();
-    const grab = (k: string) => html.match(new RegExp(`obj\\.${k}\\s*=\\s*"([^"]+)"`))?.[1];
-    const tUsr = grab('tUsr'); const tPas = grab('tPas'); const tVal = grab('tVal');
-    if (!tUsr || !tPas || !tVal) throw new BadRequestException('İBB erişim anahtarları sayfadan okunamadı (kaynak değişmiş olabilir).');
-    return { tUsr, tPas, tVal };
+    try {
+      const res = await fetch(PAGE_URL, { headers: { 'User-Agent': UA } });
+      if (res.ok) {
+        const html = await res.text();
+        const grab = (k: string) => html.match(new RegExp(`obj\\.${k}\\s*=\\s*"([^"]+)"`))?.[1];
+        const tUsr = grab('tUsr'); const tPas = grab('tPas'); const tVal = grab('tVal');
+        if (tUsr && tPas && tVal) return { tUsr, tPas, tVal };
+      }
+    } catch {
+      /* aşağıda fallback */
+    }
+    return { ...FALLBACK_TOKENS }; // scrape başarısız → bilinen sabit anahtarlar
   }
 
   /** Bir kategori için günlük İBB fiyatları (ham satırlar). */
@@ -100,6 +108,81 @@ export class IbbHalService {
       }
     }
     return { date, rows, unmatched: rows.filter((r) => !r.matchedSlug).length };
+  }
+
+  /** İBB birimini bizim unitLabel'a çevir. */
+  private mapUnit(u: string | null): string {
+    const s = (u ?? '').toLocaleLowerCase('tr');
+    if (s.includes('kilogram') || s === 'kg') return 'kg';
+    if (s.includes('adet')) return 'adet';
+    if (s.includes('demet')) return 'demet';
+    if (s.includes('bağ') || s.includes('bag')) return 'bağ';
+    return s || 'kg';
+  }
+
+  /**
+   * TÜM İBB ürünlerini içeri al: sistemde olmayan ürünü (createMissing) katalogda
+   * oluştur (kind=SIMPLE, isActive=false — vitrine çıkmaz, önce gözden geçirilir),
+   * eşlemeyi kalıcılaştır, günlük hal fiyatını tarih damgasıyla yaz (append-only).
+   */
+  async importAll(date: string, opts: { category?: string; createMissing?: boolean } = {}) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException('tarih YYYY-MM-DD olmalı');
+    const createMissing = opts.createMissing ?? true;
+    const cats = opts.category ? [opts.category] : Object.keys(CATEGORIES);
+    for (const c of cats) if (!CATEGORIES[c]) throw new BadRequestException(`Geçersiz kategori: ${c}`);
+
+    const tokens = await this.fetchTokens();
+    const [mappings, products] = await Promise.all([
+      this.prisma.halSourceMapping.findMany({ where: { tenantId: DEV_TENANT_ID, source: 'IBB' } }),
+      this.prisma.product.findMany({ where: { tenantId: DEV_TENANT_ID }, select: { slug: true } }),
+    ]);
+    const mapBySource = new Map(mappings.map((m) => [m.sourceName, m.productSlug]));
+    const existing = new Set(products.map((p) => p.slug));
+
+    const created: string[] = [];
+    const newMappings: { sourceName: string; productSlug: string }[] = [];
+    const entries: { tenantId: string; productSlug: string; price: number; date: Date; unit: string | null; source: string }[] = [];
+    const usedSlug = new Set<string>();
+    const day = new Date(`${date}T00:00:00.000Z`);
+    let totalRows = 0;
+
+    for (const c of cats) {
+      const rows = await this.fetchCategory(date, c, tokens);
+      totalRows += rows.length;
+      for (const r of rows) {
+        const slug = mapBySource.get(r.sourceName) ?? slugifyTr(r.sourceName);
+        if (!slug) continue;
+        if (!existing.has(slug)) {
+          if (!createMissing) continue;
+          try {
+            await this.prisma.product.create({
+              data: { tenantId: DEV_TENANT_ID, slug, name: r.sourceName, kind: 'SIMPLE', saleType: 'WEIGHT', unitLabel: this.mapUnit(r.unit), isActive: false },
+            });
+            existing.add(slug);
+            created.push(slug);
+          } catch {
+            continue; // slug çakışması (farklı İBB adı aynı slug) → atla
+          }
+        }
+        if (!mapBySource.has(r.sourceName)) { mapBySource.set(r.sourceName, slug); newMappings.push({ sourceName: r.sourceName, productSlug: slug }); }
+        if (usedSlug.has(slug)) continue; // aynı gün aynı slug'a tek fiyat
+        usedSlug.add(slug);
+        entries.push({ tenantId: DEV_TENANT_ID, productSlug: slug, price: r.price, date: day, unit: r.unit, source: 'IBB' });
+      }
+    }
+
+    if (totalRows === 0) {
+      throw new BadRequestException(
+        'İBB bu tarih için fiyat döndürmedi (yayın penceresi ya da geçici erişim kısıtı olabilir). Biraz sonra ya da yakın bir iş günü tarihini deneyin.',
+      );
+    }
+
+    await this.prisma.$transaction([
+      ...newMappings.map((m) => this.prisma.halSourceMapping.create({ data: { tenantId: DEV_TENANT_ID, source: 'IBB', sourceName: m.sourceName, productSlug: m.productSlug } })),
+      ...(entries.length ? [this.prisma.halPriceEntry.createMany({ data: entries })] : []),
+    ]);
+
+    return { date, totalRows, created: created.length, createdSlugs: created, priced: entries.length };
   }
 
   listMappings() {
