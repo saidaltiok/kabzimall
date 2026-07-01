@@ -32,6 +32,7 @@ export default function HalPage() {
   const [adhocPrice, setAdhocPrice] = useState('');
   // İBB otomatik çekim
   const [ibbCat, setIbbCat] = useState('6');
+  const [ibbSide, setIbbSide] = useState('avrupa');
   const [ibbRows, setIbbRows] = useState<IbbRow[] | null>(null);
   const [ibbSlugs, setIbbSlugs] = useState<Record<string, string>>({}); // sourceName → slug (düzenlenebilir)
   const [ibbBusy, setIbbBusy] = useState(false);
@@ -103,7 +104,7 @@ export default function HalPage() {
   async function fetchIbb() {
     setIbbBusy(true); setError(null); setOk(null); setIbbRows(null);
     try {
-      const q = new URLSearchParams({ date });
+      const q = new URLSearchParams({ date, side: ibbSide });
       if (ibbCat) q.set('category', ibbCat);
       const p = await apiGet<IbbPreview>(`/intel/hal/ibb/preview?${q.toString()}`);
       setIbbRows(p.rows);
@@ -119,7 +120,7 @@ export default function HalPage() {
     if (!confirm(`İBB'deki TÜM ürünler ${date} için içeri alınacak. Sistemde olmayanlar katalogda (yayın dışı) oluşturulacak. Devam?`)) return;
     setIbbBusy(true); setError(null); setOk(null); setIbbRows(null);
     try {
-      const body: Record<string, unknown> = { date, createMissing: true };
+      const body: Record<string, unknown> = { date, createMissing: true, side: ibbSide };
       if (ibbCat) body.category = ibbCat;
       const r = await apiSend<{ totalRows: number; created: number; priced: number }>('POST', '/intel/hal/ibb/import', body);
       setOk(`✓ İBB içe aktarım: ${r.priced} ürün fiyatı yazıldı, ${r.created} yeni ürün oluşturuldu (${r.totalRows} satır tarandı).`);
@@ -194,6 +195,12 @@ export default function HalPage() {
         <div className="card" style={{ borderLeft: '3px solid var(--persimmon)' }}>
           <div className="ct">🏛️ İBB'den otomatik çek <span>Avrupa Yakası Hali · {date}</span></div>
           <div className="form-row" style={{ alignItems: 'flex-end' }}>
+            <div className="field"><label>Yaka</label>
+              <select value={ibbSide} onChange={(e) => setIbbSide(e.target.value)}>
+                <option value="avrupa">Avrupa</option>
+                <option value="anadolu">Anadolu (deneysel)</option>
+              </select>
+            </div>
             <div className="field"><label>Kategori</label>
               <select value={ibbCat} onChange={(e) => setIbbCat(e.target.value)}>
                 {IBB_CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}

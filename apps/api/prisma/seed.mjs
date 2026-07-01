@@ -18,6 +18,34 @@ const PRODUCTS = [
   { slug: 'salatalik', name: 'Salatalık', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2250, discountedPrice: 1790, stockQty: 40, imageUrl: img('Salatalik') },
 ];
 
+// Rakipler (grup → işletmeler). Fiyat girişi panelden yapılır.
+const COMPETITOR_GROUPS = [
+  { name: 'Hızlı Teslimat', sortOrder: 1, members: ['Getir', 'Yemeksepeti', 'Trendyol', 'Banabi'] },
+  { name: 'Zincir Market', sortOrder: 2, members: ['Migros', 'Carrefour'] },
+  { name: 'İndirim Market', sortOrder: 3, members: ['BİM', 'A101', 'ŞOK'] },
+];
+
+async function seedCompetitors() {
+  let groups = 0;
+  let comps = 0;
+  for (const g of COMPETITOR_GROUPS) {
+    const group = await prisma.competitorGroup.upsert({
+      where: { tenantId_name: { tenantId: T, name: g.name } },
+      create: { tenantId: T, name: g.name, sortOrder: g.sortOrder },
+      update: { sortOrder: g.sortOrder },
+    });
+    groups++;
+    for (const name of g.members) {
+      const exists = await prisma.competitor.findFirst({ where: { tenantId: T, name } });
+      if (!exists) {
+        await prisma.competitor.create({ data: { tenantId: T, name, groupId: group.id, isActive: true } });
+        comps++;
+      }
+    }
+  }
+  return { groups, comps };
+}
+
 async function main() {
   // Maliyet bileşeni (GLOBAL)
   await prisma.costComponent.upsert({
@@ -70,7 +98,8 @@ async function main() {
     }
   }
 
-  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} ürün, 1 hazır sepet (ürün), GLOBAL maliyet.`);
+  const c = await seedCompetitors();
+  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} ürün, 1 hazır sepet (ürün), GLOBAL maliyet, ${c.groups} rakip grubu (${c.comps} yeni rakip).`);
 }
 
 main().finally(() => prisma.$disconnect());

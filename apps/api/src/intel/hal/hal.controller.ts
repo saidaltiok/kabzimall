@@ -16,16 +16,17 @@ export class HalController {
   @Get('ibb/preview')
   @ApiQuery({ name: 'date', required: true })
   @ApiQuery({ name: 'category', required: false, description: '5=Meyve, 6=Sebze, 7=İthal (boş=hepsi)' })
-  ibbPreview(@Query('date') date: string, @Query('category') category?: string) {
-    return this.ibb.preview(date, category);
+  @ApiQuery({ name: 'side', required: false, description: 'avrupa (varsayılan) | anadolu' })
+  ibbPreview(@Query('date') date: string, @Query('category') category?: string, @Query('side') side?: string) {
+    return this.ibb.preview(date, category, side);
   }
 
   /** POST /intel/hal/ibb/import { date, category?, createMissing? } — tüm İBB ürünlerini içeri al (eksikleri oluştur + fiyat yaz). */
   @Post('ibb/import')
   @Roles(...PRICE_WRITERS)
-  @ApiBody({ schema: { example: { date: '2026-07-01', createMissing: true } } })
-  ibbImport(@Body('date') date: string, @Body('category') category?: string, @Body('createMissing') createMissing?: boolean) {
-    return this.ibb.importAll(date, { category, createMissing });
+  @ApiBody({ schema: { example: { date: '2026-07-01', createMissing: true, side: 'avrupa' } } })
+  ibbImport(@Body('date') date: string, @Body('category') category?: string, @Body('createMissing') createMissing?: boolean, @Body('side') side?: string) {
+    return this.ibb.importAll(date, { category, createMissing, side });
   }
 
   /** GET /intel/hal/ibb/mappings — İBB ürün adı → slug eşlemeleri. */

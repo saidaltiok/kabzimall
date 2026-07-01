@@ -4,7 +4,8 @@ import { DEV_TENANT_ID } from '../../common/tenant';
 
 const PAGE_URL = 'https://tarim.ibb.istanbul/avrupa-yakasi-hal-mudurlugu/hal-fiyatlari.html';
 const DAILY_URL = 'https://tarim.ibb.istanbul/inc/halfiyatlari/gunluk_fiyatlar.asp';
-const HAL_TUR_ID = '2'; // Avrupa Yakası hali
+// Yaka → HalTurId. Avrupa=2 doğrulandı; Anadolu=1 yaygın değer (deneysel).
+const SIDES: Record<string, string> = { avrupa: '2', anadolu: '1' };
 const CATEGORIES: Record<string, string> = { '5': 'Meyve', '6': 'Sebze', '7': 'İthal' };
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
 // Sayfada gömülü, herkese açık (oturuma bağlı değil) erişim anahtarları.
@@ -74,8 +75,8 @@ export class IbbHalService {
   }
 
   /** Bir kategori için günlük İBB fiyatları (ham satırlar). */
-  private async fetchCategory(date: string, category: string, tokens: { tUsr: string; tPas: string; tVal: string }): Promise<IbbRow[]> {
-    const q = new URLSearchParams({ tarih: date, kategori: category, tUsr: tokens.tUsr, tPas: tokens.tPas, tVal: tokens.tVal, HalTurId: HAL_TUR_ID });
+  private async fetchCategory(date: string, category: string, halTurId: string, tokens: { tUsr: string; tPas: string; tVal: string }): Promise<IbbRow[]> {
+    const q = new URLSearchParams({ tarih: date, kategori: category, tUsr: tokens.tUsr, tPas: tokens.tPas, tVal: tokens.tVal, HalTurId: halTurId });
     const res = await fetch(`${DAILY_URL}?${q.toString()}`, { headers: { 'User-Agent': UA, Referer: PAGE_URL } });
     if (!res.ok) throw new BadRequestException(`İBB fiyat servisi hata verdi (${res.status})`);
     return parseIbbTable(await res.text());
@@ -86,8 +87,10 @@ export class IbbHalService {
    * eşler (kayıtlı eşleme → yoksa slug-adı katalogda varsa otomatik). category
    * verilmezse üç kategoriyi de getirir.
    */
-  async preview(date: string, category?: string): Promise<{ date: string; rows: PreviewRow[]; unmatched: number }> {
+  async preview(date: string, category?: string, side = 'avrupa'): Promise<{ date: string; rows: PreviewRow[]; unmatched: number }> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException('tarih YYYY-MM-DD olmalı');
+    const halTurId = SIDES[side];
+    if (!halTurId) throw new BadRequestException(`Geçersiz yaka: ${side}`);
     const cats = category ? [category] : Object.keys(CATEGORIES);
     for (const c of cats) if (!CATEGORIES[c]) throw new BadRequestException(`Geçersiz kategori: ${c}`);
 
@@ -101,7 +104,7 @@ export class IbbHalService {
 
     const rows: PreviewRow[] = [];
     for (const c of cats) {
-      const ibb = await this.fetchCategory(date, c, tokens);
+      const ibb = await this.fetchCategory(date, c, halTurId, tokens);
       for (const r of ibb) {
         const mapped = mapBySource.get(r.sourceName) ?? (bySlug.has(slugifyTr(r.sourceName)) ? slugifyTr(r.sourceName) : null);
         rows.push({ ...r, category: CATEGORIES[c], matchedSlug: mapped, matchedName: mapped ? bySlug.get(mapped) ?? null : null });
@@ -125,9 +128,11 @@ export class IbbHalService {
    * oluştur (kind=SIMPLE, isActive=false — vitrine çıkmaz, önce gözden geçirilir),
    * eşlemeyi kalıcılaştır, günlük hal fiyatını tarih damgasıyla yaz (append-only).
    */
-  async importAll(date: string, opts: { category?: string; createMissing?: boolean } = {}) {
+  async importAll(date: string, opts: { category?: string; createMissing?: boolean; side?: string } = {}) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException('tarih YYYY-MM-DD olmalı');
     const createMissing = opts.createMissing ?? true;
+    const halTurId = SIDES[opts.side ?? 'avrupa'];
+    if (!halTurId) throw new BadRequestException(`Geçersiz yaka: ${opts.side}`);
     const cats = opts.category ? [opts.category] : Object.keys(CATEGORIES);
     for (const c of cats) if (!CATEGORIES[c]) throw new BadRequestException(`Geçersiz kategori: ${c}`);
 
@@ -147,7 +152,7 @@ export class IbbHalService {
     let totalRows = 0;
 
     for (const c of cats) {
-      const rows = await this.fetchCategory(date, c, tokens);
+      const rows = await this.fetchCategory(date, c, halTurId, tokens);
       totalRows += rows.length;
       for (const r of rows) {
         const slug = mapBySource.get(r.sourceName) ?? slugifyTr(r.sourceName);
