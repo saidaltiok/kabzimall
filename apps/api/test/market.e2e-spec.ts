@@ -56,6 +56,9 @@ describe('Market (vitrin + sipariş)', () => {
   it('sipariş detayını id ile getir (public)', async () => {
     const res = await request(server).get(`/api/v1/storefront/orders/${orderId}`).expect(200);
     expect(res.body.customerName).toBe('Ayşe Yılmaz');
+    // "tekrar sipariş" için kalemler ürün slug'ını taşır
+    expect(res.body.items.every((i: { product: { slug: string } | null }) => !!i.product?.slug)).toBe(true);
+    expect(res.body.items.map((i: { product: { slug: string } }) => i.product.slug).sort()).toEqual(['cilek', 'domates']);
   });
 
   it('ürün notu: kalem bazında müşteri notu kaydedilir ve geri döner', async () => {

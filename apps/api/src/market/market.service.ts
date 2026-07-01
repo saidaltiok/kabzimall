@@ -337,7 +337,13 @@ export class MarketService {
 
   async getOrder(id: string) {
     const order = await this.prisma.order
-      .findFirst({ where: { id, tenantId: DEV_TENANT_ID }, include: { items: true, notifications: { orderBy: { createdAt: 'asc' } } } })
+      .findFirst({
+        where: { id, tenantId: DEV_TENANT_ID },
+        include: {
+          items: { include: { product: { select: { slug: true } } } }, // slug: "tekrar sipariş" için
+          notifications: { orderBy: { createdAt: 'asc' } },
+        },
+      })
       .catch(() => null);
     if (!order) throw new NotFoundException(`Sipariş bulunamadı: ${id}`);
     return order;

@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api';
-import { tl } from '@/lib/format';
+import { tl, emojiFor } from '@/lib/format';
+import { useCart } from '@/lib/cart';
 import OrderTimeline from '@/components/OrderTimeline';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number; note: string | null }
+interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number; note: string | null; product: { slug: string } | null }
+interface StoreProduct {
+  slug: string; name: string; unitLabel: string | null; stockQty: number | null; maxPerOrder: number | null;
+  basePrice: number; discountedPrice: number | null; category: { slug: string } | null;
+}
 interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
   deliveryDate: string | null; deliveryWindow: string | null;
@@ -24,10 +29,14 @@ const CANCELLABLE = ['CONFIRMED', 'PREPARING'];
 
 export default function OrderPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const { add } = useCart();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelErr, setCancelErr] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const [reorderMsg, setReorderMsg] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<Order>(`/storefront/orders/${params.id}`).then(setOrder).catch((e) => setError(e.message));
@@ -45,6 +54,37 @@ export default function OrderPage() {
     } finally {
       setCancelling(false);
     }
+  }
+
+  /** Geçmiş siparişteki ürünleri güncel fiyat/stokla sepete ekler. */
+  async function reorder() {
+    if (!order) return;
+    setReordering(true);
+    setReorderMsg(null);
+    const slugs = [...new Set(order.items.map((i) => i.product?.slug).filter(Boolean))] as string[];
+    let added = 0;
+    let skipped = 0;
+    await Promise.all(
+      slugs.map(async (slug) => {
+        try {
+          const p = await apiGet<StoreProduct>(`/storefront/products/${slug}`);
+          const soldOut = p.stockQty != null && p.stockQty <= 0;
+          if (soldOut) { skipped++; return; }
+          const it = order.items.find((x) => x.product?.slug === slug)!;
+          const eff = p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice ? p.discountedPrice : p.basePrice;
+          let qty = it.orderedQty;
+          if (p.maxPerOrder != null && qty > p.maxPerOrder) qty = p.maxPerOrder;
+          if (p.stockQty != null && qty > p.stockQty) qty = p.stockQty;
+          add({ slug: p.slug, name: p.name, unitPrice: eff, unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug), maxPerOrder: p.maxPerOrder ?? undefined }, qty);
+          added++;
+        } catch {
+          skipped++;
+        }
+      }),
+    );
+    setReordering(false);
+    if (added === 0) { setReorderMsg('Bu siparişteki ürünler şu an satışta değil.'); return; }
+    router.push('/sepet');
   }
 
   if (error) return <div className="error" style={{ marginTop: 24 }}>Sipariş bulunamadı: {error}</div>;
@@ -90,6 +130,13 @@ export default function OrderPage() {
           Teslimat: <b>{order.customerName}</b> · {order.addressText}. Tartılı ürünlerde nihai tutar
           paketlemede gramajla kesinleşir.
         </p>
+        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 6 }}>
+          {reorderMsg && <div className="error" style={{ marginBottom: 8 }}>{reorderMsg}</div>}
+          <button className="cta" style={{ marginTop: 0 }} onClick={reorder} disabled={reordering}>
+            {reordering ? 'Sepete ekleniyor…' : '🔁 Aynısını tekrar sipariş ver'}
+          </button>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Ürünler güncel fiyat ve stok durumuyla sepete eklenir.</p>
+        </div>
       </div>
 
       <div className="success-card" style={{ marginTop: 16 }}>
