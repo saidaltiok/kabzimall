@@ -57,6 +57,15 @@ export default function HomePage() {
     });
   }, [products, cat, q]);
 
+  const deals = useMemo(
+    () =>
+      products.filter((p) => {
+        const soldOut = p.stockQty != null && p.stockQty <= 0;
+        return !soldOut && p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice;
+      }),
+    [products],
+  );
+
   function effective(p: Product) {
     return p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice ? p.discountedPrice : p.basePrice;
   }
@@ -94,6 +103,37 @@ export default function HomePage() {
           </button>
         ))}
       </div>
+
+      {cat === 'all' && !q && deals.length > 0 && (
+        <>
+          <div className="sectit"><h2 className="serif">🔥 Bu haftanın fırsatları</h2></div>
+          <div className="deals">
+            {deals.map((p) => {
+              const eff = effective(p);
+              const discPct = Math.round((1 - eff / p.basePrice) * 100);
+              return (
+                <div className="prod deal" key={p.slug}>
+                  <span className="pill" style={{ position: 'absolute', top: 10, left: 10, background: 'var(--persimmon)', color: '#fff', zIndex: 1 }}>%{discPct}</span>
+                  <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
+                  <Link href={`/urun/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                    <div className="ph">
+                      {p.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                      ) : emojiFor(p.slug, p.category?.slug)}
+                    </div>
+                    <div className="nm">{p.name}</div>
+                    <div className="pr">
+                      {tl(eff)} <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>
+                    </div>
+                    <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {cat === 'all' && !q && baskets.length > 0 && (
         <>
