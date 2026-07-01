@@ -41,7 +41,7 @@ export default function HalPage() {
     setError(null);
     try {
       const [p, g, pr] = await Promise.all([
-        apiGet<{ data: Product[] }>('/catalog/products?active=true'),
+        apiGet<{ data: Product[] }>('/catalog/products'),
         apiGet<Grid>(`/intel/hal?date=${d}`),
         apiGet<Prev>(`/intel/hal/previous?date=${d}`),
       ]);
@@ -263,7 +263,7 @@ export default function HalPage() {
                   const g = grid[p.slug];
                   return (
                     <tr key={p.slug}>
-                      <td>{p.name} <span className="muted" style={{ fontSize: 11 }}>{p.slug}</span></td>
+                      <td>{p.name} <span className="muted" style={{ fontSize: 11 }}>{p.slug}</span>{!p.isActive && <span className="tagp info" style={{ marginLeft: 6, fontSize: 10 }}>yayın dışı</span>}</td>
                       <td className="num muted">{prev[p.slug] != null ? tl(prev[p.slug]) : '—'}</td>
                       <td className="num">
                         <input
