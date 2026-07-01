@@ -412,6 +412,28 @@ describe('Market (vitrin + sipariş)', () => {
     await request(server).get(`/api/v1/storefront/orders/lookup?code=KMYOKYOK&phone=05324445566`).expect(404);
   });
 
+  it('rol matrisi: PACKER sipariş operasyonu yapar ama fiyat/katalog yazamaz', async () => {
+    const o = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'domates', qty: 2 }], customer: { name: 'Rol Testi', phone: '05551110044', address: 'Adres 1' } })
+      .expect(201);
+    const itemId = o.body.items[0].id;
+
+    const packer = authed(app, 'PACKER');
+    // sipariş durumu ilerletir → 200
+    await packer.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'PREPARING' }).expect(200);
+    // paketler → 200
+    await packer.post(`/api/v1/admin/orders/${o.body.id}/pack`).send({ items: [{ itemId, pickedQty: 1.9 }] }).expect(201);
+    // katalog yazamaz → 403
+    await packer.post('/api/v1/catalog/products').send({ slug: 'x', name: 'X', saleType: 'WEIGHT' }).expect(403);
+    // fiyat uygulayamaz → 403
+    await packer.post('/api/v1/intel/price/apply').send({ productId: 'domates', price: 5000, strategy: 'MANUAL' }).expect(403);
+
+    // COURIER durum ilerletir → 200; SUPPORT yazamaz → 403
+    await authed(app, 'COURIER').patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'OUT_FOR_DELIVERY' }).expect(200);
+    await authed(app, 'SUPPORT').patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'DELIVERED' }).expect(403);
+  });
+
   it('teslimat bölgesi: hizmet ilçesi varsa sipariş kontrol edilir', async () => {
     await admin.post('/api/v1/admin/delivery-zones').send({ name: 'Kadıköy' }).expect(201);
     const z = await request(server).get('/api/v1/storefront/zones').expect(200);
