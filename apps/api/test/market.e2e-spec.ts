@@ -325,6 +325,18 @@ describe('Market (vitrin + sipariş)', () => {
     await admin.put('/api/v1/admin/settings').send({ deliveryTiers: [{ minSubtotal: 0, fee: 4990 }, { minSubtotal: 40000, fee: 0 }] }).expect(200);
   });
 
+  it('operasyon özeti: bugünkü sipariş/ciro + durum kırılımı + düşük stok', async () => {
+    await admin.post('/api/v1/catalog/products').send({ slug: 'az-stok', name: 'Az Stok', saleType: 'PIECE', unitLabel: 'adet', basePrice: 1000, stockQty: 2 }).expect(201);
+
+    await request(server).get('/api/v1/admin/orders/summary').expect(401); // token gerekir
+    const res = await admin.get('/api/v1/admin/orders/summary').expect(200);
+    expect(res.body.ordersToday).toBeGreaterThanOrEqual(1); // önceki testlerde sipariş oluştu
+    expect(typeof res.body.revenueToday).toBe('number');
+    expect(res.body.statusCounts).toHaveProperty('CONFIRMED');
+    expect(typeof res.body.activeCount).toBe('number');
+    expect(res.body.lowStock.some((p: { slug: string }) => p.slug === 'az-stok')).toBe(true);
+  });
+
   it('sipariş sorgulama: kod + telefon eşleşirse 200, eşleşmezse 404', async () => {
     const made = await request(server)
       .post('/api/v1/storefront/orders')

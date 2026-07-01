@@ -93,6 +93,12 @@ export class StorefrontController {
 export class AdminOrdersController {
   constructor(private readonly service: MarketService) {}
 
+  /** GET /admin/orders/summary — günün operasyon özeti (dashboard). */
+  @Get('summary')
+  summary() {
+    return this.service.opsSummary();
+  }
+
   /** GET /admin/orders?status= */
   @Get()
   @ApiQuery({ name: 'status', required: false })

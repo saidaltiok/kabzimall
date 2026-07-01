@@ -56,6 +56,12 @@ export const ORDER_STATUSES = [
   'CANCELLED',
 ] as const;
 
+/** Aksiyon bekleyen (aktif) sipariş durumları. */
+const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'] as const;
+
+/** Bu ve altı stok "düşük" sayılır (dashboard uyarısı). */
+const LOW_STOCK_THRESHOLD = 5;
+
 @Injectable()
 export class MarketService {
   constructor(private readonly prisma: PrismaService) {}
@@ -365,6 +371,38 @@ export class MarketService {
       orderBy: { createdAt: 'desc' },
       include: { items: true, notifications: { orderBy: { createdAt: 'asc' } } },
     });
+  }
+
+  /** Panel dashboard'u için günün operasyon özeti (sipariş/ciro/durum + düşük stok). */
+  async opsSummary() {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const [todays, active, lowStock] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { tenantId: DEV_TENANT_ID, createdAt: { gte: start } },
+        select: { status: true, grandTotal: true, finalTotal: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['status'],
+        where: { tenantId: DEV_TENANT_ID, status: { in: [...ACTIVE_STATUSES] } },
+        _count: { _all: true },
+      }),
+      this.prisma.product.findMany({
+        where: { tenantId: DEV_TENANT_ID, isActive: true, stockQty: { lte: LOW_STOCK_THRESHOLD } },
+        select: { slug: true, name: true, stockQty: true, unitLabel: true },
+        orderBy: { stockQty: 'asc' },
+        take: 20,
+      }),
+    ]);
+
+    const ordersToday = todays.length;
+    const revenueToday = todays.filter((o) => o.status !== 'CANCELLED').reduce((s, o) => s + (o.finalTotal ?? o.grandTotal), 0);
+    const statusCounts = Object.fromEntries(ACTIVE_STATUSES.map((s) => [s, 0])) as Record<string, number>;
+    for (const a of active) statusCounts[a.status] = a._count._all;
+    const activeCount = Object.values(statusCounts).reduce((s, n) => s + n, 0);
+
+    return { ordersToday, revenueToday, activeCount, statusCounts, lowStock };
   }
 
   /**
