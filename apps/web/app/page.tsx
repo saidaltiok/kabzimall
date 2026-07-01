@@ -31,7 +31,14 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
-  const { add } = useCart();
+  const { add, items } = useCart();
+
+  // Sepetteki miktar (normal ürün/sepet; basketSlug'suz satır).
+  const inCart = (slug: string) => items.find((i) => i.slug === slug && !i.basketSlug)?.qty ?? 0;
+  const cartLabel = (slug: string, unitLabel: string | null) => {
+    const q = inCart(slug);
+    return q > 0 ? `🛒 ${q} ${unitLabel === 'kg' ? 'kg' : (unitLabel ?? 'adet')} sepette` : null;
+  };
 
   function flash(msg: string) {
     setToast(msg);
@@ -127,6 +134,7 @@ export default function HomePage() {
                       {tl(eff)} <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>
                     </div>
                     <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
+                    {cartLabel(p.slug, p.unitLabel) && <div className="incart">{cartLabel(p.slug, p.unitLabel)}</div>}
                   </Link>
                 </div>
               );
@@ -156,6 +164,7 @@ export default function HomePage() {
                     {tl(b.price)}{' '}
                     {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.basePrice)}</s>}
                   </div>
+                  {inCart(b.slug) > 0 && <div className="incart">🛒 {inCart(b.slug)} paket sepette</div>}
                   <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
                 </div>
               );
@@ -207,6 +216,7 @@ export default function HomePage() {
                     {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>}
                   </div>
                   <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
+                  {cartLabel(p.slug, p.unitLabel) && <div className="incart">{cartLabel(p.slug, p.unitLabel)}</div>}
                 </Link>
               </div>
             );
