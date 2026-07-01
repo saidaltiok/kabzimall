@@ -14,6 +14,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
       { href: '/oner', icon: '🎯', label: 'Fiyat Öneri Motoru' },
       { href: '/kurallar', icon: '📐', label: 'Fiyat Kuralları' },
       { href: '/senaryo', icon: '🔮', label: 'Senaryo Analizi' },
+      { href: '/satis', icon: '📈', label: 'Satış Analizi' },
       { href: '/urunler', icon: '📦', label: 'Ürünler & Marj' },
     ],
   },
