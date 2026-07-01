@@ -18,6 +18,8 @@ import {
 } from './cost-components/cost-components.controller';
 import { DashboardService } from './dashboard/dashboard.service';
 import { DashboardController, ProductsTableController } from './dashboard/dashboard.controller';
+import { PricingRulesService } from './pricing-rules/pricing-rules.service';
+import { PricingRulesController } from './pricing-rules/pricing-rules.controller';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
@@ -51,6 +53,7 @@ import { DashboardController, ProductsTableController } from './dashboard/dashbo
     ProductsTableController,
     HalPurchasesController,
     CostPoolController,
+    PricingRulesController,
   ],
   providers: [
     PriceService,
@@ -60,6 +63,7 @@ import { DashboardController, ProductsTableController } from './dashboard/dashbo
     DashboardService,
     HalPurchasesService,
     CostPoolService,
+    PricingRulesService,
   ],
 })
 export class IntelModule {}

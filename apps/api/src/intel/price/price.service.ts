@@ -13,6 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../../common/tenant';
 import { CostComponentsService } from '../cost-components/cost-components.service';
 import { CompetitorsService } from '../competitors/competitors.service';
+import { PricingRulesService } from '../pricing-rules/pricing-rules.service';
 import { ResolvePriceDto, STRATEGIES } from './dto/resolve-price.dto';
 import { SuggestPriceDto } from './dto/suggest-price.dto';
 import { ApplyPriceDto } from './dto/apply-price.dto';
@@ -35,7 +36,27 @@ export class PriceService {
     private readonly prisma: PrismaService,
     private readonly costs: CostComponentsService,
     private readonly competitors: CompetitorsService,
+    private readonly rules: PricingRulesService,
   ) {}
+
+  /**
+   * Ürünün kalıcı fiyat kuralını (varsa) çağrı parametrelerinin ALTINA serer:
+   * çağrı açıkça bir alanı verdiyse o kazanır; yoksa kural varsayılanı uygulanır.
+   * Böylece "sebzede taban %25" gibi kurallar öneride otomatik devreye girer.
+   */
+  private async withRuleDefaults(
+    productId: string,
+    params: SuggestParams | undefined,
+  ): Promise<{ params: SuggestParams; strategy: Strategy | null; ruleMatched: { scope: string; refId: string }[] }> {
+    const eff = await this.rules.resolveEffective(productId);
+    const merged: SuggestParams = {
+      ...(eff.targetMargin != null ? { targetMargin: eff.targetMargin } : {}),
+      ...(eff.floorMargin != null ? { floorMargin: eff.floorMargin } : {}),
+      ...(eff.psychological != null ? { psychological: eff.psychological } : {}),
+      ...(params ?? {}), // çağrı parametreleri kuralı ezer
+    };
+    return { params: merged, strategy: (eff.strategy as Strategy | null) ?? null, ruleMatched: eff.matched };
+  }
 
   /**
    * Hiyerarşik fiyat çözümü. Tüm hesap packages/pricing'te;
@@ -148,10 +169,14 @@ export class PriceService {
    * productId ile öneri: maliyeti (cost-components + günlük hal ort.) ve
    * rakipleri DB'den toplar, tek strateji uygular. Panel "öner" akışı.
    */
-  async suggestForProduct(dto: SuggestProductDto): Promise<SuggestResult & { inputs: AssembledInputs }> {
+  async suggestForProduct(
+    dto: SuggestProductDto,
+  ): Promise<SuggestResult & { inputs: AssembledInputs; ruleMatched: { scope: string; refId: string }[] }> {
     const { cost, competitors, inputs } = await this.assemble(dto.productId, dto.halAvg, dto.date);
+    const { params, strategy: ruleStrategy, ruleMatched } = await this.withRuleDefaults(dto.productId, dto.params);
+    const strategy = dto.strategy ?? ruleStrategy ?? ('MARGIN' as Strategy);
     try {
-      return { ...suggestPrice(cost, competitors, dto.strategy, dto.params ?? {}), inputs };
+      return { ...suggestPrice(cost, competitors, strategy, params), inputs, ruleMatched };
     } catch (e) {
       throw new BadRequestException((e as Error).message);
     }
@@ -163,8 +188,9 @@ export class PriceService {
   ): Promise<SuggestResult & { chainUsed: string[]; inputs: AssembledInputs }> {
     const { cost, competitors, inputs } = await this.assemble(dto.productId, dto.halAvg, dto.date);
     const chain = this.buildChain(dto.chain);
+    const { params: baseParams } = await this.withRuleDefaults(dto.productId, dto.baseParams);
     try {
-      const result = resolvePrice(cost, competitors, chain, dto.baseParams ?? {});
+      const result = resolvePrice(cost, competitors, chain, baseParams);
       return { ...result, chainUsed: chain.map((c) => c.strategy), inputs };
     } catch (e) {
       throw new BadRequestException((e as Error).message);
@@ -188,7 +214,8 @@ export class PriceService {
         continue;
       }
 
-      const sug = suggestPrice(assembled.cost, assembled.competitors, dto.strategy, dto.params ?? {});
+      const { params: ruleParams } = await this.withRuleDefaults(slug, dto.params);
+      const sug = suggestPrice(assembled.cost, assembled.competitors, dto.strategy, ruleParams);
       const current = await this.prisma.product.findUnique({
         where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug } },
         select: { basePrice: true },

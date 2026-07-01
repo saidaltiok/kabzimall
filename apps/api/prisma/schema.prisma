@@ -307,6 +307,27 @@ model CostComponent {
   @@map("cost_components")
 }
 
+/// Kalıcı fiyat kuralı (Teknik §3.3 pricing_rules). En-spesifik alan kazanır:
+/// PRODUCT(slug) > CATEGORY(slug) > GLOBAL(''). Öneri/çözümde varsayılan
+/// strateji + hedef/taban marjı sağlar (ör. sebzede taban %25, yöreselde %40).
+model PricingRule {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  scope         String   // GLOBAL | CATEGORY | PRODUCT
+  refId         String   @default("") @map("ref_id")
+  /// Varsayılan strateji (opsiyonel; boşsa çağrı belirler).
+  strategy      String?
+  /// Hedef net marj (0..1) ve taban net marj (0..1). Motor tabanın altına inmez.
+  targetMargin  Float?   @map("target_margin")
+  floorMargin   Float?   @map("floor_margin")
+  psychological Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, scope, refId])
+  @@map("pricing_rules")
+}
+
 /// Hal alımı + ±500 g tartı mutabakatı. Yalnızca ham girdiler saklanır;
 /// efektif maliyet/risk okuma anında packages/pricing ile hesaplanır.
 model HalPurchase {

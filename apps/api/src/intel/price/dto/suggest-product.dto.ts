@@ -12,8 +12,9 @@ export class SuggestProductDto {
   @IsString()
   productId!: string;
 
-  @IsIn(STRATEGIES)
-  strategy!: Strategy;
+  /** Strateji (opsiyonel; verilmezse ürünün fiyat kuralı ya da MARGIN uygulanır). */
+  @IsOptional() @IsIn(STRATEGIES)
+  strategy?: Strategy;
 
   @IsOptional()
   @ValidateNested()
