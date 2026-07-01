@@ -70,6 +70,24 @@ export class HalService {
     return { date: date.toISOString().slice(0, 10), data };
   }
 
+  /**
+   * Verilen günden ÖNCEKI en güncel hal fiyatı (ürün başına). Saha Modu:
+   * "dünden kopyala" ön-doldurma + aykırı değer uyarısı için taban.
+   */
+  async previous(dateStr?: string): Promise<{ date: string; data: { productId: string; price: number; date: string }[] }> {
+    const date = this.dateOnly(dateStr);
+    const rows = await this.prisma.halPriceEntry.findMany({
+      where: { tenantId: DEV_TENANT_ID, date: { lt: date } },
+      orderBy: [{ date: 'desc' }, { capturedAt: 'desc' }],
+    });
+    const latest = new Map<string, HalPriceEntry>();
+    for (const r of rows) if (!latest.has(r.productSlug)) latest.set(r.productSlug, r);
+    return {
+      date: date.toISOString().slice(0, 10),
+      data: [...latest.values()].map((r) => ({ productId: r.productSlug, price: r.price, date: r.date.toISOString().slice(0, 10) })),
+    };
+  }
+
   private toData(dto: CreateHalEntryDto, fallbackDate?: string) {
     return {
       tenantId: DEV_TENANT_ID,

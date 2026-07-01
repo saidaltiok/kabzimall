@@ -48,4 +48,15 @@ export class HalController {
   grid(@Query('date') date?: string) {
     return this.service.grid(date);
   }
+
+  /**
+   * GET /api/v1/intel/hal/previous?date=YYYY-MM-DD
+   * Saha Modu: verilen günden önceki en güncel fiyat (ürün başına) —
+   * "dünden kopyala" ön-doldurma + aykırı değer uyarısı için taban.
+   */
+  @Get('previous')
+  @ApiQuery({ name: 'date', required: false })
+  previous(@Query('date') date?: string) {
+    return this.service.previous(date);
+  }
 }

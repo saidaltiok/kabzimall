@@ -69,6 +69,19 @@ describe('Intel /hal uçları (günlük fiyat girişi)', () => {
     expect(grid.body.data).toHaveLength(0);
   });
 
+  it('GET /previous → günden önceki en güncel fiyat (ürün başına)', async () => {
+    // 2026-06-30 öncesi: domates (06-29) 1890 (en güncel capturedAt), salatalik yok
+    const prev = await http.get('/api/v1/intel/hal/previous?date=2026-06-30').expect(200);
+    const dom = prev.body.data.find((r: { productId: string }) => r.productId === 'domates');
+    expect(dom.price).toBe(1890);
+    expect(dom.date).toBe('2026-06-29');
+    expect(prev.body.data.some((r: { productId: string }) => r.productId === 'salatalik')).toBe(false);
+
+    // 2026-07-01 öncesi: salatalik (06-30) da dâhil
+    const prev2 = await http.get('/api/v1/intel/hal/previous?date=2026-07-01').expect(200);
+    expect(prev2.body.data.find((r: { productId: string }) => r.productId === 'salatalik').price).toBe(1200);
+  });
+
   it('geçersiz tarih biçimi → 400', async () => {
     await http
       .post('/api/v1/intel/hal/entries')
