@@ -103,6 +103,19 @@ describe('Market (vitrin + sipariş)', () => {
     await admin.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'YOK' }).expect(400);
   });
 
+  it('durum geçmişi: her geçiş kim/ne zaman ile kaydedilir', async () => {
+    const res = await request(server).get(`/api/v1/storefront/orders/${orderId}`).expect(200);
+    const h = res.body.statusHistory as { fromStatus: string | null; toStatus: string; changedBy: string | null }[];
+    // ilk kayıt: sipariş alındı (müşteri), from null → CONFIRMED
+    expect(h[0].fromStatus).toBeNull();
+    expect(h[0].toStatus).toBe('CONFIRMED');
+    expect(h[0].changedBy).toBe('müşteri');
+    // sonraki: CONFIRMED → PREPARING (admin tarafından, changedBy dolu)
+    const prep = h.find((x) => x.toStatus === 'PREPARING');
+    expect(prep?.fromStatus).toBe('CONFIRMED');
+    expect(prep?.changedBy).toBeTruthy();
+  });
+
   it('teslimat slotları listelenir (public) + sipariş slota bağlanır', async () => {
     const slotsRes = await request(server).get('/api/v1/storefront/slots').expect(200);
     expect(slotsRes.body.data.length).toBeGreaterThan(0);

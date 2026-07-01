@@ -311,6 +311,7 @@ export class MarketService {
         },
         include: { items: true },
       });
+      await tx.orderStatusHistory.create({ data: { tenantId: DEV_TENANT_ID, orderId: order.id, fromStatus: null, toStatus: 'CONFIRMED', changedBy: 'müşteri', note: 'Sipariş alındı' } });
       await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: order.id, message: 'Siparişiniz alındı. En kısa sürede hazırlanacak.' } });
       return order;
     });
@@ -342,6 +343,7 @@ export class MarketService {
         include: {
           items: { include: { product: { select: { slug: true } } } }, // slug: "tekrar sipariş" için
           notifications: { orderBy: { createdAt: 'asc' } },
+          statusHistory: { orderBy: { createdAt: 'asc' } },
         },
       })
       .catch(() => null);
@@ -358,7 +360,7 @@ export class MarketService {
     if (!CUSTOMER_CANCELLABLE.includes(order.status as (typeof CUSTOMER_CANCELLABLE)[number])) {
       throw new BadRequestException('Sipariş bu aşamada iptal edilemez. Lütfen bizimle iletişime geçin.');
     }
-    return this.updateStatus(id, 'CANCELLED');
+    return this.updateStatus(id, 'CANCELLED', 'müşteri');
   }
 
   /** Telefon eşleştirmesi için: yalnızca rakamlar, son 10 hane. */
@@ -403,7 +405,7 @@ export class MarketService {
           : {}),
       },
       orderBy: { createdAt: 'desc' },
-      include: { items: true, notifications: { orderBy: { createdAt: 'asc' } } },
+      include: { items: true, notifications: { orderBy: { createdAt: 'asc' } }, statusHistory: { orderBy: { createdAt: 'asc' } } },
     });
   }
 
@@ -443,7 +445,7 @@ export class MarketService {
    * Paketleme: tartılan gerçek gramajları işler; satır ve toplam kesinleşir
    * (estimated → final). lineTotal packages/pricing'ten. Sipariş 'READY' olur.
    */
-  async packOrder(id: string, items: { itemId: string; pickedQty: number }[]) {
+  async packOrder(id: string, items: { itemId: string; pickedQty: number }[], actor?: string) {
     const order = await this.getOrder(id);
     const picked = new Map(items.map((i) => [i.itemId, i.pickedQty]));
     for (const pi of items) {
@@ -464,12 +466,13 @@ export class MarketService {
       }
       const finalTotal = finalSubtotal + order.deliveryFee;
       const updated = await tx.order.update({ where: { id }, data: { finalTotal, status: 'READY' }, include: { items: true } });
+      await tx.orderStatusHistory.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: 'READY', changedBy: actor ?? null, note: `Paketlendi · ${fmtTL(finalTotal)}` } });
       await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: `Siparişiniz paketlendi. Kesinleşen tutar: ${fmtTL(finalTotal)}.` } });
       return updated;
     });
   }
 
-  async updateStatus(id: string, status: string) {
+  async updateStatus(id: string, status: string, actor?: string) {
     if (!ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number])) {
       throw new BadRequestException(`Geçersiz durum: ${status}`);
     }
@@ -478,6 +481,7 @@ export class MarketService {
 
     await this.prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id }, data: { status } });
+      await tx.orderStatusHistory.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: status, changedBy: actor ?? null } });
       await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: STATUS_MSG[status] ?? `Durum: ${status}` } });
       if (restoreStock) {
         const prods = await tx.product.findMany({

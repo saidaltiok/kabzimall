@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Public, Roles } from '../auth/decorators';
-import { CATALOG_WRITERS } from '../auth/auth.constants';
+import { CurrentUser, Public, Roles } from '../auth/decorators';
+import { CATALOG_WRITERS, type JwtUser } from '../auth/auth.constants';
 import { MarketService } from './market.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
@@ -118,16 +118,16 @@ export class AdminOrdersController {
   @Patch(':id/status')
   @Roles(...CATALOG_WRITERS)
   @ApiBody({ schema: { example: { status: 'PREPARING' } } })
-  updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.service.updateStatus(id, status);
+  updateStatus(@Param('id') id: string, @Body('status') status: string, @CurrentUser() user: JwtUser) {
+    return this.service.updateStatus(id, status, user.email);
   }
 
   /** POST /admin/orders/:id/pack — gerçek gramajları işle, tutarı kesinleştir. */
   @Post(':id/pack')
   @Roles(...CATALOG_WRITERS)
   @ApiBody({ schema: { example: { items: [{ itemId: '<kalem-uuid>', pickedQty: 1.85 }] } } })
-  pack(@Param('id') id: string, @Body() dto: PackOrderDto) {
-    return this.service.packOrder(id, dto.items);
+  pack(@Param('id') id: string, @Body() dto: PackOrderDto, @CurrentUser() user: JwtUser) {
+    return this.service.packOrder(id, dto.items, user.email);
   }
 }
 

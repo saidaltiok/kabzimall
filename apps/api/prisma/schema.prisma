@@ -136,9 +136,29 @@ model Order {
 
   items         OrderItem[]
   notifications Notification[]
+  statusHistory OrderStatusHistory[]
 
   @@index([tenantId, status])
   @@map("orders")
+}
+
+/// Sipariş durumu geçmişi (Teknik §6.1 order_status_history). Her geçiş için
+/// bir satır: kimden→kime, kim yaptı, ne zaman. İzlenebilirlik + müşteri zaman çizelgesi.
+model OrderStatusHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  fromStatus String?  @map("from_status")
+  toStatus   String   @map("to_status")
+  /// Değişikliği yapan (personel e-postası ya da "müşteri"/"sistem").
+  changedBy  String?  @map("changed_by")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, orderId])
+  @@map("order_status_history")
 }
 
 /// Müşteri bildirimi (sipariş durumu/paketleme). Şimdilik LOG; ileride SMS/push.

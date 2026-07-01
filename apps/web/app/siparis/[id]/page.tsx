@@ -18,6 +18,7 @@ interface Order {
   deliveryDate: string | null; deliveryWindow: string | null;
   subtotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null; items: OrderItem[];
   notifications: { id: string; message: string; createdAt: string }[];
+  statusHistory: { id: string; fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }[];
 }
 
 const STATUS: Record<string, string> = {
@@ -142,6 +143,16 @@ export default function OrderPage() {
       <div className="success-card" style={{ marginTop: 16 }}>
         <h3 className="serif" style={{ margin: '0 0 12px', fontSize: 16 }}>Sipariş durumu</h3>
         <OrderTimeline status={order.status} />
+        {order.statusHistory?.length > 0 && (
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+            {order.statusHistory.map((s) => (
+              <div key={s.id} className="ln" style={{ alignItems: 'flex-start', fontSize: 13 }}>
+                <span>{STATUS[s.toStatus] ?? s.toStatus}{s.note ? ` · ${s.note}` : ''}</span>
+                <span className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(s.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {CANCELLABLE.includes(order.status) && (
           <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
             {cancelErr && <div className="error" style={{ marginBottom: 8 }}>{cancelErr}</div>}

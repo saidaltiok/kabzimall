@@ -13,6 +13,7 @@ interface Order {
   deliveryDate: string | null; deliveryWindow: string | null;
   createdAt: string; items: OrderItem[];
   notifications: { id: string; message: string; createdAt: string }[];
+  statusHistory: { id: string; fromStatus: string | null; toStatus: string; changedBy: string | null; note: string | null; createdAt: string }[];
 }
 
 const STATUSES: [string, string][] = [
@@ -177,6 +178,20 @@ export default function SiparislerPage() {
                                 <b style={{ fontSize: 12 }}>Gönderilen bildirimler:</b>
                                 <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
                                   {o.notifications.map((n) => <li key={n.id}>🔔 {n.message}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {o.statusHistory?.length > 0 && (
+                              <div style={{ marginTop: 10 }}>
+                                <b style={{ fontSize: 12 }}>Durum geçmişi:</b>
+                                <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
+                                  {o.statusHistory.map((s) => (
+                                    <li key={s.id}>
+                                      {s.fromStatus ? `${label(s.fromStatus)} → ` : ''}<b>{label(s.toStatus)}</b>
+                                      {s.changedBy ? ` · ${s.changedBy}` : ''} · {dt(s.createdAt)}
+                                      {s.note ? ` · ${s.note}` : ''}
+                                    </li>
+                                  ))}
                                 </ul>
                               </div>
                             )}
