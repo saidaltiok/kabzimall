@@ -2,6 +2,10 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   resolvePrice,
   suggestPrice,
+  directCost,
+  netMargin,
+  priceForMargin,
+  psych,
   DEFAULT_CHAIN,
   type CostInput,
   type Competitor,
@@ -20,6 +24,7 @@ import { ApplyPriceDto } from './dto/apply-price.dto';
 import { SuggestProductDto } from './dto/suggest-product.dto';
 import { ResolveProductDto } from './dto/resolve-product.dto';
 import { BulkApplyDto } from './dto/bulk-apply.dto';
+import { ScenarioDto } from './dto/scenario.dto';
 
 /** productId ile öneride DB'den toplanan girdilerin özeti (panel gösterimi). */
 interface AssembledInputs {
@@ -253,6 +258,58 @@ export class PriceService {
       skipped: results.filter((r) => r.skipped).length,
       results,
     };
+  }
+
+  /**
+   * Senaryo (what-if): ürünün baz maliyet girdilerini alır, verilen mutlak
+   * override'ları uygular ve baz vs senaryo için directCost/netMargin/öneri
+   * fiyatını karşılaştırır. Tüm hesap packages/pricing'te.
+   */
+  async scenario(dto: ScenarioDto) {
+    const overrides = dto.overrides ?? {};
+    const { cost: base } = await this.assemble(dto.productId, overrides.halAvg, dto.date);
+
+    const product = await this.prisma.product
+      .findUnique({ where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug: dto.productId } }, select: { basePrice: true } })
+      .catch(() => null);
+    const targetMargin = dto.targetMargin ?? 0.3;
+
+    // Yalnızca verilen alanları ez (mutlak değerler).
+    const scen: CostInput = { ...base };
+    for (const k of ['halAvg', 'fireRate', 'labor', 'packaging', 'fuel', 'coldStorage', 'amortization', 'commissionRate'] as const) {
+      if (overrides[k] != null) (scen[k] as number) = overrides[k] as number;
+    }
+
+    try {
+      const basePrice = dto.basePrice ?? product?.basePrice ?? psych(priceForMargin(base, targetMargin));
+      const round4 = (n: number) => +n.toFixed(4);
+      const baseDC = Math.round(directCost(base));
+      const scenDC = Math.round(directCost(scen));
+      return {
+        productId: dto.productId,
+        basePrice,
+        targetMargin,
+        baseline: {
+          directCost: baseDC,
+          netMargin: round4(netMargin(base, basePrice)),
+          suggestedPrice: psych(priceForMargin(base, targetMargin)),
+          inputs: base,
+        },
+        scenario: {
+          directCost: scenDC,
+          netMargin: round4(netMargin(scen, basePrice)),
+          suggestedPrice: psych(priceForMargin(scen, targetMargin)),
+          inputs: scen,
+        },
+        delta: {
+          directCost: scenDC - baseDC,
+          directCostPct: baseDC > 0 ? round4((scenDC - baseDC) / baseDC) : null,
+          netMarginPts: round4(netMargin(scen, basePrice) - netMargin(base, basePrice)),
+        },
+      };
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
   }
 
   /** cost-components + günlük hal ort. + rakipleri motor girdisine dönüştürür. */

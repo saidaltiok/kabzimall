@@ -80,6 +80,19 @@ describe('Intel /price/*-product (DB girdileriyle öneri)', () => {
     expect(res.body.inputs.costSource).toBe('GLOBAL');
   });
 
+  it('scenario (what-if): fire oranı artınca maliyet artar, marj düşer, öneri fiyatı yükselir', async () => {
+    const res = await http
+      .post('/api/v1/intel/price/scenario')
+      .send({ productId: 'domates', basePrice: 3590, targetMargin: 0.3, overrides: { fireRate: 0.3 }, date: '2026-06-29' })
+      .expect(200);
+
+    expect(res.body.baseline.directCost).toBe(2440); // fire %15 referans
+    expect(res.body.scenario.directCost).toBeGreaterThan(res.body.baseline.directCost); // fire %30 → daha yüksek
+    expect(res.body.scenario.netMargin).toBeLessThan(res.body.baseline.netMargin);
+    expect(res.body.delta.directCost).toBeGreaterThan(0);
+    expect(res.body.scenario.suggestedPrice).toBeGreaterThan(res.body.baseline.suggestedPrice);
+  });
+
   it('maliyet var ama hal yok ve halAvg verilmedi → 400', async () => {
     await http
       .post('/api/v1/intel/price/suggest-product')

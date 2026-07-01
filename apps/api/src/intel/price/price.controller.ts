@@ -9,6 +9,7 @@ import { ApplyPriceDto } from './dto/apply-price.dto';
 import { SuggestProductDto } from './dto/suggest-product.dto';
 import { ResolveProductDto } from './dto/resolve-product.dto';
 import { BulkApplyDto } from './dto/bulk-apply.dto';
+import { ScenarioDto } from './dto/scenario.dto';
 
 // Swagger "Try it out" için hazır örnek gövdeler (kuruş).
 const COST_EXAMPLE = {
@@ -97,6 +98,18 @@ export class PriceController {
   })
   bulkApply(@Body() dto: BulkApplyDto) {
     return this.priceService.bulkApply(dto);
+  }
+
+  /**
+   * POST /api/v1/intel/price/scenario
+   * What-if: maliyet girdilerini değiştir (fire, hal, yakıt…), baz vs senaryo
+   * marj/öneri fiyatını karşılaştır.
+   */
+  @Post('scenario')
+  @HttpCode(200)
+  @ApiBody({ schema: { example: { productId: 'domates', overrides: { fireRate: 0.2, fuel: 60 }, targetMargin: 0.3 } } })
+  async scenario(@Body() dto: ScenarioDto) {
+    return { ...(await this.priceService.scenario(dto)), currency: 'TRY-minor' };
   }
 
   /** GET /api/v1/intel/price/history?productId= */
