@@ -105,11 +105,12 @@ export class AdminOrdersController {
     return this.service.opsSummary();
   }
 
-  /** GET /admin/orders?status= */
+  /** GET /admin/orders?status=&q= (q: kod / müşteri adı / telefon) */
   @Get()
   @ApiQuery({ name: 'status', required: false })
-  async list(@Query('status') status?: string) {
-    const data = await this.service.listOrders(status);
+  @ApiQuery({ name: 'q', required: false })
+  async list(@Query('status') status?: string, @Query('q') q?: string) {
+    const data = await this.service.listOrders(status, q);
     return { data, meta: { total: data.length } };
   }
 

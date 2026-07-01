@@ -29,26 +29,30 @@ const cls = (s: string) => (s === 'CANCELLED' ? 'up' : s === 'DELIVERED' ? 'ok' 
 export default function SiparislerPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (status: string) => {
+  const load = useCallback(async () => {
     try {
-      const q = status ? `?status=${status}` : '';
-      const r = await apiGet<{ data: Order[] }>(`/admin/orders${q}`);
+      const params = new URLSearchParams();
+      if (filter) params.set('status', filter);
+      if (search.trim()) params.set('q', search.trim());
+      const qs = params.toString();
+      const r = await apiGet<{ data: Order[] }>(`/admin/orders${qs ? `?${qs}` : ''}`);
       setOrders(r.data);
     } catch (e) {
       setError((e as Error).message);
     }
-  }, []);
-  useEffect(() => { load(filter); }, [filter, load]);
+  }, [filter, search]);
+  useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
 
   async function setStatus(id: string, status: string) {
     setError(null);
     try {
       await apiSend('PATCH', `/admin/orders/${id}/status`, { status });
-      await load(filter);
+      await load();
     } catch (e) {
       setError((e as Error).message);
     }
@@ -66,7 +70,7 @@ export default function SiparislerPage() {
         return;
       }
       await apiSend('POST', `/admin/orders/${o.id}/pack`, { items });
-      await load(filter);
+      await load();
     } catch (e) {
       setError((e as Error).message);
     }
@@ -83,6 +87,10 @@ export default function SiparislerPage() {
               <option value="">Tümü</option>
               {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Ara (kod / müşteri / telefon)</label>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="KM… · Ayşe · 0555…" style={{ minWidth: 220 }} />
           </div>
         </div>
 

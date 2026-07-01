@@ -380,9 +380,22 @@ export class MarketService {
 
   /* -------------------------- Admin sipariş -------------------------- */
 
-  listOrders(status?: string) {
+  listOrders(status?: string, q?: string) {
+    const term = q?.trim();
     return this.prisma.order.findMany({
-      where: { tenantId: DEV_TENANT_ID, ...(status ? { status } : {}) },
+      where: {
+        tenantId: DEV_TENANT_ID,
+        ...(status ? { status } : {}),
+        ...(term
+          ? {
+              OR: [
+                { code: { contains: term, mode: 'insensitive' } },
+                { customerName: { contains: term, mode: 'insensitive' } },
+                { customerPhone: { contains: term } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: { items: true, notifications: { orderBy: { createdAt: 'asc' } } },
     });

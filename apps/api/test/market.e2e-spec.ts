@@ -337,6 +337,26 @@ describe('Market (vitrin + sipariş)', () => {
     expect(res.body.lowStock.some((p: { slug: string }) => p.slug === 'az-stok')).toBe(true);
   });
 
+  it('admin sipariş arama: kod / müşteri adı / telefon ile filtrelenir', async () => {
+    const o = await request(server)
+      .post('/api/v1/storefront/orders')
+      .send({ items: [{ slug: 'domates', qty: 1 }], customer: { name: 'Ayşegül Demir', phone: '05323334455', address: 'Adres bir 1' } })
+      .expect(201);
+
+    // kod ile (küçük harf de eşleşir)
+    const byCode = await admin.get(`/api/v1/admin/orders?q=${o.body.code.toLowerCase()}`).expect(200);
+    expect(byCode.body.data.some((x: { id: string }) => x.id === o.body.id)).toBe(true);
+    // müşteri adı ile
+    const byName = await admin.get('/api/v1/admin/orders?q=ayşegül').expect(200);
+    expect(byName.body.data.some((x: { id: string }) => x.id === o.body.id)).toBe(true);
+    // telefon parçası ile
+    const byPhone = await admin.get('/api/v1/admin/orders?q=3334455').expect(200);
+    expect(byPhone.body.data.some((x: { id: string }) => x.id === o.body.id)).toBe(true);
+    // eşleşmeyen arama → sonuç yok
+    const none = await admin.get('/api/v1/admin/orders?q=zzzz-yok-zzzz').expect(200);
+    expect(none.body.data.length).toBe(0);
+  });
+
   it('müşteri iptali: erken aşamada iptal + stok geri yükleme; geç aşamada 400', async () => {
     // stoklu ürün
     await admin.post('/api/v1/catalog/products').send({ slug: 'iptal-test', name: 'İptal Test', saleType: 'PIECE', unitLabel: 'adet', basePrice: 1000, stockQty: 10 }).expect(201);
