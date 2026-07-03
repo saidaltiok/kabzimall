@@ -11,6 +11,7 @@ import { IbbHalService } from './hal/ibb-hal.service';
 import { CompetitorsService } from './competitors/competitors.service';
 import { MarketFiyatiService } from './competitors/market-fiyati.service';
 import { ManavService } from './competitors/manav.service';
+import { CompetitorSyncService } from './competitors/competitor-sync.service';
 import { CompetitorGroupsController } from './competitors/competitor-groups.controller';
 import { CompetitorsController } from './competitors/competitors.controller';
 import { CompetitorPricesController } from './competitors/competitor-prices.controller';
@@ -68,6 +69,7 @@ import { AnalyticsController } from './analytics/analytics.controller';
     CompetitorsService,
     MarketFiyatiService,
     ManavService,
+    CompetitorSyncService,
     CostComponentsService,
     DashboardService,
     HalPurchasesService,

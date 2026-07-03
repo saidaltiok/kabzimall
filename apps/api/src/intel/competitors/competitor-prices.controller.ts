@@ -5,6 +5,7 @@ import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { CompetitorsService } from './competitors.service';
 import { MarketFiyatiService } from './market-fiyati.service';
 import { ManavService } from './manav.service';
+import { CompetitorSyncService } from './competitor-sync.service';
 import { CreateCompetitorPriceDto } from './dto/create-competitor-price.dto';
 
 @ApiTags('intel: rakipler')
@@ -14,7 +15,15 @@ export class CompetitorPricesController {
     private readonly service: CompetitorsService,
     private readonly marketFiyati: MarketFiyatiService,
     private readonly manav: ManavService,
+    private readonly sync: CompetitorSyncService,
   ) {}
+
+  /** POST /intel/competitor-prices/refresh-all — tüm otomatik kaynakları şimdi çek. */
+  @Post('refresh-all')
+  @Roles(...PRICE_WRITERS)
+  refreshAll() {
+    return this.sync.runAll();
+  }
 
   /** GET /intel/competitor-prices/marketfiyati?keyword= — marketfiyati önizleme (kaydetmez). */
   @Get('marketfiyati')

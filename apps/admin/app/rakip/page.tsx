@@ -117,6 +117,21 @@ export default function RakipPage() {
     }
   }
 
+  async function refreshAll() {
+    if (!confirm('Tüm otomatik kaynaklar (marketfiyati + online manavlar) şimdi çekilecek. Devam?')) return;
+    setBusy(true); setError(null); setOk(null);
+    try {
+      const r = await apiSend<{ marketfiyati: { recorded: number }; manav: { site: string; recorded: number }[] }>('POST', '/intel/competitor-prices/refresh-all', {});
+      const manavTotal = r.manav.reduce((s, m) => s + m.recorded, 0);
+      setOk(`✓ Tüm kaynaklar: marketfiyati ${r.marketfiyati.recorded} + manav ${manavTotal} = ${r.marketfiyati.recorded + manavTotal} rakip fiyatı kaydedildi.`);
+      await loadPrices(productId);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function manavPull() {
     if (!confirm('Online manav (Sebze Meyve Dünyası) taze fiyatları çekilip kaydedilecek. Devam?')) return;
     setBusy(true); setError(null); setOk(null);
@@ -175,6 +190,9 @@ export default function RakipPage() {
           </button>
           <button className="btn ghost" onClick={manavPull} disabled={busy} title="Online manav (SSR) — taze meyve-sebze, kg'ye normalize">
             {busy ? '…' : '🥬 Online manav çek'}
+          </button>
+          <button className="btn" onClick={refreshAll} disabled={busy} title="marketfiyati + tüm online manavlar (her gün 10:00 otomatik de çalışır)">
+            {busy ? '…' : '🔄 Tüm kaynakları çek'}
           </button>
           <span className="muted" style={{ fontSize: 12 }}>A101/BİM/ŞOK/Migros/Carrefour · resmî Ticaret Bakanlığı kaynağı · taze eşleşenler yazılır</span>
         </div>
