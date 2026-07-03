@@ -44,12 +44,18 @@ function scrapedWords(name: string): Set<string> {
   return new Set(slugifyTr(src).split('-').filter((w) => w.length > 2 && !STOP.has(w)));
 }
 
-/** Parantez/ad içindeki birimi kg fiyatına normalize et (ağırlıksa). adet/demet ham kalır. */
-function normalizeToKg(name: string, priceKurus: number): { priceKurus: number; unit: string } {
+// Bu gramajın altındaki paketleri kg'ye ekstrapole ETME: küçük butik poşetler
+// (25-100g fesleğen/roka gibi) kg başına anlamsız şişik fiyat üretir — istatistiksel
+// olarak güvenilmez, hal/toplu kg fiyatını temsil etmez.
+const MIN_GRAMS_FOR_KG_EXTRAPOLATION = 150;
+
+/** Parantez/ad içindeki birimi kg fiyatına normalize et (ağırlıksa). adet/demet ham kalır. null = güvenilmez, ele. */
+function normalizeToKg(name: string, priceKurus: number): { priceKurus: number; unit: string } | null {
   const g = name.match(/(\d+(?:[.,]\d+)?)\s*(kg|gr|gram|g)\b/i);
   if (g) {
     const val = parseFloat(g[1].replace(',', '.'));
     const grams = /kg/i.test(g[2]) ? val * 1000 : val;
+    if (grams > 0 && grams < MIN_GRAMS_FOR_KG_EXTRAPOLATION) return null;
     if (grams > 0) return { priceKurus: Math.round(priceKurus / (grams / 1000)), unit: 'kg' };
   }
   if (/adet/i.test(name)) return { priceKurus, unit: 'adet' };
@@ -134,7 +140,9 @@ export class ManavService {
         if (subset && score > pickScore) { pickScore = score; pick = p; }
       }
       if (!pick) continue;
-      const { priceKurus, unit } = normalizeToKg(it.name, it.priceKurus);
+      const normalized = normalizeToKg(it.name, it.priceKurus);
+      if (!normalized) continue; // küçük butik paket → güvenilmez ekstrapolasyon, ele
+      const { priceKurus, unit } = normalized;
       const cur = best.get(pick.slug);
       if (!cur || priceKurus < cur.priceKurus) best.set(pick.slug, { name: it.name, slug: pick.slug, product: pick.name, priceKurus, unit });
     }
