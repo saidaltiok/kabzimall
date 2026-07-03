@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { avg, median, stddev, competitionIndex, effectivePrice } from '../../pricing-engine';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../../common/tenant';
@@ -164,5 +164,79 @@ export class CompetitorsService {
         capturedAt: r.capturedAt.toISOString(),
       })),
     };
+  }
+
+  /* -------------------- Kapsam (kesişim) & yayın -------------------- */
+
+  /** Ürün başına rakip fiyatı EN GÜNCEL kayıtları (competitorId → price). */
+  private async latestByProduct(slugs?: string[]): Promise<Map<string, Map<string, number>>> {
+    const rows = await this.prisma.competitorPriceEntry.findMany({
+      where: { tenantId: DEV_TENANT_ID, ...(slugs?.length ? { productSlug: { in: slugs } } : {}) },
+      orderBy: { capturedAt: 'asc' },
+      select: { productSlug: true, competitorId: true, price: true },
+    });
+    const bySlug = new Map<string, Map<string, number>>();
+    for (const e of rows) {
+      let m = bySlug.get(e.productSlug);
+      if (!m) { m = new Map(); bySlug.set(e.productSlug, m); }
+      m.set(e.competitorId, e.price); // asc → son yazan en güncel
+    }
+    return bySlug;
+  }
+
+  /**
+   * Rakip kapsam analizi: her ürün kaç farklı rakipte fiyatlı (kesişim gücü).
+   * "En çok tercih edilenler" = en çok rakipte bulunanlar. Yayın kararına baz.
+   */
+  async coverage() {
+    const bySlug = await this.latestByProduct();
+    const products = await this.prisma.product.findMany({
+      where: { tenantId: DEV_TENANT_ID, kind: 'SIMPLE' },
+      select: { slug: true, name: true, isActive: true, basePrice: true, discountedPrice: true },
+    });
+    const pmap = new Map(products.map((p) => [p.slug, p]));
+    const rows = [...bySlug.entries()].flatMap(([slug, cmap]) => {
+      const p = pmap.get(slug);
+      if (!p) return [];
+      const prices = [...cmap.values()];
+      return [{
+        slug,
+        name: p.name,
+        coverage: cmap.size,
+        minComp: Math.min(...prices),
+        medianComp: Math.round(median(prices)),
+        ourPrice: p.basePrice != null ? effectivePrice(p.basePrice, p.discountedPrice) : null,
+        isActive: p.isActive,
+      }];
+    });
+    rows.sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'tr'));
+    const totalCompetitors = await this.prisma.competitor.count({ where: { tenantId: DEV_TENANT_ID, isActive: true } });
+    return { totalCompetitors, rows };
+  }
+
+  /**
+   * Yayına al: verilen ürünleri aktifle + rakip fiyatına göre başlangıç satış
+   * fiyatı ata (basis: median=rakip medyanı, min=en düşük). Fiyat 0,50₺'ye yuvarlanır.
+   * Rakip fiyatı olmayan slug atlanır.
+   */
+  async publishPopular(slugs: string[], basis: 'median' | 'min' = 'median') {
+    if (!Array.isArray(slugs) || slugs.length === 0) throw new BadRequestException('slugs gerekli');
+    const bySlug = await this.latestByProduct(slugs);
+    let published = 0;
+    const details: { slug: string; price?: number; coverage?: number; skipped?: string }[] = [];
+    for (const slug of slugs) {
+      const cmap = bySlug.get(slug);
+      if (!cmap || cmap.size === 0) { details.push({ slug, skipped: 'rakip fiyatı yok' }); continue; }
+      const prices = [...cmap.values()];
+      const raw = basis === 'min' ? Math.min(...prices) : Math.round(median(prices));
+      const price = Math.max(50, Math.round(raw / 50) * 50); // 0,50₺ yuvarla
+      await this.prisma.product.update({
+        where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug } },
+        data: { isActive: true, basePrice: price },
+      });
+      published++;
+      details.push({ slug, price, coverage: cmap.size });
+    }
+    return { published, basis, details };
   }
 }

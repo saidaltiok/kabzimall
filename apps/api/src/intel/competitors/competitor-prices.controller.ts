@@ -39,6 +39,23 @@ export class CompetitorPricesController {
     return this.marketFiyati.bulkImport(Array.isArray(slugs) ? slugs : undefined);
   }
 
+  /** GET /intel/competitor-prices/coverage — ürün başına rakip kapsamı (kesişim gücü). */
+  @Get('coverage')
+  coverage() {
+    return this.service.coverage();
+  }
+
+  /**
+   * POST /intel/competitor-prices/publish { slugs, basis? } — seçili ürünleri
+   * yayına al (aktifle + rakip medyanı/min'ine göre başlangıç fiyatı ata).
+   */
+  @Post('publish')
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ schema: { example: { slugs: ['patates', 'portakal'], basis: 'median' } } })
+  publish(@Body('slugs') slugs: string[], @Body('basis') basis?: 'median' | 'min') {
+    return this.service.publishPopular(slugs, basis === 'min' ? 'min' : 'median');
+  }
+
   /** POST /api/v1/intel/competitor-prices/entries */
   @Post('entries')
   @ApiBody({ schema: { example: { productId: 'domates', competitorId: '<rakip-uuid>', price: 4200, date: '2026-06-29' } } })
