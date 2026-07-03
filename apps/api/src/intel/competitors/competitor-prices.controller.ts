@@ -28,6 +28,17 @@ export class CompetitorPricesController {
     return this.marketFiyati.importForProduct(productId, keyword);
   }
 
+  /**
+   * POST /intel/competitor-prices/marketfiyati/bulk { slugs? }
+   * Tüm katalog (ya da verilen slug'lar) için marketfiyati'ndan toplu çekim.
+   */
+  @Post('marketfiyati/bulk')
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ required: false, schema: { example: { slugs: ['muz-yerli', 'patates'] } } })
+  mfBulk(@Body('slugs') slugs?: string[]) {
+    return this.marketFiyati.bulkImport(Array.isArray(slugs) ? slugs : undefined);
+  }
+
   /** POST /api/v1/intel/competitor-prices/entries */
   @Post('entries')
   @ApiBody({ schema: { example: { productId: 'domates', competitorId: '<rakip-uuid>', price: 4200, date: '2026-06-29' } } })

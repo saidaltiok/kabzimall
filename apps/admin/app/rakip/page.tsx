@@ -35,6 +35,7 @@ export default function RakipPage() {
   const [prices, setPrices] = useState<Prices | null>(null);
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // yeni rakip
   const [newComp, setNewComp] = useState('');
@@ -100,6 +101,22 @@ export default function RakipPage() {
     }
   }
 
+  async function mfBulk() {
+    if (!confirm('Tüm katalog için marketfiyati\'ndan rakip fiyatları çekilecek (biraz sürebilir). Devam?')) return;
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    try {
+      const r = await apiSend<{ total: number; withData: number; recorded: number }>('POST', '/intel/competitor-prices/marketfiyati/bulk', {});
+      setOk(`✓ Toplu çekim: ${r.total} üründen ${r.withData} tanesinde eşleşme, ${r.recorded} rakip fiyatı kaydedildi.`);
+      await loadPrices(productId);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addCompetitor() {
     if (!newComp || !newGroup) return;
     setBusy(true);
@@ -137,12 +154,16 @@ export default function RakipPage() {
 
         <div className="form-row" style={{ marginBottom: 12, alignItems: 'center' }}>
           <button className="btn" style={{ background: 'var(--persimmon)' }} onClick={mfImport} disabled={busy}>
-            {busy ? '…' : '🛒 marketfiyati’ndan çek (A101/BİM/ŞOK/Migros/Carrefour)'}
+            {busy ? '…' : '🛒 marketfiyati’ndan çek (bu ürün)'}
           </button>
-          <span className="muted" style={{ fontSize: 12 }}>Resmî Ticaret Bakanlığı kaynağı · taze meyve-sebze eşleşenler yazılır</span>
+          <button className="btn ghost" onClick={mfBulk} disabled={busy}>
+            {busy ? '…' : '📦 Tüm katalog için toplu çek'}
+          </button>
+          <span className="muted" style={{ fontSize: 12 }}>A101/BİM/ŞOK/Migros/Carrefour · resmî Ticaret Bakanlığı kaynağı · taze eşleşenler yazılır</span>
         </div>
 
         {error && <div className="error">{error}</div>}
+        {ok && <div className="ok-box">{ok}</div>}
 
         <div className="card">
           <div className="ct">

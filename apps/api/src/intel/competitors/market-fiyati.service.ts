@@ -96,4 +96,51 @@ export class MarketFiyatiService {
     }
     return { productId, keyword: kw, matched: prices.length, recorded, prices };
   }
+
+  /**
+   * Toplu çekim: verilen slug'lar (yoksa tüm SIMPLE ürünler) için marketfiyati'ndan
+   * rakip fiyatlarını çeker ve kaydeder. Kaynağı yormamak için sınırlı eşzamanlılık.
+   * marketfiyati taze meyve-sebze kapsamı kısıtlı → yalnızca eşleşenler yazılır.
+   */
+  async bulkImport(slugs?: string[]) {
+    const where = slugs?.length
+      ? { tenantId: DEV_TENANT_ID, slug: { in: slugs } }
+      : { tenantId: DEV_TENANT_ID, kind: 'SIMPLE' as const };
+    const products = await this.prisma.product.findMany({ where, select: { slug: true, name: true } });
+    const competitors = await this.prisma.competitor.findMany({ where: { tenantId: DEV_TENANT_ID } });
+    const byName = new Map(competitors.map((c) => [c.name, c.id]));
+    const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
+
+    const results: { slug: string; matched: number; recorded: number; markets: string[] }[] = [];
+    const CONCURRENCY = 6;
+    for (let i = 0; i < products.length; i += CONCURRENCY) {
+      const batch = products.slice(i, i + CONCURRENCY);
+      const batchRes = await Promise.all(
+        batch.map(async (p) => {
+          try {
+            const prices = aggregateProducePrices(await this.search(p.name), p.name);
+            let recorded = 0;
+            for (const pr of prices) {
+              const competitorId = byName.get(pr.competitor);
+              if (!competitorId) continue;
+              await this.prisma.competitorPriceEntry.create({
+                data: { tenantId: DEV_TENANT_ID, productSlug: p.slug, competitorId, price: pr.price, source: 'marketfiyati', date: today },
+              });
+              recorded++;
+            }
+            return { slug: p.slug, matched: prices.length, recorded, markets: prices.map((x) => x.competitor) };
+          } catch {
+            return { slug: p.slug, matched: 0, recorded: 0, markets: [] as string[] };
+          }
+        }),
+      );
+      results.push(...batchRes);
+    }
+    return {
+      total: products.length,
+      withData: results.filter((r) => r.recorded > 0).length,
+      recorded: results.reduce((s, r) => s + r.recorded, 0),
+      results: results.filter((r) => r.recorded > 0).sort((a, b) => b.recorded - a.recorded),
+    };
+  }
 }
