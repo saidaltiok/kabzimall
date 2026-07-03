@@ -117,6 +117,20 @@ export default function RakipPage() {
     }
   }
 
+  async function manavPull() {
+    if (!confirm('Online manav (Sebze Meyve Dünyası) taze fiyatları çekilip kaydedilecek. Devam?')) return;
+    setBusy(true); setError(null); setOk(null);
+    try {
+      const r = await apiSend<{ scanned: number; recorded: number }>('POST', '/intel/competitor-prices/manav/import', { site: 'sebzemeyvedunyasi' });
+      setOk(`✓ Online manav: ${r.scanned} ürün tarandı, ${r.recorded} eşleşen fiyat kaydedildi.`);
+      await loadPrices(productId);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addCompetitor() {
     if (!newComp || !newGroup) return;
     setBusy(true);
@@ -158,6 +172,9 @@ export default function RakipPage() {
           </button>
           <button className="btn ghost" onClick={mfBulk} disabled={busy}>
             {busy ? '…' : '📦 Tüm katalog için toplu çek'}
+          </button>
+          <button className="btn ghost" onClick={manavPull} disabled={busy} title="Online manav (SSR) — taze meyve-sebze, kg'ye normalize">
+            {busy ? '…' : '🥬 Online manav çek'}
           </button>
           <span className="muted" style={{ fontSize: 12 }}>A101/BİM/ŞOK/Migros/Carrefour · resmî Ticaret Bakanlığı kaynağı · taze eşleşenler yazılır</span>
         </div>

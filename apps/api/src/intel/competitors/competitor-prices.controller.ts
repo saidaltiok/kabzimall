@@ -4,12 +4,17 @@ import { Roles } from '../../auth/decorators';
 import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { CompetitorsService } from './competitors.service';
 import { MarketFiyatiService } from './market-fiyati.service';
+import { ManavService } from './manav.service';
 import { CreateCompetitorPriceDto } from './dto/create-competitor-price.dto';
 
 @ApiTags('intel: rakipler')
 @Controller('intel/competitor-prices')
 export class CompetitorPricesController {
-  constructor(private readonly service: CompetitorsService, private readonly marketFiyati: MarketFiyatiService) {}
+  constructor(
+    private readonly service: CompetitorsService,
+    private readonly marketFiyati: MarketFiyatiService,
+    private readonly manav: ManavService,
+  ) {}
 
   /** GET /intel/competitor-prices/marketfiyati?keyword= — marketfiyati önizleme (kaydetmez). */
   @Get('marketfiyati')
@@ -37,6 +42,29 @@ export class CompetitorPricesController {
   @ApiBody({ required: false, schema: { example: { slugs: ['muz-yerli', 'patates'] } } })
   mfBulk(@Body('slugs') slugs?: string[]) {
     return this.marketFiyati.bulkImport(Array.isArray(slugs) ? slugs : undefined);
+  }
+
+  /** GET /intel/competitor-prices/manav — çekilebilir online manav siteleri. */
+  @Get('manav')
+  manavSites() {
+    return this.manav.sites();
+  }
+
+  /** GET /intel/competitor-prices/manav/preview?site= — önizleme (kaydetmez). */
+  @Get('manav/preview')
+  @ApiQuery({ name: 'site', required: true })
+  manavPreview(@Query('site') site: string) {
+    if (!site) throw new BadRequestException('site zorunludur');
+    return this.manav.preview(site);
+  }
+
+  /** POST /intel/competitor-prices/manav/import { site } — online manav fiyatlarını çek + kaydet. */
+  @Post('manav/import')
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ schema: { example: { site: 'sebzemeyvedunyasi' } } })
+  manavImport(@Body('site') site: string) {
+    if (!site) throw new BadRequestException('site zorunludur');
+    return this.manav.importSite(site);
   }
 
   /** GET /intel/competitor-prices/coverage — ürün başına rakip kapsamı (kesişim gücü). */
