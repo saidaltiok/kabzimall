@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   competitionIndex,
   netMargin,
+  effectivePrice,
   DEFAULT_FLOOR_MARGIN,
   type Competitor,
 } from '../../pricing-engine';
@@ -78,7 +79,9 @@ export class DashboardService {
       where: { tenantId: DEV_TENANT_ID, basePrice: { not: null } },
       orderBy: { slug: 'asc' },
     });
-    return Promise.all(products.map((p) => this.computeRow(p.slug, p.basePrice as number, dateStr)));
+    // Gerçek satış fiyatı: indirimli fiyat varsa (ve tabandan düşükse) o geçerlidir —
+    // ZARARINA/DUSUK_MARJ kontrolü indirimi görmezden gelirse riski kaçırır.
+    return Promise.all(products.map((p) => this.computeRow(p.slug, effectivePrice(p.basePrice as number, p.discountedPrice), dateStr)));
   }
 
   /** KPI + riskli ürünler + son fiyat değişiklikleri (panel ana ekranı). */

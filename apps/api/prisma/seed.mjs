@@ -11,14 +11,14 @@ const CATEGORIES = [
   { slug: 'meyve', name: 'Meyve' },
   { slug: 'sebze', name: 'Sebze' },
 ];
-// NOT: 'salatalik' kasıtlı olarak burada YOK — İBB'nin gerçek karşılığı
-// 'salatalik-i' ile birleştirilip silindi (bkz. kabzimall-ibb-catalog-source
-// belleği). Bu listeye slug eklerken önce gerçek katalogda (İBB) aynı
-// üründen var mı kontrol et; varsa buraya EKLEME (upsert her seed'de geri getirir).
+// NOT: 'salatalik' ve 'muz' kasıtlı olarak burada YOK — İBB'nin gerçek
+// karşılıkları ('salatalik-i', 'muz-yerli'/'muz-1-kalite') ile birleştirilip
+// silindi (bkz. kabzimall-ibb-catalog-source belleği). Aşağıdaki listedekiler
+// (domates, cilek) CREATE-ONLY yazılır (bkz. aşağıdaki döngü) — reseed var olan
+// gerçek İBB/rakip fiyatını EZMEZ, sadece fresh DB'de başlangıç ürünü oluşturur.
 const PRODUCTS = [
   { slug: 'domates', name: 'Domates', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590, stockQty: 50, isFreshDaily: true, imageUrl: img('Domates') },
   { slug: 'cilek', name: 'Çilek', cat: 'meyve', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 6400, stockQty: 3, isFreshDaily: true, isLocal: true, imageUrl: img('Cilek') },
-  { slug: 'muz', name: 'Muz', cat: 'meyve', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 5200, stockQty: 0, imageUrl: img('Muz') },
 ];
 
 // NOT: Gerçek meyve-sebze kataloğu artık İBB günlük fiyat import'undan gelir
@@ -77,13 +77,13 @@ async function main() {
     catIds[c.slug] = row.id;
   }
 
+  // Create-only (asla update ETME): bu slug'lar İBB import'u ya da rakip
+  // yayınlama akışıyla gerçek fiyata kavuşmuş olabilir — reseed onu ezmesin.
   for (const p of PRODUCTS) {
     const { cat, ...rest } = p;
-    await prisma.product.upsert({
-      where: { tenantId_slug: { tenantId: T, slug: p.slug } },
-      create: { tenantId: T, categoryId: catIds[cat], ...rest },
-      update: { ...rest, categoryId: catIds[cat] },
-    });
+    const exists = await prisma.product.findFirst({ where: { tenantId: T, slug: p.slug } });
+    if (exists) continue;
+    await prisma.product.create({ data: { tenantId: T, categoryId: catIds[cat], ...rest } });
   }
 
   // Teslimat bölgeleri (ilçe)
