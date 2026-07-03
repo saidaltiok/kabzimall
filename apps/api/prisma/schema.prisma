@@ -105,6 +105,9 @@ model StoreSetting {
   /// Kademeli teslimat tarifesi: [{minSubtotal, fee}] (kuruş). Artan eşik;
   /// sepet ara toplamının geçtiği en yüksek kademe uygulanır (fee 0 = ücretsiz).
   deliveryTiers Json     @map("delivery_tiers")
+  /// Dükkân/depo başlangıç noktası — rota optimizasyonu buradan başlar/biter.
+  depotLat      Float?   @map("depot_lat")
+  depotLng      Float?   @map("depot_lng")
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("store_settings")

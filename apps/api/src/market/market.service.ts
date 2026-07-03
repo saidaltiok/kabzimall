@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
 import { dateOnly } from '../common/date';
 import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
+import { optimize, haversineKm } from './route-optim';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
@@ -126,23 +127,70 @@ export class MarketService {
     return {
       minOrderTotal: s?.minOrderTotal ?? 0,
       deliveryTiers: this.normalizeTiers(s?.deliveryTiers),
+      depotLat: s?.depotLat ?? null,
+      depotLng: s?.depotLng ?? null,
     };
   }
 
   /** Verilen alanları günceller; verilmeyenler korunur. */
-  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[] }) {
+  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; depotLat?: number | null; depotLng?: number | null }) {
     const cur = await this.getStoreSettings();
     const next = {
       minOrderTotal: patch.minOrderTotal ?? cur.minOrderTotal,
       deliveryTiers: patch.deliveryTiers ? this.normalizeTiers(patch.deliveryTiers) : cur.deliveryTiers,
+      depotLat: patch.depotLat !== undefined ? patch.depotLat : cur.depotLat,
+      depotLng: patch.depotLng !== undefined ? patch.depotLng : cur.depotLng,
     };
     const tiersJson = next.deliveryTiers as unknown as Prisma.InputJsonValue;
     const s = await this.prisma.storeSetting.upsert({
       where: { tenantId: DEV_TENANT_ID },
-      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson },
-      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson },
+      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng },
+      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng },
     });
-    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers) };
+    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), depotLat: s.depotLat, depotLng: s.depotLng };
+  }
+
+  /**
+   * Günlük dağıtım rota optimizasyonu: verilen teslimat gününün, harita konumu
+   * olan siparişlerini depodan başlayıp en kısa turla sıralar (nearest-neighbor
+   * + 2-opt, haversine). Konumsuz siparişler ayrıca döner (rotaya giremez).
+   */
+  async optimizeRoute(dateStr?: string) {
+    const where: Prisma.OrderWhereInput = {
+      tenantId: DEV_TENANT_ID,
+      status: { in: ['CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'] },
+      ...(dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? { deliveryDate: new Date(`${dateStr}T00:00:00.000Z`) } : {}),
+    };
+    const orders = await this.prisma.order.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, code: true, customerName: true, customerPhone: true, addressText: true, lat: true, lng: true, grandTotal: true, deliveryWindow: true },
+    });
+
+    const withGeo = orders.filter((o): o is typeof o & { lat: number; lng: number } => o.lat != null && o.lng != null);
+    const noGeo = orders.filter((o) => o.lat == null || o.lng == null).map((o) => ({ id: o.id, code: o.code, customerName: o.customerName, addressText: o.addressText }));
+
+    const settings = await this.getStoreSettings();
+    const depot = { lat: settings.depotLat ?? 41.0082, lng: settings.depotLng ?? 28.9784 };
+
+    const stops = withGeo.map((o) => ({ lat: o.lat, lng: o.lng }));
+    const { order, distanceKm } = optimize(depot, stops);
+
+    let prev = depot;
+    const route = order.map((idx, seq) => {
+      const o = withGeo[idx];
+      const legKm = haversineKm(prev, { lat: o.lat, lng: o.lng });
+      prev = { lat: o.lat, lng: o.lng };
+      return { seq: seq + 1, orderId: o.id, code: o.code, customerName: o.customerName, customerPhone: o.customerPhone, addressText: o.addressText, deliveryWindow: o.deliveryWindow, grandTotal: o.grandTotal, lat: o.lat, lng: o.lng, legKm: Math.round(legKm * 100) / 100 };
+    });
+
+    // Kaba süre tahmini: 25 km/sa ort. şehir içi + durak başına 5 dk servis.
+    const estMinutes = Math.round((distanceKm / 25) * 60 + route.length * 5);
+    // Google Maps çoklu durak yol tarifi (depot → duraklar → depot).
+    const pts = [`${depot.lat},${depot.lng}`, ...route.map((r) => `${r.lat},${r.lng}`), `${depot.lat},${depot.lng}`];
+    const googleMapsUrl = `https://www.google.com/maps/dir/${pts.join('/')}`;
+
+    return { date: dateStr ?? null, depot, stops: route.length, distanceKm: Math.round(distanceKm * 100) / 100, estMinutes, route, noGeo, googleMapsUrl };
   }
 
   /* --------------------------- Teslimat bölgesi -------------------------- */

@@ -6,7 +6,7 @@ import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 
 interface Tier { minSubtotal: number; fee: number }
-interface Settings { minOrderTotal: number; deliveryTiers: Tier[] }
+interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; depotLat: number | null; depotLng: number | null }
 
 const toTl = (k: number) => (k ? (k / 100).toFixed(2) : '');
 const toKurus = (v: string) => (v.trim() === '' ? 0 : Math.round(parseFloat(v.replace(',', '.')) * 100));
@@ -15,6 +15,8 @@ interface TierRow { minTl: string; feeTl: string }
 
 export default function AyarlarPage() {
   const [minTl, setMinTl] = useState('');
+  const [depotLat, setDepotLat] = useState('');
+  const [depotLng, setDepotLng] = useState('');
   const [rows, setRows] = useState<TierRow[]>([]);
   const [saved, setSaved] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -24,6 +26,8 @@ export default function AyarlarPage() {
   function apply(s: Settings) {
     setSaved(s);
     setMinTl(toTl(s.minOrderTotal));
+    setDepotLat(s.depotLat != null ? String(s.depotLat) : '');
+    setDepotLng(s.depotLng != null ? String(s.depotLng) : '');
     setRows(s.deliveryTiers.map((t) => ({ minTl: toTl(t.minSubtotal), feeTl: t.fee ? toTl(t.fee) : '0' })));
   }
 
@@ -43,7 +47,9 @@ export default function AyarlarPage() {
       const deliveryTiers = rows
         .filter((r) => r.minTl.trim() !== '' || r.feeTl.trim() !== '')
         .map((r) => ({ minSubtotal: toKurus(r.minTl), fee: toKurus(r.feeTl) }));
-      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers });
+      const dLat = depotLat.trim() === '' ? null : parseFloat(depotLat.replace(',', '.'));
+      const dLng = depotLng.trim() === '' ? null : parseFloat(depotLng.replace(',', '.'));
+      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers, depotLat: dLat, depotLng: dLng });
       apply(r);
       setOk('✓ Mağaza ayarları kaydedildi.');
     } catch (e) {
@@ -70,6 +76,15 @@ export default function AyarlarPage() {
           <div className="field">
             <label>Asgari sipariş tutarı (₺, boş=yok)</label>
             <input value={minTl} onChange={(e) => setMinTl(e.target.value)} placeholder="150,00" />
+          </div>
+        </div>
+
+        <div className="card" style={{ maxWidth: 420 }}>
+          <div className="ct">Depo / dükkân konumu</div>
+          <p className="note2" style={{ marginTop: 0 }}>Dağıtım rotası buradan başlar/biter. Haritadan koordinat alabilirsiniz (boş = İstanbul merkez).</p>
+          <div className="form-row">
+            <div className="field"><label>Enlem (lat)</label><input value={depotLat} onChange={(e) => setDepotLat(e.target.value)} placeholder="41.0000" /></div>
+            <div className="field"><label>Boylam (lng)</label><input value={depotLng} onChange={(e) => setDepotLng(e.target.value)} placeholder="29.0300" /></div>
           </div>
         </div>
 

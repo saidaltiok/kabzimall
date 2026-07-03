@@ -105,6 +105,13 @@ export class AdminOrdersController {
     return this.service.opsSummary();
   }
 
+  /** GET /admin/orders/route?date= — günlük dağıtım rota optimizasyonu. */
+  @Get('route')
+  @ApiQuery({ name: 'date', required: false })
+  route(@Query('date') date?: string) {
+    return this.service.optimizeRoute(date);
+  }
+
   /** GET /admin/orders?status=&q= (q: kod / müşteri adı / telefon) */
   @Get()
   @ApiQuery({ name: 'status', required: false })
