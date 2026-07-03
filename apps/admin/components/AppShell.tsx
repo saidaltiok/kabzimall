@@ -25,6 +25,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (path === '/login') return <>{children}</>;
   if (!ready) return null;
+  // Kurye görünümü: auth korumalı ama sidebar'sız, tam ekran mobil.
+  if (path.startsWith('/kurye')) return <>{children}</>;
 
   return (
     <div className="app">

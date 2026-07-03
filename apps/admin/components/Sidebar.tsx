@@ -24,6 +24,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
     links: [
       { href: '/pano', icon: '📋', label: 'Operasyon Panosu' },
       { href: '/rota', icon: '🚚', label: 'Dağıtım Rotası' },
+      { href: '/kurye', icon: '📱', label: 'Kurye Görünümü (PWA)' },
       { href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' },
       { href: '/sepetler', icon: '🧺', label: 'Hazır Sepetler' },
       { href: '/bolgeler', icon: '📍', label: 'Teslimat Bölgeleri' },
