@@ -18,49 +18,9 @@ const PRODUCTS = [
   { slug: 'salatalik', name: 'Salatalık', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2250, discountedPrice: 1790, stockQty: 40, imageUrl: img('Salatalik') },
 ];
 
-// Türkçe-duyarlı slug (İBB import'uyla aynı mantık → fiyatlar eşleşir).
-function slugifyTr(s) {
-  const m = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' };
-  return s.trim().toLocaleLowerCase('tr').replace(/[çğıöşüâîû]/g, (c) => m[c] ?? c).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
-// Halde bulunan yaygın meyve-sebze listesi (temiz katalog çekirdeği).
-// isActive=false → önce fiyatlanır/gözden geçirilir, sonra vitrine çıkar.
-const PRODUCE = [
-  // Sebze
-  ['Domates', 'sebze'], ['Salatalık', 'sebze'], ['Sivri Biber', 'sebze'], ['Çarliston Biber', 'sebze'],
-  ['Dolmalık Biber', 'sebze'], ['Kırmızı Biber', 'sebze'], ['Patlıcan', 'sebze'], ['Kabak', 'sebze'],
-  ['Patates', 'sebze'], ['Kuru Soğan', 'sebze'], ['Taze Soğan', 'sebze'], ['Sarımsak', 'sebze'],
-  ['Havuç', 'sebze'], ['Kıvırcık Marul', 'sebze'], ['Aysberg Marul', 'sebze'], ['Maydanoz', 'sebze'],
-  ['Dereotu', 'sebze'], ['Roka', 'sebze'], ['Tere', 'sebze'], ['Ispanak', 'sebze'], ['Pazı', 'sebze'],
-  ['Pırasa', 'sebze'], ['Beyaz Lahana', 'sebze'], ['Kırmızı Lahana', 'sebze'], ['Karnabahar', 'sebze'],
-  ['Brokoli', 'sebze'], ['Taze Fasulye', 'sebze'], ['Barbunya', 'sebze'], ['Bakla', 'sebze'],
-  ['Bamya', 'sebze'], ['Bezelye', 'sebze'], ['Enginar', 'sebze'], ['Kereviz', 'sebze'], ['Turp', 'sebze'],
-  ['Balkabağı', 'sebze'], ['Kültür Mantarı', 'sebze'], ['Semizotu', 'sebze'], ['Nane', 'sebze'],
-  ['Pancar', 'sebze'], ['Cherry Domates', 'sebze'],
-  // Meyve
-  ['Starking Elma', 'meyve'], ['Golden Elma', 'meyve'], ['Granny Smith Elma', 'meyve'], ['Armut', 'meyve'],
-  ['Muz', 'meyve'], ['Portakal', 'meyve'], ['Mandalina', 'meyve'], ['Limon', 'meyve'], ['Greyfurt', 'meyve'],
-  ['Çilek', 'meyve'], ['Kiraz', 'meyve'], ['Vişne', 'meyve'], ['Kayısı', 'meyve'], ['Şeftali', 'meyve'],
-  ['Nektarin', 'meyve'], ['Erik', 'meyve'], ['Kavun', 'meyve'], ['Karpuz', 'meyve'], ['Siyah Üzüm', 'meyve'],
-  ['Yeşil Üzüm', 'meyve'], ['İncir', 'meyve'], ['Nar', 'meyve'], ['Ayva', 'meyve'], ['Trabzon Hurması', 'meyve'],
-  ['Avokado', 'meyve'], ['Kivi', 'meyve'], ['Ananas', 'meyve'], ['Mango', 'meyve'], ['Böğürtlen', 'meyve'],
-  ['Ahududu', 'meyve'], ['Yaban Mersini', 'meyve'], ['Ceviz İçi', 'meyve'], ['Fındık', 'meyve'], ['Kestane', 'meyve'],
-];
-
-async function seedProduce(catIds) {
-  let created = 0;
-  for (const [name, cat] of PRODUCE) {
-    const slug = slugifyTr(name);
-    const exists = await prisma.product.findFirst({ where: { tenantId: T, slug } });
-    if (exists) continue;
-    await prisma.product.create({
-      data: { tenantId: T, slug, name, categoryId: catIds[cat] ?? null, kind: 'SIMPLE', saleType: 'WEIGHT', unitLabel: 'kg', isActive: false },
-    });
-    created++;
-  }
-  return created;
-}
+// NOT: Gerçek meyve-sebze kataloğu artık İBB günlük fiyat import'undan gelir
+// (IbbHalService.dailyAutoImport cron + admin "Tümünü içeri al"). Seed yalnızca
+// dev/test için minimal demo ürünleri (yukarıdaki PRODUCTS) + sepeti kurar.
 
 // Rakipler (grup → işletmeler). Fiyat girişi panelden yapılır.
 const COMPETITOR_GROUPS = [
@@ -142,9 +102,8 @@ async function main() {
     }
   }
 
-  const produceCreated = await seedProduce(catIds);
   const c = await seedCompetitors();
-  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} demo ürün, ${produceCreated} yeni hal ürünü (toplam katalog ${PRODUCE.length}), 1 hazır sepet, GLOBAL maliyet, ${c.groups} rakip grubu (${c.comps} yeni rakip).`);
+  console.log(`Seed tamam: ${CATEGORIES.length} kategori, ${PRODUCTS.length} demo ürün, 1 hazır sepet, GLOBAL maliyet, ${c.groups} rakip grubu (${c.comps} yeni rakip). Gerçek katalog İBB import'undan gelir.`);
 }
 
 main().finally(() => prisma.$disconnect());
