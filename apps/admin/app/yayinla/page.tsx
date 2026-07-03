@@ -13,6 +13,9 @@ interface Row {
   medianComp: number;
   ourPrice: number | null;
   isActive: boolean;
+  directCost: number | null;
+  floorPrice: number | null;
+  belowFloor: boolean;
 }
 interface Coverage {
   totalCompetitors: number;
@@ -49,9 +52,18 @@ export default function YayinlaPage() {
   }
   function clearSel() { setSel(new Set()); }
 
+  /** Backend'deki güvenlik mantığıyla aynı: maliyet varsa fiyat taban marjın altına inmez. */
   function priceFor(r: Row): number {
     const raw = basis === 'min' ? r.minComp : r.medianComp;
-    return Math.max(50, Math.round(raw / 50) * 50);
+    const competitorPrice = Math.max(50, Math.round(raw / 50) * 50);
+    if (r.floorPrice != null && competitorPrice < r.floorPrice) {
+      return Math.max(50, Math.round(r.floorPrice / 50) * 50);
+    }
+    return competitorPrice;
+  }
+  function isFloored(r: Row): boolean {
+    const raw = basis === 'min' ? r.minComp : r.medianComp;
+    return r.floorPrice != null && raw < r.floorPrice;
   }
 
   async function publish() {
@@ -60,8 +72,9 @@ export default function YayinlaPage() {
     if (!confirm(`${slugs.length} ürün yayına alınacak; başlangıç satış fiyatı rakip ${basis === 'min' ? 'en düşüğü' : 'medyanı'} olarak atanacak. Devam?`)) return;
     setBusy(true); setError(null); setOk(null);
     try {
-      const r = await apiSend<{ published: number }>('POST', '/intel/competitor-prices/publish', { slugs, basis });
-      setOk(`✓ ${r.published} ürün yayına alındı (fiyatlandı + aktifleştirildi).`);
+      const r = await apiSend<{ published: number; flooredCount: number }>('POST', '/intel/competitor-prices/publish', { slugs, basis });
+      const flooredNote = r.flooredCount > 0 ? ` (${r.flooredCount} tanesi maliyet altına düşmesin diye taban fiyata yükseltildi)` : '';
+      setOk(`✓ ${r.published} ürün yayına alındı (fiyatlandı + aktifleştirildi)${flooredNote}.`);
       setSel(new Set());
       await load();
     } catch (e) {
@@ -81,6 +94,7 @@ export default function YayinlaPage() {
           <b>Kesişim kümesi</b> = en çok rakipte bulunan ürünler (herkesin sattığı = en çok tercih edilenler).
           Eşiği seç, <b>Kesişimi seç</b> ile işaretle, başlangıç fiyatı için rakip <b>medyan/min</b> tabanını belirle,
           <b>Yayına al</b>. Ürünler aktifleşir ve web mağazasında görünür.
+          <b> Maliyet altına asla düşülmez</b> — rakip fiyatı maliyetin altındaysa (⚠️ taban) otomatik taban marja yükseltilir.
         </p>
 
         <div className="form-row" style={{ marginBottom: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -124,26 +138,36 @@ export default function YayinlaPage() {
                   <th className="num">Kapsam</th>
                   <th className="num">Rakip medyan</th>
                   <th className="num">Rakip min</th>
+                  <th className="num">Maliyet</th>
                   <th className="num">Yeni fiyat</th>
                   <th className="num">Bizim</th>
                   <th>Durum</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={r.slug} style={sel.has(r.slug) ? { background: 'var(--wash, #f3f7f4)' } : undefined}>
-                    <td><input type="checkbox" checked={sel.has(r.slug)} onChange={() => toggle(r.slug)} /></td>
-                    <td>{r.name} <span className="muted" style={{ fontSize: 11 }}>{r.slug}</span></td>
-                    <td className="num">
-                      <span className={`tagp ${r.coverage >= minCov ? 'ok' : 'info'}`}>{r.coverage}/{data?.totalCompetitors ?? '?'}</span>
-                    </td>
-                    <td className="num">{tl(r.medianComp)}</td>
-                    <td className="num muted">{tl(r.minComp)}</td>
-                    <td className="num savecell">{tl(priceFor(r))}</td>
-                    <td className="num muted">{r.ourPrice != null ? tl(r.ourPrice) : '—'}</td>
-                    <td>{r.isActive ? <span className="tagp ok">yayında</span> : <span className="tagp info">pasif</span>}</td>
-                  </tr>
-                ))}
+                {rows.map((r) => {
+                  const floored = isFloored(r);
+                  return (
+                    <tr key={r.slug} style={sel.has(r.slug) ? { background: 'var(--wash, #f3f7f4)' } : undefined}>
+                      <td><input type="checkbox" checked={sel.has(r.slug)} onChange={() => toggle(r.slug)} /></td>
+                      <td>{r.name} <span className="muted" style={{ fontSize: 11 }}>{r.slug}</span></td>
+                      <td className="num">
+                        <span className={`tagp ${r.coverage >= minCov ? 'ok' : 'info'}`}>{r.coverage}/{data?.totalCompetitors ?? '?'}</span>
+                      </td>
+                      <td className="num">{tl(r.medianComp)}</td>
+                      <td className="num muted">{tl(r.minComp)}</td>
+                      <td className="num muted">
+                        {r.directCost != null ? tl(r.directCost) : <span title="Maliyet/hal verisi yok — güvenlik kontrolü yapılamıyor">?</span>}
+                      </td>
+                      <td className="num savecell">
+                        {tl(priceFor(r))}
+                        {floored && <span className="tagp zararina" style={{ marginLeft: 6, fontSize: 10 }} title={`Rakip fiyatı maliyetin altındaydı, taban fiyata (${r.floorPrice != null ? tl(r.floorPrice) : '?'}) yükseltildi`}>⚠️ taban</span>}
+                      </td>
+                      <td className="num muted">{r.ourPrice != null ? tl(r.ourPrice) : '—'}</td>
+                      <td>{r.isActive ? <span className="tagp ok">yayında</span> : <span className="tagp info">pasif</span>}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
