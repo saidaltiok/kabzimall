@@ -11,11 +11,14 @@ const CATEGORIES = [
   { slug: 'meyve', name: 'Meyve' },
   { slug: 'sebze', name: 'Sebze' },
 ];
+// NOT: 'salatalik' kasıtlı olarak burada YOK — İBB'nin gerçek karşılığı
+// 'salatalik-i' ile birleştirilip silindi (bkz. kabzimall-ibb-catalog-source
+// belleği). Bu listeye slug eklerken önce gerçek katalogda (İBB) aynı
+// üründen var mı kontrol et; varsa buraya EKLEME (upsert her seed'de geri getirir).
 const PRODUCTS = [
   { slug: 'domates', name: 'Domates', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590, stockQty: 50, isFreshDaily: true, imageUrl: img('Domates') },
   { slug: 'cilek', name: 'Çilek', cat: 'meyve', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 6400, stockQty: 3, isFreshDaily: true, isLocal: true, imageUrl: img('Cilek') },
   { slug: 'muz', name: 'Muz', cat: 'meyve', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 5200, stockQty: 0, imageUrl: img('Muz') },
-  { slug: 'salatalik', name: 'Salatalık', cat: 'sebze', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2250, discountedPrice: 1790, stockQty: 40, imageUrl: img('Salatalik') },
 ];
 
 // NOT: Gerçek meyve-sebze kataloğu artık İBB günlük fiyat import'undan gelir
@@ -92,11 +95,12 @@ async function main() {
     });
   }
 
-  // Hazır sepet = ayrı bir ürün (kind=BASKET) + içeriği (yoksa)
+  // Hazır sepet = ayrı bir ürün (kind=BASKET) + içeriği (yoksa). salatalik-i İBB
+  // import'undan gelir; henüz çekilmediyse sepet oluşturulmaz (aşağıdaki null-check).
   const hasBasket = await prisma.product.findFirst({ where: { tenantId: T, slug: 'haftalik-sebze' } });
   if (!hasBasket) {
     const dom = await prisma.product.findFirst({ where: { tenantId: T, slug: 'domates' } });
-    const sal = await prisma.product.findFirst({ where: { tenantId: T, slug: 'salatalik' } });
+    const sal = await prisma.product.findFirst({ where: { tenantId: T, slug: 'salatalik-i' } });
     if (dom && sal) {
       await prisma.product.create({
         data: {
