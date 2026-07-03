@@ -23,8 +23,8 @@ function slugifyTr(s: string): string {
 
 // Ad eşlemesinde yok sayılan kelimeler (marka/sıfat/birim).
 const STOP = new Set(['taze', 'organik', 'yerli', 'kg', 'gr', 'gram', 'adet', 'demet', 'paket', 'kalite', 'ithal', 'soyulmus', 'konserve', 'dilimli', 'yikanmis']);
-// İşlenmiş/paketli ürünleri ele (taze meyve-sebze dışı).
-const PROCESSED = /suyu|püre|pure|konserve|salça|salca|reçel|recel|turşu|tursu|kurutulmu|cips|sos|çorba|corba|dondurma|smoothie|shot|kombucha|\bml\b/i;
+// İşlenmiş/paketli/çoklu ürünleri ele (tekil taze meyve-sebze dışı).
+const PROCESSED = /suyu|püre|pure|konserve|salça|salca|reçel|recel|turşu|tursu|kurutulmu|cips|sos|çorba|corba|dondurma|smoothie|shot|kombucha|\bml\b|\bset\b|seti|kutu|\bmix\b|\bpaketi\b|&|\|/i;
 
 function words(name: string): Set<string> {
   // Parantez içi BİRİM ise at (500 Gr, Kg, Adet, Demet); ÇEŞİT ise koru (Capia, Sivri).
@@ -47,21 +47,26 @@ function normalizeToKg(name: string, priceKurus: number): { priceKurus: number; 
   return { priceKurus, unit: 'kg' }; // birim yoksa kg varsay
 }
 
-/** "70,00 TL" → kuruş. */
+/** "70,00 TL" ya da "₺179,00" (binlik ayraçlı da olabilir) → kuruş. */
 function parseTl(s: string): number {
-  const m = s.match(/(\d{1,4})(?:[.](\d{3}))*[,](\d{2})/) ?? s.match(/(\d{1,4})[,.](\d{2})/);
-  if (!m) return 0;
-  return Math.round(parseFloat(s.replace(/[^\d,]/g, '').replace(/\./g, '').replace(',', '.')) * 100);
+  if (!/\d[.,]\d{2}/.test(s)) return 0;
+  const n = parseFloat(s.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? Math.round(n * 100) : 0;
 }
 
-/** sebzemeyvedunyasi.com parser (Ticimax; productName detailUrl + discountPriceSpan). */
-export function parseSebzeMeyveDunyasi(html: string): RawItem[] {
+/**
+ * Ticimax tabanlı manav parser (productName detailUrl + discountPriceSpan).
+ * Fiyat formatından bağımsız (₺ önde ya da TL arkada). sebzemeyvedunyasi,
+ * tazedukkan gibi Ticimax siteleri için ortak.
+ */
+export function parseTicimax(html: string): RawItem[] {
   const items: RawItem[] = [];
   const blocks = html.split(/class="productName detailUrl"/i).slice(1);
   for (const b of blocks) {
     const name = (b.match(/<a[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
     if (!name) continue;
-    const priceStr = b.match(/discountPriceSpan[^>]*>([\s\S]{0,30}?TL)/i)?.[1] ?? b.match(/(\d{1,4}[.,]\d{2})\s*TL/)?.[0] ?? '';
+    const span = b.match(/discountPriceSpan[^>]*>([\s\S]{0,40}?)<\/span>/i)?.[1];
+    const priceStr = span ?? b.match(/(?:₺\s*[\d.]+,\d{2}|[\d.]+,\d{2}\s*TL)/i)?.[0] ?? '';
     const priceKurus = parseTl(priceStr);
     if (priceKurus > 0) items.push({ name, priceKurus });
   }
@@ -74,7 +79,14 @@ const SITES: ManavSite[] = [
     competitor: 'Sebze Meyve Dünyası',
     base: 'https://www.sebzemeyvedunyasi.com',
     paths: ['/sebze', '/meyve'],
-    parse: parseSebzeMeyveDunyasi,
+    parse: parseTicimax,
+  },
+  {
+    key: 'tazedukkan',
+    competitor: 'Taze Dükkan',
+    base: 'https://www.tazedukkan.com.tr',
+    paths: ['/meyvesebze'],
+    parse: parseTicimax,
   },
 ];
 

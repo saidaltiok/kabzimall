@@ -32,7 +32,7 @@ const COMPETITOR_GROUPS = [
   // Yerel İstanbul zincirleri + Hepsiexpress (tarayıcı-destekli / elle).
   { name: 'Yerel Zincir', sortOrder: 5, members: ['Onur', 'Hakmar', 'Mopaş', 'Happy Center', 'Kim Market', 'Namlı', 'Hepsiexpress'] },
   // Online manav — taze meyve-sebzede en yakın direkt rakipler (tarayıcı-destekli).
-  { name: 'Online Manav', sortOrder: 6, members: ['Sebze Reyonu', 'Tazedirekt', 'Sebze Meyve Dünyası', 'Çiftçiden Eve', 'TazeMasa'] },
+  { name: 'Online Manav', sortOrder: 6, members: ['Sebze Reyonu', 'Tazedirekt', 'Sebze Meyve Dünyası', 'Taze Dükkan', 'Çiftçiden Eve', 'TazeMasa'] },
 ];
 
 async function seedCompetitors() {
