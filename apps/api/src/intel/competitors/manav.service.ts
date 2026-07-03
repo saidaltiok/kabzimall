@@ -26,12 +26,22 @@ const STOP = new Set(['taze', 'organik', 'yerli', 'kg', 'gr', 'gram', 'adet', 'd
 // İşlenmiş/paketli/çoklu ürünleri ele (tekil taze meyve-sebze dışı).
 const PROCESSED = /suyu|püre|pure|konserve|salça|salca|reçel|recel|turşu|tursu|kurutulmu|cips|sos|çorba|corba|dondurma|smoothie|shot|kombucha|\bml\b|\bset\b|seti|kutu|\bmix\b|\bpaketi\b|&|\|/i;
 
-function words(name: string): Set<string> {
-  // Parantez içi BİRİM ise at (500 Gr, Kg, Adet, Demet); ÇEŞİT ise koru (Capia, Sivri).
+/** BİZİM ürün adı: parantez içi ÇEŞİT'i koru (Capia, Sivri), birim parantezini at. */
+function productWords(name: string): Set<string> {
   const cleaned = name.replace(/\(([^)]*)\)/g, (_m, inner) =>
     /\d|kg|gr|gram|adet|demet|bağ|bag|paket/i.test(inner) ? ' ' : ' ' + inner + ' ',
   );
   return new Set(slugifyTr(cleaned).split('-').filter((w) => w.length > 2 && !STOP.has(w)));
+}
+
+/**
+ * TARANAN manav adı: ürün adı ilk parantezden öncedir ("Sivri Biber (500 gr)
+ * Çiftlik-Bursa" → "Sivri Biber"). Birim/çiftlik/konum ekini kırpar.
+ */
+function scrapedWords(name: string): Set<string> {
+  const base = name.split('(')[0].trim();
+  const src = base.length >= 3 ? base : name;
+  return new Set(slugifyTr(src).split('-').filter((w) => w.length > 2 && !STOP.has(w)));
 }
 
 /** Parantez/ad içindeki birimi kg fiyatına normalize et (ağırlıksa). adet/demet ham kalır. */
@@ -88,6 +98,13 @@ const SITES: ManavSite[] = [
     paths: ['/meyvesebze'],
     parse: parseTicimax,
   },
+  {
+    key: 'tazemasa',
+    competitor: 'TazeMasa',
+    base: 'https://www.tazemasa.com',
+    paths: ['/taze-sebzeler', '/taze-meyveler-250'],
+    parse: parseTicimax,
+  },
 ];
 
 @Injectable()
@@ -100,11 +117,11 @@ export class ManavService {
    * (sıralamadan bağımsız: "Sivri Biber" ↔ "Biber (Sivri)"). Saf/test edilebilir.
    */
   static match(raw: RawItem[], products: { slug: string; name: string }[]): ManavPrice[] {
-    const prodWords = products.map((p) => ({ ...p, w: words(p.name) }));
+    const prodWords = products.map((p) => ({ ...p, w: productWords(p.name) }));
     const best = new Map<string, ManavPrice>(); // slug → en düşük fiyat
     for (const it of raw) {
       if (PROCESSED.test(it.name)) continue;
-      const w = words(it.name);
+      const w = scrapedWords(it.name);
       if (w.size === 0) continue;
       let pick: (typeof prodWords)[number] | null = null;
       let pickScore = 0;
