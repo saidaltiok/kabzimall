@@ -8,6 +8,7 @@ import Topbar from '@/components/Topbar';
 interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; unitPrice: number; lineTotal: number; note: string | null }
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string; addressText: string;
+  lat: number | null; lng: number | null;
   status: string; subtotal: number; deliveryFee: number; grandTotal: number; note: string | null;
   estimatedTotal: number; finalTotal: number | null;
   deliveryDate: string | null; deliveryWindow: string | null;
@@ -137,6 +138,11 @@ export default function SiparislerPage() {
                           <div style={{ padding: '4px 2px' }}>
                             {o.deliveryWindow && <><b>Teslimat:</b> {o.deliveryDate?.slice(0, 10)} · {o.deliveryWindow} · </>}
                             <b>Adres:</b> {o.addressText}
+                            {o.lat != null && o.lng != null ? (
+                              <> · 📍 <a href={`https://www.google.com/maps?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer" style={{ color: 'var(--forest)', fontWeight: 600 }}>Haritada gör / yol tarifi</a></>
+                            ) : (
+                              <> · <span className="muted">📍 harita konumu yok</span></>
+                            )}
                             {o.note && <> · <b>Not:</b> {o.note}</>}
                             <table style={{ marginTop: 8, background: '#fff', borderRadius: 10 }}>
                               <thead>

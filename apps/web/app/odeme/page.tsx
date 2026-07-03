@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api';
+
+// Harita yalnızca istemcide (leaflet SSR'a girmez).
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 import { rememberOrder } from '@/lib/orders';
@@ -22,6 +26,7 @@ export default function CheckoutPage() {
   const [slotKey, setSlotKey] = useState('');
   const [zones, setZones] = useState<string[]>([]);
   const [district, setDistrict] = useState('');
+  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +53,7 @@ export default function CheckoutPage() {
       const slot = slots.find((s) => `${s.date}|${s.window}` === slotKey);
       const order = await apiPost<{ id: string; code: string }>('/storefront/orders', {
         items: items.map((i) => ({ slug: i.slug, qty: i.qty, basketSlug: i.basketSlug, note: i.note })),
-        customer: { name, phone, address, district: district || undefined },
+        customer: { name, phone, address, district: district || undefined, lat: geo?.lat, lng: geo?.lng },
         slot: slot ? { date: slot.date, window: slot.window } : undefined,
         note: note || undefined,
       });
@@ -86,6 +91,10 @@ export default function CheckoutPage() {
               </div>
             )}
             <div className="field"><label>Adres</label><textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Mahalle, cadde, no, daire" /></div>
+            <div className="field">
+              <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : <span className="muted">(kuryenin sizi kolay bulması için)</span>}</label>
+              <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => setGeo({ lat, lng })} />
+            </div>
             <div className="field"><label>Sipariş notu (opsiyonel)</label><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Zili çalmayın" /></div>
           </div>
           <div className="block">

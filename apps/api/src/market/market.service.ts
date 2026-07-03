@@ -298,6 +298,8 @@ export class MarketService {
           customerPhone: dto.customer.phone,
           addressText: dto.customer.address,
           district: dto.customer.district ?? null,
+          lat: dto.customer.lat ?? null,
+          lng: dto.customer.lng ?? null,
           note: dto.note ?? null,
           status: 'CONFIRMED',
           paymentMethod: dto.paymentMethod ?? 'COD',

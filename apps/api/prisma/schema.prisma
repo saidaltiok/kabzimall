@@ -119,6 +119,9 @@ model Order {
   customerPhone  String   @map("customer_phone")
   addressText    String   @map("address_text")
   district       String?
+  /// Haritadan seçilen teslimat noktası (WGS84). Rota optimizasyonunu besler.
+  lat            Float?
+  lng            Float?
   note           String?
   status         String   @default("CONFIRMED")
   paymentMethod  String   @default("COD") @map("payment_method")

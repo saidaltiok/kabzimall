@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   Matches,
+  Max,
   Min,
   MinLength,
   ValidateNested,
@@ -49,6 +50,13 @@ export class CustomerInput {
   /** Teslimat ilçesi (hizmet bölgesi varsa zorunlu/doğrulanır). */
   @IsOptional() @IsString()
   district?: string;
+
+  /** Haritadan seçilen teslimat noktası (WGS84). */
+  @IsOptional() @IsNumber() @Min(-90) @Max(90)
+  lat?: number;
+
+  @IsOptional() @IsNumber() @Min(-180) @Max(180)
+  lng?: number;
 }
 
 export class CreateOrderDto {
