@@ -9,7 +9,7 @@ const LNG = 28.9784;
 
 /** marketfiyati marketAdi → bizim rakip adımız (seed'de tanımlı olanlar). */
 const MARKET_TO_COMPETITOR: Record<string, string> = {
-  a101: 'A101', bim: 'BİM', sok: 'ŞOK', migros: 'Migros', carrefour: 'Carrefour',
+  a101: 'A101', bim: 'BİM', sok: 'ŞOK', migros: 'Migros', carrefour: 'Carrefour', tarim_kredi: 'Tarım Kredi',
 };
 
 interface DepotInfo { marketAdi: string; price: number; unitPrice?: string }

@@ -27,6 +27,12 @@ const COMPETITOR_GROUPS = [
   { name: 'Hızlı Teslimat', sortOrder: 1, members: ['Getir', 'Yemeksepeti', 'Trendyol', 'Banabi'] },
   { name: 'Zincir Market', sortOrder: 2, members: ['Migros', 'Carrefour'] },
   { name: 'İndirim Market', sortOrder: 3, members: ['BİM', 'A101', 'ŞOK'] },
+  // Resmî marketfiyati.org.tr kaynağında olan kooperatif (otomatik çekilir).
+  { name: 'Kooperatif', sortOrder: 4, members: ['Tarım Kredi'] },
+  // Yerel İstanbul zincirleri + Hepsiexpress (tarayıcı-destekli / elle).
+  { name: 'Yerel Zincir', sortOrder: 5, members: ['Onur', 'Hakmar', 'Mopaş', 'Happy Center', 'Kim Market', 'Namlı', 'Hepsiexpress'] },
+  // Online manav — taze meyve-sebzede en yakın direkt rakipler (tarayıcı-destekli).
+  { name: 'Online Manav', sortOrder: 6, members: ['Sebze Reyonu', 'Tazedirekt', 'Sebze Meyve Dünyası', 'Çiftçiden Eve', 'TazeMasa'] },
 ];
 
 async function seedCompetitors() {
