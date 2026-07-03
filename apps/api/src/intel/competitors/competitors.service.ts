@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { avg, median, stddev, competitionIndex, effectivePrice } from '../../pricing-engine';
+import { avg, median, stddev, competitionIndex, effectivePrice, priceForMargin, DEFAULT_FLOOR_MARGIN } from '../../pricing-engine';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../../common/tenant';
 import { dateOnly } from '../../common/date';
 import { CreateCompetitorGroupDto } from './dto/create-competitor-group.dto';
 import { CreateCompetitorDto } from './dto/create-competitor.dto';
 import { CreateCompetitorPriceDto } from './dto/create-competitor-price.dto';
+import { CostComponentsService } from '../cost-components/cost-components.service';
+import { PricingRulesService } from '../pricing-rules/pricing-rules.service';
 
 export interface CompetitorPricesResult {
   productId: string;
@@ -36,7 +38,11 @@ export interface CompetitorPricesResult {
 
 @Injectable()
 export class CompetitorsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly costs: CostComponentsService,
+    private readonly rules: PricingRulesService,
+  ) {}
 
   /* ----------------------------- Gruplar ----------------------------- */
 
@@ -195,48 +201,90 @@ export class CompetitorsService {
       select: { slug: true, name: true, isActive: true, basePrice: true, discountedPrice: true },
     });
     const pmap = new Map(products.map((p) => [p.slug, p]));
-    const rows = [...bySlug.entries()].flatMap(([slug, cmap]) => {
+    const rows = await Promise.all([...bySlug.entries()].map(async ([slug, cmap]) => {
       const p = pmap.get(slug);
-      if (!p) return [];
+      if (!p) return null;
       const prices = [...cmap.values()];
-      return [{
+      const medianComp = Math.round(median(prices));
+
+      // Maliyet tabanı: varsa medyan rakip fiyatı taban marjın altında mı?
+      let directCost: number | null = null;
+      let floorPrice: number | null = null;
+      let belowFloor = false;
+      const cost = await this.costs.costForProduct(slug).catch(() => null);
+      if (cost?.breakdown) {
+        directCost = cost.directCost;
+        const rule = await this.rules.resolveEffective(slug).catch(() => null);
+        floorPrice = Math.round(priceForMargin(cost.breakdown, rule?.floorMargin ?? DEFAULT_FLOOR_MARGIN));
+        belowFloor = medianComp < floorPrice;
+      }
+
+      return {
         slug,
         name: p.name,
         coverage: cmap.size,
         minComp: Math.min(...prices),
-        medianComp: Math.round(median(prices)),
+        medianComp,
         ourPrice: p.basePrice != null ? effectivePrice(p.basePrice, p.discountedPrice) : null,
         isActive: p.isActive,
-      }];
-    });
-    rows.sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'tr'));
+        directCost,
+        floorPrice,
+        belowFloor,
+      };
+    }));
+    const clean = rows.filter((r): r is NonNullable<typeof r> => r != null);
+    clean.sort((a, b) => b.coverage - a.coverage || a.name.localeCompare(b.name, 'tr'));
     const totalCompetitors = await this.prisma.competitor.count({ where: { tenantId: DEV_TENANT_ID, isActive: true } });
-    return { totalCompetitors, rows };
+    return { totalCompetitors, rows: clean };
   }
 
   /**
    * Yayına al: verilen ürünleri aktifle + rakip fiyatına göre başlangıç satış
    * fiyatı ata (basis: median=rakip medyanı, min=en düşük). Fiyat 0,50₺'ye yuvarlanır.
+   * GÜVENLİK: maliyet verisi varsa (hal fiyatı + maliyet bileşeni), fiyat asla taban
+   * marjın (kural varsa ondan, yoksa varsayılan) altına düşürülmez — rakip fiyatı
+   * maliyetin altındaysa taban marj fiyatına yükseltilir (floored:true ile işaretlenir).
+   * Maliyet verisi yoksa (MALIYET_TANIMSIZ/HAL_VERISI_YOK) güvenlik kontrolü yapılamaz;
+   * rakip fiyatıyla yayınlanır ama 'costUnknown' ile işaretlenir (admin gözden geçirsin).
    * Rakip fiyatı olmayan slug atlanır.
    */
   async publishPopular(slugs: string[], basis: 'median' | 'min' = 'median') {
     if (!Array.isArray(slugs) || slugs.length === 0) throw new BadRequestException('slugs gerekli');
     const bySlug = await this.latestByProduct(slugs);
     let published = 0;
-    const details: { slug: string; price?: number; coverage?: number; skipped?: string }[] = [];
+    let flooredCount = 0;
+    const details: { slug: string; price?: number; coverage?: number; competitorPrice?: number; floored?: boolean; costUnknown?: boolean; skipped?: string }[] = [];
     for (const slug of slugs) {
       const cmap = bySlug.get(slug);
       if (!cmap || cmap.size === 0) { details.push({ slug, skipped: 'rakip fiyatı yok' }); continue; }
       const prices = [...cmap.values()];
       const raw = basis === 'min' ? Math.min(...prices) : Math.round(median(prices));
-      const price = Math.max(50, Math.round(raw / 50) * 50); // 0,50₺ yuvarla
+      const competitorPrice = Math.max(50, Math.round(raw / 50) * 50); // 0,50₺ yuvarla
+
+      let price = competitorPrice;
+      let floored = false;
+      let costUnknown = false;
+      const cost = await this.costs.costForProduct(slug).catch(() => null);
+      if (!cost?.breakdown) {
+        costUnknown = true; // maliyet/hal verisi yok → güvenlik kontrolü yapılamıyor
+      } else {
+        const rule = await this.rules.resolveEffective(slug).catch(() => null);
+        const floorMargin = rule?.floorMargin ?? DEFAULT_FLOOR_MARGIN;
+        const floorPrice = Math.round(priceForMargin(cost.breakdown, floorMargin));
+        if (competitorPrice < floorPrice) {
+          price = Math.round(floorPrice / 50) * 50;
+          floored = true;
+          flooredCount++;
+        }
+      }
+
       await this.prisma.product.update({
         where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug } },
         data: { isActive: true, basePrice: price },
       });
       published++;
-      details.push({ slug, price, coverage: cmap.size });
+      details.push({ slug, price, coverage: cmap.size, competitorPrice, floored, costUnknown });
     }
-    return { published, basis, details };
+    return { published, flooredCount, basis, details };
   }
 }
