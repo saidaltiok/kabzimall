@@ -16,6 +16,17 @@ export class DashboardController {
   overview(@Query('date') date?: string) {
     return this.service.overview(date);
   }
+
+  /**
+   * GET /api/v1/intel/dashboard/decisions?date=
+   * "Bugün" ekranı: aksiyon gerektiren ürünler + motorun önerdiği fiyat
+   * (tek tıkla POST /intel/price/apply ile uygulanır).
+   */
+  @Get('decisions')
+  @ApiQuery({ name: 'date', required: false })
+  decisions(@Query('date') date?: string) {
+    return this.service.decisions(date);
+  }
 }
 
 @ApiTags('intel: dashboard')

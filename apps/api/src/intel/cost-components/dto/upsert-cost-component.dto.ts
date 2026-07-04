@@ -34,7 +34,8 @@ export class UpsertCostComponentDto {
   @IsOptional() @IsInt() @Min(0)
   amortization?: number;
 
-  @IsOptional() @IsNumber() @Min(0) @Max(0.99)
+  /** 0..0.5 — %50 üstü komisyon gerçekçi değil; yazım hatası (0.53 vs 0.053) fiyat önerisini patlatır. */
+  @IsOptional() @IsNumber() @Min(0) @Max(0.5)
   commissionRate?: number;
 
   @IsOptional() @IsNumber() @Min(0) @Max(0.99)

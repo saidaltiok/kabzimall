@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet } from '@/lib/api';
-import { tl, pct, dt } from '@/lib/format';
+import { apiGet, apiSend } from '@/lib/api';
+import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+
+/* ------------------------------- Tipler ------------------------------- */
 
 interface OpsSummary {
   ordersToday: number;
@@ -20,69 +22,226 @@ const OPS_STATUS: [string, string][] = [
   ['OUT_FOR_DELIVERY', 'Yolda'],
 ];
 
-interface RiskyProduct {
-  productId: string;
-  basePrice: number;
-  directCost: number | null;
-  netMargin: number | null;
-  competitionIndex: number | null;
-  flags: string[];
-}
 interface Dashboard {
   date: string;
   kpis: {
     pricedProducts: number;
     productsWithHalToday: number;
-    competitors: number;
-    competitorGroups: number;
+    competitorPricesToday: number;
     priceChangesToday: number;
     priceChangesTotal: number;
     avgNetMargin: number | null;
-    belowFloorCount: number;
     belowCostCount: number;
     riskyProductCount: number;
   };
-  riskyProducts: RiskyProduct[];
-  alerts: { productId: string; code: string; severity: 'high' | 'medium' | 'low'; message: string }[];
   recentPriceChanges: { productId: string; oldPrice: number | null; newPrice: number; strategy: string; changedAt: string }[];
 }
 
-const SEV_META: Record<string, { cls: string; icon: string }> = {
-  high: { cls: 'zararina', icon: '🔴' },
-  medium: { cls: 'risk', icon: '🟠' },
-  low: { cls: 'info', icon: '🔵' },
-};
+interface Decision {
+  productId: string;
+  name: string;
+  flags: string[];
+  currentPrice: number;
+  currentMargin: number | null;
+  suggestedPrice: number;
+  suggestedMargin: number;
+  strategy: string;
+  floored: boolean;
+}
+interface Decisions {
+  date: string;
+  decisions: Decision[];
+  info: { productId: string; name: string; flags: string[] }[];
+}
 
 const FLAG_META: Record<string, { label: string; cls: string }> = {
-  ZARARINA: { label: 'Zararına', cls: 'zararina' },
-  DUSUK_MARJ: { label: 'Düşük marj', cls: 'risk' },
+  ZARARINA: { label: 'Zararına satılıyor', cls: 'zararina' },
+  DUSUK_MARJ: { label: 'Marjı düşük', cls: 'risk' },
   RAKIPTEN_PAHALI: { label: 'Rakipten pahalı', cls: 'risk' },
   MALIYET_TANIMSIZ: { label: 'Maliyet tanımsız', cls: 'info' },
   HAL_VERISI_YOK: { label: 'Hal verisi yok', cls: 'info' },
 };
 
-export default function DashboardPage() {
-  const [data, setData] = useState<Dashboard | null>(null);
-  const [ops, setOps] = useState<OpsSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
+/* ------------------------------- Ekran -------------------------------- */
 
-  useEffect(() => {
+export default function BugunPage() {
+  const [data, setData] = useState<Dashboard | null>(null);
+  const [dec, setDec] = useState<Decisions | null>(null);
+  const [ops, setOps] = useState<OpsSummary | null>(null);
+  const [busy, setBusy] = useState<string | null>(null); // productId | '__all__'
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  const load = useCallback(() => {
     apiGet<Dashboard>('/intel/dashboard').then(setData).catch((e) => setError(e.message));
+    apiGet<Decisions>('/intel/dashboard/decisions').then(setDec).catch(() => {});
     apiGet<OpsSummary>('/admin/orders/summary').then(setOps).catch(() => {});
   }, []);
+  useEffect(() => { load(); }, [load]);
+
+  /** Motorun önerisini tek tıkla mağaza fiyatı yap (taban korumalı öneri). */
+  async function apply(d: Decision) {
+    setBusy(d.productId); setError(null); setOk(null);
+    try {
+      await apiSend('POST', '/intel/price/apply', {
+        productId: d.productId,
+        price: d.suggestedPrice,
+        strategy: d.strategy,
+        netMargin: d.suggestedMargin,
+        reason: 'Bugün ekranından tek tık uygulama',
+      });
+      setOk(`✓ ${d.name}: ${tl(d.suggestedPrice)} uygulandı.`);
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function applyAll() {
+    if (!dec || dec.decisions.length === 0) return;
+    if (!confirm(`${dec.decisions.length} ürünün fiyatı motorun önerisiyle güncellenecek (hepsi maliyet tabanı korumalı). Devam?`)) return;
+    setBusy('__all__'); setError(null); setOk(null);
+    let done = 0;
+    for (const d of dec.decisions) {
+      try {
+        await apiSend('POST', '/intel/price/apply', {
+          productId: d.productId, price: d.suggestedPrice, strategy: d.strategy,
+          netMargin: d.suggestedMargin, reason: 'Bugün ekranından toplu uygulama',
+        });
+        done++;
+      } catch { /* tekil hata toplu akışı bozmasın */ }
+    }
+    setOk(`✓ ${done}/${dec.decisions.length} ürünün fiyatı güncellendi.`);
+    setBusy(null);
+    load();
+  }
+
+  const k = data?.kpis;
+  const halOk = (k?.productsWithHalToday ?? 0) > 0;
+  const rakipOk = (k?.competitorPricesToday ?? 0) > 0;
 
   return (
     <>
-      <Topbar title="Dashboard" sub={data ? `Fiyat zekâsı özeti · ${data.date}` : 'Yükleniyor…'} />
+      <Topbar title="Bugün" sub={data ? `${data.date} · veri → karar → uygula` : 'Yükleniyor…'} />
       <div className="body">
-        {error && (
-          <div className="error">
-            API'ye ulaşılamadı: {error} — sunucu çalışıyor mu? (apps/api → npm run start:dev, Docker açık)
+        {error && <div className="error">{error}</div>}
+        {ok && <div className="ok-box">{ok}</div>}
+        {!data && !error && <div className="loading">Yükleniyor…</div>}
+
+        {/* 1 — Bugünün verisi geldi mi? */}
+        {k && (
+          <div className="miniinfo" style={{ marginBottom: 16, flexWrap: 'wrap' }}>
+            <span>
+              {halOk ? '🟢' : '🟠'} Hal fiyatları:{' '}
+              <b>{halOk ? `${k.productsWithHalToday} ürün geldi` : 'bugün henüz yok'}</b>
+              {!halOk && <> · <Link href="/hal" style={{ color: 'var(--forest)', fontWeight: 600 }}>Hal ekranından çek/gir →</Link></>}
+            </span>
+            <span>
+              {rakipOk ? '🟢' : '🟠'} Rakip fiyatları:{' '}
+              <b>{rakipOk ? `${k.competitorPricesToday} kayıt geldi` : 'bugün henüz yok'}</b>
+              {!rakipOk && <> · <Link href="/rakip" style={{ color: 'var(--forest)', fontWeight: 600 }}>Şimdi güncelle →</Link></>}
+            </span>
+            <span className="muted" style={{ fontSize: 12 }}>Hal 11:00–15:00, rakip 10:00'da otomatik çekilir.</span>
           </div>
         )}
+
+        {/* 2 — Bugünün fiyat kararları (ekranın kalbi) */}
+        {dec && (
+          <div className="card" style={{ marginBottom: 16, borderLeft: '3px solid var(--persimmon)' }}>
+            <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              🎯 Bugünün fiyat kararları
+              <span>{dec.decisions.length} ürün aksiyon bekliyor</span>
+              {dec.decisions.length > 1 && (
+                <button className="btn" style={{ marginLeft: 'auto', background: 'var(--persimmon)' }} onClick={applyAll} disabled={busy != null}>
+                  {busy === '__all__' ? 'Uygulanıyor…' : `⚡ Hepsini uygula (${dec.decisions.length})`}
+                </button>
+              )}
+            </div>
+            {dec.decisions.length === 0 ? (
+              <p className="muted">Bugün fiyat aksiyonu gerektiren ürün yok. 👍</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ürün</th>
+                    <th>Sorun</th>
+                    <th className="num">Şu an</th>
+                    <th className="num">Öneri</th>
+                    <th className="num">Yeni marj</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dec.decisions.map((d) => (
+                    <tr key={d.productId}>
+                      <td>{d.name} <span className="muted" style={{ fontSize: 11 }}>{d.productId}</span></td>
+                      <td>
+                        {d.flags.map((f) => {
+                          const m = FLAG_META[f] ?? { label: f, cls: 'info' };
+                          return <span key={f} className={`tagp ${m.cls}`}>{m.label}</span>;
+                        })}
+                      </td>
+                      <td className="num">{tl(d.currentPrice)} {d.currentMargin != null && <span className="muted" style={{ fontSize: 11 }}>({pct(d.currentMargin)})</span>}</td>
+                      <td className="num savecell">
+                        {tl(d.suggestedPrice)}
+                        {d.floored && <span className="tagp info" style={{ marginLeft: 5, fontSize: 10 }} title="Maliyet tabanı koruması devrede">taban</span>}
+                      </td>
+                      <td className="num">{pct(d.suggestedMargin)}</td>
+                      <td className="num">
+                        <button className="btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => apply(d)} disabled={busy != null}>
+                          {busy === d.productId ? '…' : '✓ Uygula'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {dec.info.length > 0 && (
+              <p className="note2" style={{ marginTop: 10 }}>
+                ℹ️ Fiyatlanamayanlar (veri eksik): {dec.info.map((i) => i.name).join(', ')} —{' '}
+                <Link href="/hal" style={{ color: 'var(--forest)', fontWeight: 600 }}>hal fiyatı</Link> ya da{' '}
+                <Link href="/maliyet" style={{ color: 'var(--forest)', fontWeight: 600 }}>maliyet</Link> girilince öneri üretilebilir.
+              </p>
+            )}
+            <p className="note2" style={{ marginTop: 6 }}>
+              Öneriler fiyat motorundan (rakip ortalaması → hedef marj → hal+%100 → taban zinciri), hepsi maliyet tabanı korumalı.
+              İnce ayar için <Link href="/oner" style={{ color: 'var(--forest)', fontWeight: 600 }}>Fiyat Öneri Motoru</Link>.
+            </p>
+          </div>
+        )}
+
+        {/* 3 — KPI şeridi */}
+        {k && (
+          <div className="kpis">
+            <Kpi l="Fiyatlı ürün" v={String(k.pricedProducts)} d="mağazada satışta" />
+            <Kpi l="Ortalama net marj" v={pct(k.avgNetMargin)} d="hedef %30" />
+            <Kpi l="Zararına satılan" v={String(k.belowCostCount)} d="maliyet altı" alert={k.belowCostCount > 0} />
+            <Kpi l="Bugünkü fiyat değişikliği" v={String(k.priceChangesToday)} d={`toplam ${k.priceChangesTotal}`} />
+          </div>
+        )}
+
+        {/* 4 — Bugünün operasyonu */}
         {ops && <Ops ops={ops} />}
-        {!data && !error && <div className="loading">Yükleniyor…</div>}
-        {data && <Content data={data} />}
+
+        {/* 5 — Son fiyat değişiklikleri */}
+        {data && data.recentPriceChanges.length > 0 && (
+          <div className="card" style={{ marginTop: 16 }}>
+            <div className="ct">Son fiyat değişiklikleri</div>
+            {data.recentPriceChanges.slice(0, 8).map((c, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--line)', fontSize: 12.5 }}>
+                <b>{c.productId}</b>
+                <span className="muted">{c.strategy}</span>
+                <span style={{ marginLeft: 'auto' }}>
+                  {c.oldPrice != null && <span className="muted">{tl(c.oldPrice)} → </span>}
+                  <b>{tl(c.newPrice)}</b>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
@@ -90,10 +249,10 @@ export default function DashboardPage() {
 
 function Ops({ ops }: { ops: OpsSummary }) {
   return (
-    <div style={{ marginBottom: 22 }}>
+    <div style={{ marginTop: 16 }}>
       <div className="ct" style={{ fontFamily: "'Fraunces', serif", fontSize: 16, marginBottom: 12, display: 'flex', gap: 10, alignItems: 'baseline' }}>
         Bugünün operasyonu
-        <Link href="/pano" style={{ fontSize: 12, color: 'var(--persimmon)', fontWeight: 600 }}>Panoya git →</Link>
+        <Link href="/siparisler" style={{ fontSize: 12, color: 'var(--persimmon)', fontWeight: 600 }}>Siparişlere git →</Link>
       </div>
       <div className="kpis">
         <Kpi l="Bugünkü sipariş" v={String(ops.ordersToday)} d="00:00'dan beri" />
@@ -114,9 +273,6 @@ function Ops({ ops }: { ops: OpsSummary }) {
               ))}
             </div>
           )}
-          <p className="note2" style={{ marginTop: 10 }}>
-            Siparişleri <Link href="/siparisler" style={{ color: 'var(--forest)', fontWeight: 600 }}>listeden</Link> ya da <Link href="/pano" style={{ color: 'var(--forest)', fontWeight: 600 }}>panodan</Link> yönet.
-          </p>
         </div>
 
         <div className="card">
@@ -143,113 +299,6 @@ function Ops({ ops }: { ops: OpsSummary }) {
         </div>
       </div>
     </div>
-  );
-}
-
-function Content({ data }: { data: Dashboard }) {
-  const k = data.kpis;
-  return (
-    <>
-      <div className="kpis">
-        <Kpi l="Fiyatlı ürün" v={String(k.pricedProducts)} d={`bugün ${k.productsWithHalToday} hal girişi`} />
-        <Kpi l="Ortalama net marj" v={pct(k.avgNetMargin)} d="hedef %30" />
-        <Kpi l="Zararına satılan" v={String(k.belowCostCount)} d="maliyet altı" alert={k.belowCostCount > 0} />
-        <Kpi l="Riskli ürün" v={String(k.riskyProductCount)} d="aksiyon gerek" alert={k.riskyProductCount > 0} />
-      </div>
-
-      {data.alerts.length > 0 && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="ct">⚠️ Uyarılar <span>{data.alerts.length}</span></div>
-          {data.alerts.slice(0, 12).map((a, i) => {
-            const m = SEV_META[a.severity] ?? SEV_META.low;
-            return (
-              <div key={i} className="frow" style={{ alignItems: 'center' }}>
-                <span>{m.icon} {a.message}</span>
-                <span className={`tagp ${m.cls}`} style={{ marginLeft: 'auto' }}>{a.productId}</span>
-              </div>
-            );
-          })}
-          {data.alerts.length > 12 && <p className="note2">+{data.alerts.length - 12} uyarı daha…</p>}
-        </div>
-      )}
-
-      <div className="grid2">
-        <div className="card">
-          <div className="ct">
-            Riskli ürünler <span>{data.riskyProducts.length} ürün</span>
-          </div>
-          {data.riskyProducts.length === 0 ? (
-            <p className="muted">Risk işareti olan ürün yok. 👍</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Ürün</th>
-                  <th className="num">Fiyat</th>
-                  <th className="num">Maliyet</th>
-                  <th className="num">Marj</th>
-                  <th>Durum</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.riskyProducts.map((p) => (
-                  <tr key={p.productId}>
-                    <td>{p.productId}</td>
-                    <td className="num">{tl(p.basePrice)}</td>
-                    <td className="num">{tl(p.directCost)}</td>
-                    <td className="num">{pct(p.netMargin)}</td>
-                    <td>
-                      {p.flags.map((f) => {
-                        const m = FLAG_META[f] ?? { label: f, cls: 'info' };
-                        return <span key={f} className={`tagp ${m.cls}`}>{m.label}</span>;
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        <div className="card">
-          <div className="ct">
-            Son fiyat değişiklikleri <span>price_history</span>
-          </div>
-          {data.recentPriceChanges.length === 0 ? (
-            <p className="muted">Henüz fiyat uygulanmadı.</p>
-          ) : (
-            data.recentPriceChanges.map((c, i) => (
-              <div
-                key={i}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--line)', fontSize: 12.5 }}
-              >
-                <b>{c.productId}</b>
-                <span className="muted">{c.strategy}</span>
-                <span style={{ marginLeft: 'auto' }}>
-                  {c.oldPrice != null && <span className="muted">{tl(c.oldPrice)} → </span>}
-                  <b>{tl(c.newPrice)}</b>
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="aibox">
-        <span className="k">Günlük Özet</span>
-        {k.belowCostCount > 0 ? (
-          <>
-            <b>{k.belowCostCount} ürün maliyetinin altında satılıyor</b> — Fiyat Öneri Motoru'ndan
-            yeniden fiyatlamanı öneririm.{' '}
-          </>
-        ) : (
-          <>Maliyet altında satılan ürün yok. </>
-        )}
-        Ortalama net marj {pct(k.avgNetMargin)} (hedef %30). Toplam {k.priceChangesTotal} fiyat
-        değişikliği kayıtlı; bugün {k.priceChangesToday}. Tüm hesaplar packages/pricing ile
-        gerçek-zamanlı.
-      </div>
-    </>
   );
 }
 

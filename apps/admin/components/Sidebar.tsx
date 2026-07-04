@@ -7,7 +7,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
   {
     label: 'Fiyat Zekâsı',
     links: [
-      { href: '/', icon: '📊', label: 'Dashboard' },
+      { href: '/', icon: '☀️', label: 'Bugün' },
       { href: '/hal', icon: '🥬', label: 'Hal Fiyatları' },
       { href: '/rakip', icon: '🏷️', label: 'Rakip Fiyatları' },
       { href: '/yayinla', icon: '🚀', label: 'Yayına Al' },

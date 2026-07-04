@@ -12,6 +12,7 @@ import { dateOnly } from '../../common/date';
 import { CostComponentsService } from '../cost-components/cost-components.service';
 import { CompetitorsService } from '../competitors/competitors.service';
 import { PricingRulesService } from '../pricing-rules/pricing-rules.service';
+import { PriceService } from '../price/price.service';
 
 type RiskFlag =
   | 'ZARARINA'
@@ -51,7 +52,60 @@ export class DashboardService {
     private readonly costs: CostComponentsService,
     private readonly competitors: CompetitorsService,
     private readonly rules: PricingRulesService,
+    private readonly price: PriceService,
   ) {}
+
+  /**
+   * "Bugün" ekranının kalbi: aksiyon gerektiren her ürün için motorun önerdiği
+   * fiyatı da yanına koyar — tek tıkla uygulanabilir karar listesi. Öneri mevcut
+   * fiyatla (yuvarlama adımı içinde) aynıysa yapılacak iş yok demektir, listeye
+   * girmez. Maliyeti/hal verisi olmayan ürünler fiyatlanamaz → "bilgi" olarak döner.
+   */
+  async decisions(dateStr?: string) {
+    const rows = await this.productsTable(dateStr);
+    const actionableFlags = new Set(['ZARARINA', 'DUSUK_MARJ', 'RAKIPTEN_PAHALI']);
+    const risky = rows.filter((r) => r.flags.some((f) => actionableFlags.has(f)));
+    const info = rows.filter((r) => r.flags.length > 0 && !r.flags.some((f) => actionableFlags.has(f)));
+
+    const products = await this.prisma.product.findMany({
+      where: { tenantId: DEV_TENANT_ID, slug: { in: rows.filter((r) => r.flags.length > 0).map((r) => r.productId) } },
+      select: { slug: true, name: true },
+    });
+    const nameBySlug = new Map(products.map((p) => [p.slug, p.name]));
+
+    const decisions: {
+      productId: string; name: string; flags: string[]; currentPrice: number; currentMargin: number | null;
+      suggestedPrice: number; suggestedMargin: number; strategy: string; floored: boolean;
+    }[] = [];
+    for (const r of risky) {
+      try {
+        const sug = await this.price.resolveForProduct({ productId: r.productId });
+        // Öneri ≈ mevcut (1₺ ya da %1 içinde — psych yuvarlama farkı) → gerçek aksiyon yok.
+        const tolerance = Math.max(100, Math.round(r.basePrice * 0.01));
+        if (Math.abs(sug.price - r.basePrice) < tolerance) continue;
+        decisions.push({
+          productId: r.productId,
+          name: nameBySlug.get(r.productId) ?? r.productId,
+          flags: r.flags,
+          currentPrice: r.basePrice,
+          currentMargin: r.netMargin,
+          suggestedPrice: sug.price,
+          suggestedMargin: sug.netMargin,
+          strategy: sug.strategy,
+          floored: sug.floored,
+        });
+      } catch {
+        /* girdi eksik (hal/maliyet) → fiyatlanamaz; info listesi zaten kapsıyor */
+      }
+    }
+    decisions.sort((a, b) => (a.currentMargin ?? 1) - (b.currentMargin ?? 1)); // en kanayan üstte
+
+    return {
+      date: dateOnly(dateStr).toISOString().slice(0, 10),
+      decisions,
+      info: info.map((r) => ({ productId: r.productId, name: nameBySlug.get(r.productId) ?? r.productId, flags: r.flags })),
+    };
+  }
 
   /** Bir ürün satırını okunur uyarı mesajlarına çevirir (PRD §8.9). */
   private buildAlerts(r: ProductRow): Alert[] {
@@ -91,10 +145,11 @@ export class DashboardService {
     const dayStart = date;
     const dayEnd = new Date(date.getTime() + 86_400_000);
 
-    const [rows, halToday, competitorCount, groupCount, priceChangesToday, priceChangesTotal, recent] =
+    const [rows, halToday, competitorPricesToday, competitorCount, groupCount, priceChangesToday, priceChangesTotal, recent] =
       await Promise.all([
         this.productsTable(dateStr),
         this.prisma.halPriceEntry.findMany({ where: { tenantId, date }, select: { productSlug: true } }),
+        this.prisma.competitorPriceEntry.count({ where: { tenantId, date } }),
         this.prisma.competitor.count({ where: { tenantId } }),
         this.prisma.competitorGroup.count({ where: { tenantId } }),
         this.prisma.priceHistory.count({ where: { tenantId, changedAt: { gte: dayStart, lt: dayEnd } } }),
@@ -124,6 +179,7 @@ export class DashboardService {
       kpis: {
         pricedProducts: rows.length,
         productsWithHalToday: new Set(halToday.map((h) => h.productSlug)).size,
+        competitorPricesToday,
         competitors: competitorCount,
         competitorGroups: groupCount,
         priceChangesToday,
