@@ -1,18 +1,45 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Ip, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Public, Roles } from '../auth/decorators';
 import { CATALOG_WRITERS, ORDER_WRITERS, type JwtUser } from '../auth/auth.constants';
 import { MarketService } from './market.service';
+import { CustomerAuthService } from './customer-auth.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
 import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
 import { SlotChangeRequestDto, SlotChangeDecisionDto } from './dto/slot-change.dto';
+import { RequestOtpDto, VerifyOtpDto } from './dto/customer-auth.dto';
 
 @ApiTags('market: vitrin (public)')
 @Public()
 @Controller('storefront')
 export class StorefrontController {
-  constructor(private readonly service: MarketService) {}
+  constructor(
+    private readonly service: MarketService,
+    private readonly customerAuth: CustomerAuthService,
+  ) {}
+
+  /** POST /storefront/auth/request-otp — e-postaya 6 haneli giriş kodu gönder. */
+  @Post('auth/request-otp')
+  @ApiBody({ schema: { example: { email: 'musteri@example.com' } } })
+  requestOtp(@Body() dto: RequestOtpDto, @Ip() ip: string) {
+    return this.customerAuth.requestOtp(dto.email, ip ?? 'unknown');
+  }
+
+  /** POST /storefront/auth/verify-otp — kodu doğrula → 30 günlük müşteri oturumu. */
+  @Post('auth/verify-otp')
+  @ApiBody({ schema: { example: { email: 'musteri@example.com', code: '123456' } } })
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.customerAuth.verifyOtp(dto.email, dto.code);
+  }
+
+  /** GET /storefront/my-orders — doğrulanmış e-postanın siparişleri (müşteri token'ı ister). */
+  @Get('my-orders')
+  async myOrders(@Headers('authorization') auth?: string) {
+    const email = this.customerAuth.emailFromAuthHeader(auth);
+    const data = await this.service.myOrders(email);
+    return { email, data, meta: { total: data.length } };
+  }
 
   @Get('categories')
   async categories() {
@@ -75,11 +102,13 @@ export class StorefrontController {
     return this.service.createOrder(dto);
   }
 
-  /** GET /storefront/orders/lookup?code=&phone= — misafir sipariş sorgulama. */
+  /** GET /storefront/orders/lookup?code=&phone= — misafir sipariş sorgulama (IP başına limitli). */
   @Get('orders/lookup')
   @ApiQuery({ name: 'code', required: true })
   @ApiQuery({ name: 'phone', required: true })
-  lookup(@Query('code') code: string, @Query('phone') phone: string) {
+  lookup(@Query('code') code: string, @Query('phone') phone: string, @Ip() ip: string) {
+    // Kod+telefon kaba kuvvetle taranamasın.
+    this.customerAuth.assertIpLimit(`lookup:${ip ?? 'unknown'}`, 15);
     return this.service.lookupOrder(code, phone);
   }
 

@@ -569,6 +569,16 @@ export class MarketService {
     return this.getOrder(id);
   }
 
+  /** Doğrulanmış e-postayla verilen siparişler ("Siparişlerim" — cihazdan bağımsız). */
+  myOrders(email: string) {
+    return this.prisma.order.findMany({
+      where: { tenantId: DEV_TENANT_ID, customerEmail: email },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { items: true },
+    });
+  }
+
   /* ---------------------- Teslimat saati değişikliği ---------------------- */
 
   /**

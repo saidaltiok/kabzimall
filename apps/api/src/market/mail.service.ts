@@ -21,6 +21,11 @@ export class MailService {
       })
     : null;
 
+  /** SMTP yapılandırılmadı → log modu (dev). OTP devCode yalnız bu modda döner. */
+  get isLogMode(): boolean {
+    return this.transport === null;
+  }
+
   /** true = gerçekten gönderildi; false = log modu (ya da adres yok). Hata fırlatmaz. */
   async send(to: string | null | undefined, subject: string, text: string): Promise<boolean> {
     if (!to) return false;

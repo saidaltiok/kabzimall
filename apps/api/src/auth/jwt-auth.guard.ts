@@ -25,9 +25,16 @@ export class JwtAuthGuard implements CanActivate {
     if (!token) throw new UnauthorizedException('Token gerekli');
 
     try {
-      req.user = this.jwt.verify<JwtUser>(token, { secret: JWT_SECRET });
+      const payload = this.jwt.verify<JwtUser & { kind?: string }>(token, { secret: JWT_SECRET });
+      // Müşteri OTP token'ı (kind:'customer') PERSONEL uçlarında geçersizdir —
+      // aynı gizle imzalansa da panel/intel uçlarına asla kimlik sağlayamaz.
+      if (payload.kind === 'customer') {
+        throw new UnauthorizedException('Bu oturum personel paneli için geçerli değil');
+      }
+      req.user = payload;
       return true;
-    } catch {
+    } catch (e) {
+      if (e instanceof UnauthorizedException) throw e;
       throw new UnauthorizedException('Geçersiz veya süresi dolmuş token');
     }
   }

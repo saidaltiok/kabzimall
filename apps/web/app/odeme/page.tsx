@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPost, customerSession } from '@/lib/api';
 
 // Harita yalnızca istemcide (leaflet SSR'a girmez).
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
@@ -53,6 +53,9 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Girişli müşterinin doğrulanmış e-postasını önden doldur (değiştirilebilir).
+    const s = customerSession();
+    if (s) setEmail((cur) => cur || s.email);
     apiGet<{ data: Slot[] }>('/storefront/slots').then((r) => setSlots(r.data)).catch(() => {});
     apiGet<{ data: { name: string }[] }>('/storefront/zones').then((r) => setZones(r.data.map((z) => z.name))).catch(() => {});
     apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
