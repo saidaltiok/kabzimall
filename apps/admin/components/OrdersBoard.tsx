@@ -8,9 +8,17 @@ interface OrderItem { id: string; productName: string; orderedQty: number; picke
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string;
   status: string; grandTotal: number; estimatedTotal: number; finalTotal: number | null; note: string | null;
+  substitutionPref: string;
   deliveryDate: string | null; deliveryWindow: string | null;
   createdAt: string; items: OrderItem[];
 }
+
+/** Müşterinin "ürün eksik çıkarsa" tercihi — paketlerken uyulacak kural. */
+const SUB_LABEL: Record<string, string> = {
+  CALL: '📞 Eksikte: müşteriyi ara',
+  REMOVE: '➖ Eksikte: ürünü çıkar',
+  SUBSTITUTE: '🔄 Eksikte: benzeriyle değiştir',
+};
 
 /** Operasyon akışı (soldan sağa ilerler). İptal ayrı tutulur. */
 const FLOW: [string, string, string][] = [
@@ -137,6 +145,7 @@ export default function OrdersBoard() {
 
                       {packOpen === o.id ? (
                         <div className="oc-pack">
+                          <div className="tagp risk" style={{ marginBottom: 8 }}>{SUB_LABEL[o.substitutionPref] ?? SUB_LABEL.CALL}</div>
                           {o.items.map((it) => (
                             <div className="oc-packrow" key={it.id}>
                               <span>

@@ -15,6 +15,23 @@ import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal } from '@/lib/deli
 
 interface Slot { date: string; window: string; label: string }
 
+type SubPref = 'CALL' | 'REMOVE' | 'SUBSTITUTE';
+const SUB_PREFS: { id: SubPref; icon: string; title: string; desc: string }[] = [
+  { id: 'CALL', icon: '📞', title: 'Beni arayın', desc: 'Telefonla sorulmadan değişiklik yapılmaz' },
+  { id: 'REMOVE', icon: '➖', title: 'Eksik ürünü çıkarın', desc: 'Tutar düşer, kalanlar teslim edilir' },
+  { id: 'SUBSTITUTE', icon: '🔄', title: 'Benzeriyle değiştirin', desc: 'En yakın taze muadili konur' },
+];
+
+/** İki nokta arası kuş uçuşu km (haversine) — konum teyidi için. */
+function distKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
   const router = useRouter();
@@ -27,6 +44,9 @@ export default function CheckoutPage() {
   const [zones, setZones] = useState<string[]>([]);
   const [district, setDistrict] = useState('');
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  /** Cihazın gerçek konumu (pin'den bağımsız) — "farklı yer seçtiniz" teyidi için. */
+  const [geoSelf, setGeoSelf] = useState<{ lat: number; lng: number } | null>(null);
+  const [subPref, setSubPref] = useState<SubPref>('CALL');
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +55,18 @@ export default function CheckoutPage() {
     apiGet<{ data: Slot[] }>('/storefront/slots').then((r) => setSlots(r.data)).catch(() => {});
     apiGet<{ data: { name: string }[] }>('/storefront/zones').then((r) => setZones(r.data.map((z) => z.name))).catch(() => {});
     apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
+    // Konum izni ZATEN verilmişse gerçek konumu sessizce al (izin sorusu açtırmaz) —
+    // haritada uzak bir yere pin bırakılırsa siparişte teyit sorabilelim.
+    try {
+      navigator.permissions?.query({ name: 'geolocation' as PermissionName }).then((p) => {
+        if (p.state === 'granted') {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => setGeoSelf({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => {},
+          );
+        }
+      }).catch(() => {});
+    } catch { /* eski tarayıcı → teyit atlanır */ }
   }, []);
 
   if (items.length === 0)
@@ -47,6 +79,14 @@ export default function CheckoutPage() {
     );
 
   async function placeOrder() {
+    // Pin, cihazın gerçek konumundan belirgin uzaktaysa (>250 m) bilinçli mi diye sor —
+    // yanlışlıkla haritaya dokunulup yanlış adrese gitmesin. Konum bilinmiyorsa atlanır.
+    if (geo && geoSelf) {
+      const km = distKm(geoSelf, geo);
+      if (km > 0.25 && !confirm(`Seçtiğiniz teslimat noktası şu anki konumunuzdan ~${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km uzakta. Farklı bir adrese sipariş verdiğinizden emin misiniz?`)) {
+        return;
+      }
+    }
     setBusy(true);
     setError(null);
     try {
@@ -56,6 +96,7 @@ export default function CheckoutPage() {
         customer: { name, phone, address, district: district || undefined, lat: geo?.lat, lng: geo?.lng },
         slot: slot ? { date: slot.date, window: slot.window } : undefined,
         note: note || undefined,
+        substitutionPref: subPref,
       });
       rememberOrder(order.id, order.code);
       clear();
@@ -93,7 +134,7 @@ export default function CheckoutPage() {
             <div className="field"><label>Adres</label><textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Mahalle, cadde, no, daire" /></div>
             <div className="field">
               <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : <span className="muted">(kuryenin sizi kolay bulması için)</span>}</label>
-              <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => setGeo({ lat, lng })} />
+              <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => setGeo({ lat, lng })} onGeolocate={(lat, lng) => setGeoSelf({ lat, lng })} />
             </div>
             <div className="field"><label>Sipariş notu (opsiyonel)</label><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Zili çalmayın" /></div>
           </div>
@@ -117,6 +158,23 @@ export default function CheckoutPage() {
                 );
               })
             )}
+          </div>
+          <div className="block">
+            <h3>Ürün eksik çıkarsa?</h3>
+            <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px' }}>
+              Taze üründe gün içinde tükenme olabilir. Sipariş hazırlanırken bir ürün eksik çıkarsa ne yapalım?
+            </p>
+            {SUB_PREFS.map((p) => (
+              <div
+                key={p.id}
+                className={`choice ${subPref === p.id ? 'sel' : ''}`}
+                style={{ marginBottom: 8, cursor: 'pointer' }}
+                onClick={() => setSubPref(p.id)}
+              >
+                <div>{p.icon} <b>{p.title}</b><div className="muted" style={{ fontSize: 12 }}>{p.desc}</div></div>
+                <span>{subPref === p.id ? '✓' : ''}</span>
+              </div>
+            ))}
           </div>
           <div className="block">
             <h3>Ödeme yöntemi</h3>

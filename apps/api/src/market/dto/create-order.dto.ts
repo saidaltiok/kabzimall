@@ -79,6 +79,10 @@ export class CreateOrderDto {
   @IsOptional() @IsString()
   note?: string;
 
+  /** Ürün eksik/tükenmiş çıkarsa ne yapılsın? Varsayılan CALL (beni ara). */
+  @IsOptional() @IsIn(['CALL', 'REMOVE', 'SUBSTITUTE'])
+  substitutionPref?: 'CALL' | 'REMOVE' | 'SUBSTITUTE';
+
   /** Faz 1: yalnızca kapıda ödeme. */
   @IsOptional() @IsIn(['COD'])
   paymentMethod?: 'COD';

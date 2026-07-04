@@ -125,6 +125,8 @@ model Order {
   /// Haritadan seçilen teslimat noktası (WGS84). Rota optimizasyonunu besler.
   lat            Float?
   lng            Float?
+  /// Ürün eksik/tükenmiş çıkarsa: CALL (beni ara) | REMOVE (çıkar, tutarı düş) | SUBSTITUTE (benzeriyle değiştir).
+  substitutionPref String @default("CALL") @map("substitution_pref")
   note           String?
   status         String   @default("CONFIRMED")
   paymentMethod  String   @default("COD") @map("payment_method")

@@ -10,6 +10,7 @@ interface OrderItem { id: string; productName: string; orderedQty: number; picke
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string; addressText: string;
   lat: number | null; lng: number | null;
+  substitutionPref: string;
   status: string; subtotal: number; deliveryFee: number; grandTotal: number; note: string | null;
   estimatedTotal: number; finalTotal: number | null;
   deliveryDate: string | null; deliveryWindow: string | null;
@@ -17,6 +18,13 @@ interface Order {
   notifications: { id: string; message: string; createdAt: string }[];
   statusHistory: { id: string; fromStatus: string | null; toStatus: string; changedBy: string | null; note: string | null; createdAt: string }[];
 }
+
+/** Müşterinin "ürün eksik çıkarsa" tercihi — paketleyicinin uyması gereken kural. */
+const SUB_LABEL: Record<string, string> = {
+  CALL: '📞 Eksikte: müşteriyi ara',
+  REMOVE: '➖ Eksikte: ürünü çıkar',
+  SUBSTITUTE: '🔄 Eksikte: benzeriyle değiştir',
+};
 
 const STATUSES: [string, string][] = [
   ['CONFIRMED', 'Onaylandı'],
@@ -155,6 +163,7 @@ export default function SiparislerPage() {
                         <td colSpan={9} style={{ background: 'var(--cream)' }}>
                           <div style={{ padding: '4px 2px' }}>
                             {o.deliveryWindow && <><b>Teslimat:</b> {o.deliveryDate?.slice(0, 10)} · {o.deliveryWindow} · </>}
+                            <span className="tagp risk" style={{ marginRight: 8 }}>{SUB_LABEL[o.substitutionPref] ?? SUB_LABEL.CALL}</span>
                             <b>Adres:</b> {o.addressText}
                             {o.lat != null && o.lng != null ? (
                               <> · 📍 <a href={`https://www.google.com/maps?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer" style={{ color: 'var(--forest)', fontWeight: 600 }}>Haritada gör / yol tarifi</a></>

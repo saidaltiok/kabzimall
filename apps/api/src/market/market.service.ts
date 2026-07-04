@@ -348,6 +348,7 @@ export class MarketService {
           district: dto.customer.district ?? null,
           lat: dto.customer.lat ?? null,
           lng: dto.customer.lng ?? null,
+          substitutionPref: dto.substitutionPref ?? 'CALL',
           note: dto.note ?? null,
           status: 'CONFIRMED',
           paymentMethod: dto.paymentMethod ?? 'COD',
