@@ -7,7 +7,7 @@ import Topbar from '@/components/Topbar';
 import SectionTabs, { SETTINGS_TABS } from '@/components/SectionTabs';
 
 interface Tier { minSubtotal: number; fee: number }
-interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; depotLat: number | null; depotLng: number | null }
+interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; depotLat: number | null; depotLng: number | null; contactPhone: string | null; contactWhatsapp: string | null; contactEmail: string | null; contactAddress: string | null; contactInstagram: string | null }
 
 const toTl = (k: number) => (k ? (k / 100).toFixed(2) : '');
 const toKurus = (v: string) => (v.trim() === '' ? 0 : Math.round(parseFloat(v.replace(',', '.')) * 100));
@@ -18,6 +18,11 @@ export default function AyarlarPage() {
   const [minTl, setMinTl] = useState('');
   const [depotLat, setDepotLat] = useState('');
   const [depotLng, setDepotLng] = useState('');
+  const [cPhone, setCPhone] = useState('');
+  const [cWhatsapp, setCWhatsapp] = useState('');
+  const [cEmail, setCEmail] = useState('');
+  const [cAddress, setCAddress] = useState('');
+  const [cInstagram, setCInstagram] = useState('');
   const [rows, setRows] = useState<TierRow[]>([]);
   const [saved, setSaved] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,6 +34,8 @@ export default function AyarlarPage() {
     setMinTl(toTl(s.minOrderTotal));
     setDepotLat(s.depotLat != null ? String(s.depotLat) : '');
     setDepotLng(s.depotLng != null ? String(s.depotLng) : '');
+    setCPhone(s.contactPhone ?? ''); setCWhatsapp(s.contactWhatsapp ?? ''); setCEmail(s.contactEmail ?? '');
+    setCAddress(s.contactAddress ?? ''); setCInstagram(s.contactInstagram ?? '');
     setRows(s.deliveryTiers.map((t) => ({ minTl: toTl(t.minSubtotal), feeTl: t.fee ? toTl(t.fee) : '0' })));
   }
 
@@ -50,7 +57,7 @@ export default function AyarlarPage() {
         .map((r) => ({ minSubtotal: toKurus(r.minTl), fee: toKurus(r.feeTl) }));
       const dLat = depotLat.trim() === '' ? null : parseFloat(depotLat.replace(',', '.'));
       const dLng = depotLng.trim() === '' ? null : parseFloat(depotLng.replace(',', '.'));
-      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers, depotLat: dLat, depotLng: dLng });
+      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers, depotLat: dLat, depotLng: dLng, contactPhone: cPhone.trim() || null, contactWhatsapp: cWhatsapp.trim() || null, contactEmail: cEmail.trim() || null, contactAddress: cAddress.trim() || null, contactInstagram: cInstagram.trim() || null });
       apply(r);
       setOk('✓ Mağaza ayarları kaydedildi.');
     } catch (e) {
@@ -88,6 +95,19 @@ export default function AyarlarPage() {
             <div className="field"><label>Enlem (lat)</label><input value={depotLat} onChange={(e) => setDepotLat(e.target.value)} placeholder="41.0000" /></div>
             <div className="field"><label>Boylam (lng)</label><input value={depotLng} onChange={(e) => setDepotLng(e.target.value)} placeholder="29.0300" /></div>
           </div>
+        </div>
+
+        <div className="card" style={{ maxWidth: 520 }}>
+          <div className="ct">İletişim bilgileri <span>web İletişim sayfası + alt bilgi</span></div>
+          <div className="form-row">
+            <div className="field"><label>Telefon</label><input value={cPhone} onChange={(e) => setCPhone(e.target.value)} placeholder="0216 000 00 00" /></div>
+            <div className="field"><label>WhatsApp</label><input value={cWhatsapp} onChange={(e) => setCWhatsapp(e.target.value)} placeholder="0555 000 00 00" /></div>
+          </div>
+          <div className="form-row">
+            <div className="field"><label>E-posta</label><input value={cEmail} onChange={(e) => setCEmail(e.target.value)} placeholder="merhaba@kabzimall.com" /></div>
+            <div className="field"><label>Instagram</label><input value={cInstagram} onChange={(e) => setCInstagram(e.target.value)} placeholder="@kabzimall" /></div>
+          </div>
+          <div className="field"><label>Adres</label><input value={cAddress} onChange={(e) => setCAddress(e.target.value)} placeholder="Moda Cad. No:1, Kadıköy / İstanbul" /></div>
         </div>
 
         <div className="card" style={{ maxWidth: 520 }}>

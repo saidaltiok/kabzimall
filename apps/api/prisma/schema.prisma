@@ -108,6 +108,12 @@ model StoreSetting {
   /// Dükkân/depo başlangıç noktası — rota optimizasyonu buradan başlar/biter.
   depotLat      Float?   @map("depot_lat")
   depotLng      Float?   @map("depot_lng")
+  /// İletişim bilgileri — web'in İletişim sayfası ve alt bilgisi buradan beslenir.
+  contactPhone     String? @map("contact_phone")
+  contactWhatsapp  String? @map("contact_whatsapp")
+  contactEmail     String? @map("contact_email")
+  contactAddress   String? @map("contact_address")
+  contactInstagram String? @map("contact_instagram")
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("store_settings")

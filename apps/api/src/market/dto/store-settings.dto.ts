@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsInt, IsNumber, IsOptional, Max, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class DeliveryTierDto {
   /** Bu ara toplam ve üstüne uygulanan ücret (kuruş). */
@@ -26,4 +26,20 @@ export class UpdateStoreSettingsDto {
 
   @IsOptional() @IsNumber() @Min(-180) @Max(180)
   depotLng?: number;
+
+  /** İletişim bilgileri (web İletişim sayfası + alt bilgi). */
+  @IsOptional() @IsString() @MaxLength(40)
+  contactPhone?: string;
+
+  @IsOptional() @IsString() @MaxLength(40)
+  contactWhatsapp?: string;
+
+  @IsOptional() @IsString() @MaxLength(120)
+  contactEmail?: string;
+
+  @IsOptional() @IsString() @MaxLength(300)
+  contactAddress?: string;
+
+  @IsOptional() @IsString() @MaxLength(80)
+  contactInstagram?: string;
 }

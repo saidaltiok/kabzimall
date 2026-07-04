@@ -130,25 +130,35 @@ export class MarketService {
       deliveryTiers: this.normalizeTiers(s?.deliveryTiers),
       depotLat: s?.depotLat ?? null,
       depotLng: s?.depotLng ?? null,
+      contactPhone: s?.contactPhone ?? null,
+      contactWhatsapp: s?.contactWhatsapp ?? null,
+      contactEmail: s?.contactEmail ?? null,
+      contactAddress: s?.contactAddress ?? null,
+      contactInstagram: s?.contactInstagram ?? null,
     };
   }
 
   /** Verilen alanları günceller; verilmeyenler korunur. */
-  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; depotLat?: number | null; depotLng?: number | null }) {
+  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; depotLat?: number | null; depotLng?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; contactEmail?: string | null; contactAddress?: string | null; contactInstagram?: string | null }) {
     const cur = await this.getStoreSettings();
     const next = {
       minOrderTotal: patch.minOrderTotal ?? cur.minOrderTotal,
       deliveryTiers: patch.deliveryTiers ? this.normalizeTiers(patch.deliveryTiers) : cur.deliveryTiers,
       depotLat: patch.depotLat !== undefined ? patch.depotLat : cur.depotLat,
       depotLng: patch.depotLng !== undefined ? patch.depotLng : cur.depotLng,
+      contactPhone: patch.contactPhone !== undefined ? patch.contactPhone : cur.contactPhone,
+      contactWhatsapp: patch.contactWhatsapp !== undefined ? patch.contactWhatsapp : cur.contactWhatsapp,
+      contactEmail: patch.contactEmail !== undefined ? patch.contactEmail : cur.contactEmail,
+      contactAddress: patch.contactAddress !== undefined ? patch.contactAddress : cur.contactAddress,
+      contactInstagram: patch.contactInstagram !== undefined ? patch.contactInstagram : cur.contactInstagram,
     };
     const tiersJson = next.deliveryTiers as unknown as Prisma.InputJsonValue;
     const s = await this.prisma.storeSetting.upsert({
       where: { tenantId: DEV_TENANT_ID },
-      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng },
-      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng },
+      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
+      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
     });
-    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), depotLat: s.depotLat, depotLng: s.depotLng };
+    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), depotLat: s.depotLat, depotLng: s.depotLng, contactPhone: s.contactPhone, contactWhatsapp: s.contactWhatsapp, contactEmail: s.contactEmail, contactAddress: s.contactAddress, contactInstagram: s.contactInstagram };
   }
 
   /**
