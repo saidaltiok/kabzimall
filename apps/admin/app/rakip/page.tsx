@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { MARKET_TABS } from '@/components/SectionTabs';
 
 interface Competitor { id: string; name: string; group: { id: string; name: string } }
 interface Group { id: string; name: string }
@@ -129,6 +130,7 @@ export default function RakipPage() {
     <>
       <Topbar title="Rakip Fiyatları" sub="Rakip ve grup karşılaştırması" />
       <div className="body">
+        <SectionTabs tabs={MARKET_TABS} />
         <div className="pchips">
           {CHIPS.map((c) => (
             <div key={c.id} className={`pchip${productId === c.id ? ' sel' : ''}`} onClick={() => setProductId(c.id)}>

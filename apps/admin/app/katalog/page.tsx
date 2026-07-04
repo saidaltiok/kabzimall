@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { PRODUCTS_TABS } from '@/components/SectionTabs';
 
 interface Category { id: string; name: string; slug: string }
 interface Product {
@@ -165,6 +166,7 @@ export default function KatalogPage() {
     <>
       <Topbar title="Ürün Kataloğu" sub="Ürün ve kategori yönetimi" />
       <div className="body">
+        <SectionTabs tabs={PRODUCTS_TABS} />
         {error && <div className="error">{error}</div>}
         {ok && <div className="ok-box">{ok}</div>}
 

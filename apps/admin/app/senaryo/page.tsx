@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
 
 interface CostInputs { halAvg: number; fireRate: number; labor: number; packaging: number; fuel: number; coldStorage?: number; amortization?: number; commissionRate: number }
 interface Side { directCost: number; netMargin: number; suggestedPrice: number; inputs: CostInputs }
@@ -81,6 +82,7 @@ export default function SenaryoPage() {
     <>
       <Topbar title="Senaryo Analizi" sub="What-if: girdileri değiştir, marjı gör" />
       <div className="body">
+        <SectionTabs tabs={PRICING_TABS} />
         <p className="hint">
           Bir ürünün maliyet girdilerini değiştir (fire, hal, yakıt…) ve marjın/öneri fiyatının nasıl
           değiştiğini <b>anında</b> gör. Örn. <b>fire %10→%20</b> ya da <b>yakıt +%15</b> olursa ne olur?

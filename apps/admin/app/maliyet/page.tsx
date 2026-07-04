@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { COST_TABS } from '@/components/SectionTabs';
 
 interface CostResult {
   source: string;
@@ -115,6 +116,7 @@ export default function MaliyetPage() {
     <>
       <Topbar title="Maliyet & Fire Motoru" sub="Gerçek birim maliyet hesabı" />
       <div className="body">
+        <SectionTabs tabs={COST_TABS} />
         <div className="pchips">
           {CHIPS.map((c) => (
             <div key={c.id} className={`pchip${productId === c.id ? ' sel' : ''}`} onClick={() => setProductId(c.id)}>

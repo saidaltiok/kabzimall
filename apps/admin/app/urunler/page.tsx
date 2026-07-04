@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
 
 interface Row {
   productId: string;
@@ -31,6 +32,7 @@ export default function UrunlerPage() {
     <>
       <Topbar title="Ürünler & Marj" sub="Tüm ürünler tek tabloda" />
       <div className="body">
+        <SectionTabs tabs={PRICING_TABS} />
         <p className="hint">
           Hal → maliyet → mağaza fiyatı → net marj → rekabet endeksi. Endeks 100 altı = rakipten ucuz.
           Bir ürünü yeniden fiyatlamak için <b>Fiyatla →</b>.

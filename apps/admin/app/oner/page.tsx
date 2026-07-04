@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
 
 interface SuggestResult {
   price: number;
@@ -88,6 +89,7 @@ export default function OnerPage() {
     <>
       <Topbar title="Fiyat Öneri Motoru" sub="Öneri → tek tıkla mağazaya yaz" />
       <div className="body">
+        <SectionTabs tabs={PRICING_TABS} />
         <div className="pchips">
           {CHIPS.map((c) => (
             <div key={c.id} className={`pchip${productId === c.id ? ' sel' : ''}`} onClick={() => setProductId(c.id)}>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { SETTINGS_TABS } from '@/components/SectionTabs';
 
 interface Zone { id: string; name: string; isActive: boolean }
 
@@ -40,6 +41,7 @@ export default function BolgelerPage() {
     <>
       <Topbar title="Teslimat Bölgeleri" sub="Hizmet verilen ilçeler" />
       <div className="body">
+        <SectionTabs tabs={SETTINGS_TABS} />
         <p className="hint">
           Hizmet verdiğin ilçeleri ekle. <b>Liste boşsa</b> tüm adreslere sipariş alınır; ilçe
           eklediğinde müşteri checkout'ta ilçe seçer ve yalnızca bu ilçelere sipariş verilebilir.

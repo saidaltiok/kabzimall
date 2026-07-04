@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
 
 interface Row {
   slug: string;
@@ -90,6 +91,7 @@ export default function YayinlaPage() {
     <>
       <Topbar title="Yayına Al" sub="Rakip kapsamına göre en çok tercih edilen ürünleri yayına al" />
       <div className="body">
+        <SectionTabs tabs={PRICING_TABS} />
         <p className="hint">
           <b>Kesişim kümesi</b> = en çok rakipte bulunan ürünler (herkesin sattığı = en çok tercih edilenler).
           Eşiği seç, <b>Kesişimi seç</b> ile işaretle, başlangıç fiyatı için rakip <b>medyan/min</b> tabanını belirle,

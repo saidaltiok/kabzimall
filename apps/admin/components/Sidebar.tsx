@@ -3,31 +3,29 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const SECTIONS: { label: string; links: { href: string; icon: string; label: string }[] }[] = [
+/**
+ * 9 giriş, 2 grup. İlgili ekranlar tek girişte toplanır; grup içi gezinme
+ * ekranların üstündeki SectionTabs ile (URL'ler değişmedi — `also` o ekranlarda
+ * da girişi aktif vurgular).
+ */
+const SECTIONS: { label: string; links: { href: string; icon: string; label: string; also?: string[] }[] }[] = [
   {
-    label: 'Fiyat Zekâsı',
+    label: 'Günlük İş',
     links: [
       { href: '/', icon: '☀️', label: 'Bugün' },
-      { href: '/hal', icon: '🥬', label: 'Hal Fiyatları' },
-      { href: '/rakip', icon: '🏷️', label: 'Rakip Fiyatları' },
-      { href: '/yayinla', icon: '🚀', label: 'Yayına Al' },
-      { href: '/maliyet', icon: '💸', label: 'Maliyet & Fire' },
-      { href: '/oner', icon: '🎯', label: 'Fiyat Öneri Motoru' },
-      { href: '/kurallar', icon: '📐', label: 'Fiyat Kuralları' },
-      { href: '/senaryo', icon: '🔮', label: 'Senaryo Analizi' },
-      { href: '/satis', icon: '📈', label: 'Satış Analizi' },
-      { href: '/urunler', icon: '📦', label: 'Ürünler & Marj' },
+      { href: '/hal', icon: '🧺', label: 'Piyasa Verisi', also: ['/rakip'] },
+      { href: '/oner', icon: '🎯', label: 'Fiyatlandırma', also: ['/yayinla', '/urunler', '/senaryo'] },
+      { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
+      { href: '/rota', icon: '🚚', label: 'Dağıtım Rotası' },
     ],
   },
   {
-    label: 'Operasyon',
+    label: 'Yönetim',
     links: [
-      { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
-      { href: '/rota', icon: '🚚', label: 'Dağıtım Rotası' },
-      { href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' },
-      { href: '/sepetler', icon: '🧺', label: 'Hazır Sepetler' },
-      { href: '/bolgeler', icon: '📍', label: 'Teslimat Bölgeleri' },
-      { href: '/ayarlar', icon: '⚙️', label: 'Mağaza Ayarları' },
+      { href: '/katalog', icon: '🗂️', label: 'Ürünler', also: ['/sepetler'] },
+      { href: '/satis', icon: '📈', label: 'Satış Analizi' },
+      { href: '/maliyet', icon: '💸', label: 'Maliyet & Kurallar', also: ['/kurallar'] },
+      { href: '/ayarlar', icon: '⚙️', label: 'Ayarlar', also: ['/bolgeler'] },
     ],
   },
 ];
@@ -50,7 +48,7 @@ export default function Sidebar() {
           <div className="navlabel">{s.label}</div>
           <nav className="nav">
             {s.links.map((l) => (
-              <Link key={l.href} href={l.href} className={path === l.href ? 'active' : ''}>
+              <Link key={l.href} href={l.href} className={path === l.href || l.also?.includes(path) ? 'active' : ''}>
                 <span className="ic">{l.icon}</span> {l.label}
               </Link>
             ))}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { SETTINGS_TABS } from '@/components/SectionTabs';
 
 interface Tier { minSubtotal: number; fee: number }
 interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; depotLat: number | null; depotLng: number | null }
@@ -63,6 +64,7 @@ export default function AyarlarPage() {
     <>
       <Topbar title="Mağaza Ayarları" sub="Sipariş & teslimat kuralları" />
       <div className="body">
+        <SectionTabs tabs={SETTINGS_TABS} />
         <p className="hint">
           Mağaza geneli kurallar (sunucuda zorunlu kılınır). Tutarlar <b>₺</b> girilir. Teslimat
           <b> kademeli</b>: sepet ara toplamının geçtiği <b>en yüksek</b> kademenin ücreti uygulanır

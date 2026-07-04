@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { PRODUCTS_TABS } from '@/components/SectionTabs';
 
 interface Product { id: string; slug: string; name: string; kind: string }
 interface Component { slug: string; name: string; unitLabel: string | null; qty: number }
@@ -74,6 +75,7 @@ export default function SepetlerPage() {
     <>
       <Topbar title="Hazır Sepetler" sub="Her sepet ayrı bir üründür — kendi fiyatı + içeriği" />
       <div className="body">
+        <SectionTabs tabs={PRODUCTS_TABS} />
         <p className="hint">
           Hazır sepet ayrı bir üründür: <b>kendi fiyatını ve indirimini</b> sen belirlersin (diğer
           ürünler gibi). İçindeki ürünler yalnızca müşteriye gösterim ve paketleme içindir. Fiyat/stok/

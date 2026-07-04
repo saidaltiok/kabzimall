@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { COST_TABS } from '@/components/SectionTabs';
 
 interface Rule {
   id: string;
@@ -86,6 +87,7 @@ export default function KurallarPage() {
     <>
       <Topbar title="Fiyat Kuralları" sub="Kalıcı strateji + hedef/taban marj" />
       <div className="body">
+        <SectionTabs tabs={COST_TABS} />
         <p className="hint">
           Ürün/kategori/global bazlı kalıcı kurallar. Öneri motoru, çağrıda belirtilmeyen alanlar için
           bu kuralları <b>varsayılan</b> kabul eder; en-spesifik kazanır (<b>Ürün &gt; Kategori &gt; Global</b>).

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import SectionTabs, { MARKET_TABS } from '@/components/SectionTabs';
 
 interface Product { slug: string; name: string; kind: string; unitLabel: string | null; isActive: boolean }
 interface GridRow { productId: string; count: number; dailyAverage: number }
@@ -186,6 +187,7 @@ export default function HalPage() {
     <>
       <Topbar title="Hal Fiyatları" sub="Günlük toplu fiyat girişi (append-only)" />
       <div className="body">
+        <SectionTabs tabs={MARKET_TABS} />
         <p className="hint">
           Seçili gün için tüm ürünlerin hal fiyatını tek ekranda gir. <b>Dünden doldur</b> ile önceki
           günün fiyatlarını getir, gerekenleri değiştir, <b>Tümünü kaydet</b>. %40+ sapmada uyarılırsın.
