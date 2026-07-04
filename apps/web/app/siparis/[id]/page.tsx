@@ -40,7 +40,24 @@ export default function OrderPage() {
   const [reorderMsg, setReorderMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    apiGet<Order>(`/storefront/orders/${params.id}`).then(setOrder).catch((e) => setError(e.message));
+    let active = true;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const load = () =>
+      apiGet<Order>(`/storefront/orders/${params.id}`)
+        .then((o) => {
+          if (!active) return;
+          setOrder(o);
+          // Sipariş kapandıysa (teslim/iptal) tazelemeyi durdur — durum artık değişmez.
+          if (timer && (o.status === 'DELIVERED' || o.status === 'CANCELLED')) {
+            clearInterval(timer);
+            timer = null;
+          }
+        })
+        .catch((e) => { if (active) setError(e.message); });
+    load();
+    // Aktif siparişte 30 sn'de bir kendini tazele — "Yolda"ya geçtiğini müşteri görsün.
+    timer = setInterval(load, 30_000);
+    return () => { active = false; if (timer) clearInterval(timer); };
   }, [params.id]);
 
   async function cancelOrder() {

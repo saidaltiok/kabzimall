@@ -7,12 +7,14 @@ interface Props {
   lat: number | null;
   lng: number | null;
   onChange: (lat: number, lng: number) => void;
+  /** "Konumumu bul" başarılı olunca gerçek konum (pin'den bağımsız) — uzaklık teyidi için. */
+  onGeolocate?: (lat: number, lng: number) => void;
 }
 
 // İstanbul merkez — başlangıç görünümü (konum seçilmediyse).
 const DEFAULT: [number, number] = [41.0082, 28.9784];
 
-export default function MapPicker({ lat, lng, onChange }: Props) {
+export default function MapPicker({ lat, lng, onChange, onGeolocate }: Props) {
   const elRef = useRef<HTMLDivElement>(null);
   // leaflet tipi bundle'a sokmadan referans tut.
   const mapRef = useRef<import('leaflet').Map | null>(null);
@@ -62,6 +64,7 @@ export default function MapPicker({ lat, lng, onChange }: Props) {
         mapRef.current!.setView([latitude, longitude], 16);
         markerRef.current!.setLatLng([latitude, longitude]);
         onChangeRef.current(latitude, longitude);
+        onGeolocate?.(latitude, longitude);
       },
       () => alert('Konum alınamadı. Tarayıcı izni gerekebilir; haritadan da seçebilirsiniz.'),
     );

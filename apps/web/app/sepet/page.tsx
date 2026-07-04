@@ -9,7 +9,7 @@ import { tl } from '@/lib/format';
 import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal, nextTier } from '@/lib/delivery';
 
 export default function CartPage() {
-  const { items, setQty, setNote, remove, subtotal, keyOf } = useCart();
+  const { items, setQty, setNote, remove, clear, subtotal, keyOf } = useCart();
   const router = useRouter();
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
 
@@ -34,7 +34,16 @@ export default function CartPage() {
 
   return (
     <>
-      <h1 className="h1">Sepetim</h1>
+      <h1 className="h1" style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+        Sepetim
+        <button
+          className="back"
+          style={{ marginLeft: 'auto', fontSize: 13, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--berry)' }}
+          onClick={() => { if (confirm('Sepetteki tüm ürünler kaldırılacak. Emin misiniz?')) clear(); }}
+        >
+          🗑 Sepeti boşalt
+        </button>
+      </h1>
       <div className="layout2">
         <div>
           {items.map((it) => {
