@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { tl, emojiFor } from '@/lib/format';
@@ -21,6 +22,16 @@ interface Basket {
 }
 
 const CAT_ICON: Record<string, string> = { meyve: '🍑', sebze: '🥬', yag: '🫒', kahvalti: '🧀', yoresel: '🏺' };
+
+/** URL '?kategori=' parametresini kategori filtresine bağlar (header/footer linkleri). */
+function KategoriReader({ onCat }: { onCat: (c: string) => void }) {
+  const sp = useSearchParams();
+  useEffect(() => {
+    const k = sp.get('kategori');
+    if (k) onCat(k);
+  }, [sp, onCat]);
+  return null;
+}
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,6 +103,7 @@ export default function HomePage() {
 
   return (
     <>
+      <Suspense fallback={null}><KategoriReader onCat={setCat} /></Suspense>
       {toast && <div className="toast">{toast}</div>}
       <div className="promo">
         <div className="k">Taze · Yöresel</div>
