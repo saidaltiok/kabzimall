@@ -22,14 +22,12 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
   {
     label: 'Operasyon',
     links: [
-      { href: '/pano', icon: '📋', label: 'Operasyon Panosu' },
+      { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
       { href: '/rota', icon: '🚚', label: 'Dağıtım Rotası' },
-      { href: '/kurye', icon: '📱', label: 'Kurye Görünümü (PWA)' },
       { href: '/katalog', icon: '🗂️', label: 'Ürün Kataloğu' },
       { href: '/sepetler', icon: '🧺', label: 'Hazır Sepetler' },
       { href: '/bolgeler', icon: '📍', label: 'Teslimat Bölgeleri' },
       { href: '/ayarlar', icon: '⚙️', label: 'Mağaza Ayarları' },
-      { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
     ],
   },
 ];

@@ -68,6 +68,9 @@ export default function RotaPage() {
           {data && data.stops > 0 && (
             <a className="btn" style={{ background: 'var(--persimmon)' }} href={data.googleMapsUrl} target="_blank" rel="noreferrer">🗺️ Google Maps’te aç (yol tarifi)</a>
           )}
+          <a className="btn ghost" href="/kurye" target="_blank" rel="noreferrer" title="Kuryenin telefonunda açılan sade görünüm — 'ana ekrana ekle' ile uygulama gibi kullanılır">
+            📱 Kurye görünümünü aç
+          </a>
         </div>
 
         {error && <div className="error">{error}</div>}

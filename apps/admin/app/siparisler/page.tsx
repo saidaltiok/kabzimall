@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import OrdersBoard from '@/components/OrdersBoard';
 
 interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; unitPrice: number; lineTotal: number; note: string | null }
 interface Order {
@@ -29,6 +30,8 @@ const label = (s: string) => STATUSES.find((x) => x[0] === s)?.[1] ?? s;
 const cls = (s: string) => (s === 'CANCELLED' ? 'up' : s === 'DELIVERED' ? 'ok' : 'risk');
 
 export default function SiparislerPage() {
+  // Pano = günlük operasyon (varsayılan); Liste = arama/geçmiş/detay.
+  const [view, setView] = useState<'pano' | 'liste'>('pano');
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -82,6 +85,21 @@ export default function SiparislerPage() {
     <>
       <Topbar title="Siparişler" sub="Bugünün operasyonu" />
       <div className="body">
+        <div className="form-row" style={{ marginBottom: 14, alignItems: 'center' }}>
+          <div className="pchips" style={{ margin: 0 }}>
+            <div className={`pchip${view === 'pano' ? ' sel' : ''}`} onClick={() => setView('pano')} title="Günlük akış: siparişleri kolonlar arasında ilerlet">
+              <span className="e">📋</span> Pano
+            </div>
+            <div className={`pchip${view === 'liste' ? ' sel' : ''}`} onClick={() => setView('liste')} title="Ara, filtrele, geçmişe ve detaya bak">
+              <span className="e">☰</span> Liste
+            </div>
+          </div>
+        </div>
+
+        {view === 'pano' ? (
+          <OrdersBoard />
+        ) : (
+          <>
         <div className="form-row" style={{ marginBottom: 16 }}>
           <div className="field">
             <label>Durum filtresi</label>
@@ -211,6 +229,8 @@ export default function SiparislerPage() {
             </table>
           )}
         </div>
+          </>
+        )}
       </div>
     </>
   );

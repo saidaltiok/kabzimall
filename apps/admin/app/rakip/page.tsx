@@ -87,57 +87,18 @@ export default function RakipPage() {
     }
   }
 
-  async function mfImport() {
-    setBusy(true);
-    setError(null);
-    try {
-      const r = await apiSend<{ matched: number; recorded: number; note?: string }>('POST', '/intel/competitor-prices/marketfiyati/import', { productId });
-      if (r.recorded === 0) setError(r.note || 'marketfiyati bu ürün için taze eşleşme döndürmedi.');
-      await loadPrices(productId);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function mfBulk() {
-    if (!confirm('Tüm katalog için marketfiyati\'ndan rakip fiyatları çekilecek (biraz sürebilir). Devam?')) return;
-    setBusy(true);
-    setError(null);
-    setOk(null);
-    try {
-      const r = await apiSend<{ total: number; withData: number; recorded: number }>('POST', '/intel/competitor-prices/marketfiyati/bulk', {});
-      setOk(`✓ Toplu çekim: ${r.total} üründen ${r.withData} tanesinde eşleşme, ${r.recorded} rakip fiyatı kaydedildi.`);
-      await loadPrices(productId);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  /**
+   * Tek kapı: TÜM otomatik kaynaklar (resmî marketfiyati 6 zincir + online
+   * manavlar) tek tıkla çekilir. Aynı iş her sabah 10:00'da cron'la da çalışır —
+   * ayrı ayrı "şu kaynağı çek" butonlarına gerek yok (buton enflasyonu sadeleşti).
+   */
   async function refreshAll() {
-    if (!confirm('Tüm otomatik kaynaklar (marketfiyati + online manavlar) şimdi çekilecek. Devam?')) return;
+    if (!confirm('Tüm otomatik kaynaklardan (resmî marketfiyati + online manavlar) güncel rakip fiyatları şimdi çekilecek. Devam?')) return;
     setBusy(true); setError(null); setOk(null);
     try {
       const r = await apiSend<{ marketfiyati: { recorded: number }; manav: { site: string; recorded: number }[] }>('POST', '/intel/competitor-prices/refresh-all', {});
       const manavTotal = r.manav.reduce((s, m) => s + m.recorded, 0);
-      setOk(`✓ Tüm kaynaklar: marketfiyati ${r.marketfiyati.recorded} + manav ${manavTotal} = ${r.marketfiyati.recorded + manavTotal} rakip fiyatı kaydedildi.`);
-      await loadPrices(productId);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function manavPull() {
-    if (!confirm('Online manav (Sebze Meyve Dünyası) taze fiyatları çekilip kaydedilecek. Devam?')) return;
-    setBusy(true); setError(null); setOk(null);
-    try {
-      const r = await apiSend<{ scanned: number; recorded: number }>('POST', '/intel/competitor-prices/manav/import', { site: 'sebzemeyvedunyasi' });
-      setOk(`✓ Online manav: ${r.scanned} ürün tarandı, ${r.recorded} eşleşen fiyat kaydedildi.`);
+      setOk(`✓ ${r.marketfiyati.recorded + manavTotal} güncel rakip fiyatı kaydedildi (zincir marketler ${r.marketfiyati.recorded} + online manavlar ${manavTotal}).`);
       await loadPrices(productId);
     } catch (e) {
       setError((e as Error).message);
@@ -177,24 +138,17 @@ export default function RakipPage() {
           ))}
         </div>
         <p className="hint">
-          Seçili ürün için rakip fiyatlarını gir; <b>min · maks · ortalama · medyan</b> anında güncellenir
-          (rakip başına en güncel fiyat). Fiyatlar append-only kaydedilir.
+          Rakip fiyatları <b>her sabah 10:00'da otomatik</b> çekilir (resmî marketfiyati zincirleri +
+          online manavlar). Beklemeden istersen <b>Şimdi güncelle</b>. Otomatik kaynakta olmayan
+          rakipler (Getir, Trendyol, yerel zincirler…) için fiyatı aşağıdaki tabloya elle gir —
+          <b> min · maks · ortalama · medyan</b> anında güncellenir.
         </p>
 
         <div className="form-row" style={{ marginBottom: 12, alignItems: 'center' }}>
-          <button className="btn" style={{ background: 'var(--persimmon)' }} onClick={mfImport} disabled={busy}>
-            {busy ? '…' : '🛒 marketfiyati’ndan çek (bu ürün)'}
+          <button className="btn" style={{ background: 'var(--persimmon)' }} onClick={refreshAll} disabled={busy}>
+            {busy ? 'Çekiliyor…' : '🔄 Şimdi güncelle (tüm otomatik kaynaklar)'}
           </button>
-          <button className="btn ghost" onClick={mfBulk} disabled={busy}>
-            {busy ? '…' : '📦 Tüm katalog için toplu çek'}
-          </button>
-          <button className="btn ghost" onClick={manavPull} disabled={busy} title="Online manav (SSR) — taze meyve-sebze, kg'ye normalize">
-            {busy ? '…' : '🥬 Online manav çek'}
-          </button>
-          <button className="btn" onClick={refreshAll} disabled={busy} title="marketfiyati + tüm online manavlar (her gün 10:00 otomatik de çalışır)">
-            {busy ? '…' : '🔄 Tüm kaynakları çek'}
-          </button>
-          <span className="muted" style={{ fontSize: 12 }}>A101/BİM/ŞOK/Migros/Carrefour · resmî Ticaret Bakanlığı kaynağı · taze eşleşenler yazılır</span>
+          <span className="muted" style={{ fontSize: 12 }}>A101 · BİM · ŞOK · Migros · Carrefour · Tarım Kredi + online manavlar — her sabah 10:00'da kendiliğinden çalışır</span>
         </div>
 
         {error && <div className="error">{error}</div>}
