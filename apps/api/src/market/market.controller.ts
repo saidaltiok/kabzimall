@@ -6,6 +6,7 @@ import { MarketService } from './market.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
 import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
+import { SlotChangeRequestDto, SlotChangeDecisionDto } from './dto/slot-change.dto';
 
 @ApiTags('market: vitrin (public)')
 @Public()
@@ -92,6 +93,16 @@ export class StorefrontController {
   cancel(@Param('id') id: string) {
     return this.service.cancelByCustomer(id);
   }
+
+  /**
+   * POST /storefront/orders/:id/slot-change — teslimat saati değişikliği TALEBİ
+   * (yalnız sipariş hazırlanmaya başlamadıysa; admin onayıyla kesinleşir).
+   */
+  @Post('orders/:id/slot-change')
+  @ApiBody({ schema: { example: { date: '2026-07-06', window: '13:00-16:00' } } })
+  requestSlotChange(@Param('id') id: string, @Body() dto: SlotChangeRequestDto) {
+    return this.service.requestSlotChange(id, dto.date, dto.window);
+  }
 }
 
 @ApiTags('market: sipariş (admin)')
@@ -135,6 +146,14 @@ export class AdminOrdersController {
   @ApiBody({ schema: { example: { items: [{ itemId: '<kalem-uuid>', pickedQty: 1.85 }] } } })
   pack(@Param('id') id: string, @Body() dto: PackOrderDto, @CurrentUser() user: JwtUser) {
     return this.service.packOrder(id, dto.items, user.email);
+  }
+
+  /** POST /admin/orders/:id/slot-change { approve } — bekleyen saat talebini onayla/reddet; müşteri bilgilendirilir. */
+  @Post(':id/slot-change')
+  @Roles(...ORDER_WRITERS)
+  @ApiBody({ schema: { example: { approve: true } } })
+  decideSlotChange(@Param('id') id: string, @Body() dto: SlotChangeDecisionDto, @CurrentUser() user: JwtUser) {
+    return this.service.decideSlotChange(id, dto.approve, user.email);
   }
 }
 

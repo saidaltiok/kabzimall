@@ -127,6 +127,12 @@ model Order {
   lng            Float?
   /// Ürün eksik/tükenmiş çıkarsa: CALL (beni ara) | REMOVE (çıkar, tutarı düş) | SUBSTITUTE (benzeriyle değiştir).
   substitutionPref String @default("CALL") @map("substitution_pref")
+  /// Sipariş bildirimleri için opsiyonel e-posta (checkout'ta isteğe bağlı).
+  customerEmail  String?  @map("customer_email")
+  /// Bekleyen teslimat saati değişikliği talebi — admin onaylayınca deliveryDate/Window'a işlenir.
+  slotChangeDate   DateTime? @map("slot_change_date") @db.Date
+  slotChangeWindow String?   @map("slot_change_window")
+  slotChangeStatus String?   @map("slot_change_status")
   note           String?
   status         String   @default("CONFIRMED")
   paymentMethod  String   @default("COD") @map("payment_method")

@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -93,7 +94,7 @@ export default function CheckoutPage() {
       const slot = slots.find((s) => `${s.date}|${s.window}` === slotKey);
       const order = await apiPost<{ id: string; code: string }>('/storefront/orders', {
         items: items.map((i) => ({ slug: i.slug, qty: i.qty, basketSlug: i.basketSlug, note: i.note })),
-        customer: { name, phone, address, district: district || undefined, lat: geo?.lat, lng: geo?.lng },
+        customer: { name, phone, email: email.trim() || undefined, address, district: district || undefined, lat: geo?.lat, lng: geo?.lng },
         slot: slot ? { date: slot.date, window: slot.window } : undefined,
         note: note || undefined,
         substitutionPref: subPref,
@@ -122,6 +123,10 @@ export default function CheckoutPage() {
             <h3>Teslimat bilgileri</h3>
             <div className="field"><label>Ad Soyad</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ayşe Yılmaz" /></div>
             <div className="field"><label>Telefon</label><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0555 555 55 55" /></div>
+            <div className="field">
+              <label>E-posta <span className="muted" style={{ fontWeight: 400 }}>(isteğe bağlı — sipariş güncellemeleri için)</span></label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ornek@eposta.com" />
+            </div>
             {zones.length > 0 && (
               <div className="field">
                 <label>İlçe (teslimat bölgesi)</label>

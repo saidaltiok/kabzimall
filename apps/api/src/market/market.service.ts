@@ -6,6 +6,7 @@ import { DEV_TENANT_ID } from '../common/tenant';
 import { dateOnly } from '../common/date';
 import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
 import { optimize, haversineKm } from './route-optim';
+import { MailService } from './mail.service';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
@@ -68,7 +69,7 @@ const LOW_STOCK_THRESHOLD = 5;
 
 @Injectable()
 export class MarketService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly mail: MailService) {}
 
   /* ----------------------------- Vitrin ------------------------------ */
 
@@ -333,7 +334,7 @@ export class MarketService {
     const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);
 
     // Sipariş oluşturma + stok düşme atomik (ürün + sepet içeriği).
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       for (const it of items) {
         const p = products.find((x) => x.id === it.productId)!;
         await this.adjustStock(tx, p, it.orderedQty, -1);
@@ -349,6 +350,7 @@ export class MarketService {
           lat: dto.customer.lat ?? null,
           lng: dto.customer.lng ?? null,
           substitutionPref: dto.substitutionPref ?? 'CALL',
+          customerEmail: dto.customer.email ?? null,
           note: dto.note ?? null,
           status: 'CONFIRMED',
           paymentMethod: dto.paymentMethod ?? 'COD',
@@ -366,6 +368,23 @@ export class MarketService {
       await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: order.id, message: 'Siparişiniz alındı. En kısa sürede hazırlanacak.' } });
       return order;
     });
+    await this.emailCustomer(created.id, created.customerEmail, `Siparişiniz alındı (${created.code})`,
+      `Merhaba ${dto.customer.name}, ${fmtTL(created.grandTotal)} tutarındaki ${created.code} kodlu siparişinizi aldık. ` +
+      (created.deliveryWindow ? `Teslimat: ${created.deliveryDate?.toISOString().slice(0, 10)} ${created.deliveryWindow}. ` : '') +
+      'Durumu sipariş sayfanızdan takip edebilirsiniz.');
+    return created;
+  }
+
+  /**
+   * Müşteriye e-posta (varsa) + EMAIL kanallı bildirim kaydı. SMTP yoksa log
+   * modunda çalışır; hiçbir ana akışı bloklamaz/bozamaz.
+   */
+  private async emailCustomer(orderId: string, to: string | null | undefined, subject: string, text: string) {
+    if (!to) return;
+    await this.mail.send(to, subject, text);
+    await this.prisma.notification
+      .create({ data: { tenantId: DEV_TENANT_ID, orderId, channel: 'EMAIL', message: `${subject} → ${to}` } })
+      .catch(() => {});
   }
 
   /** Stok ayarı: ürünün kendi stoğu + (BASKET ise) içeriği. dir=-1 düş, +1 geri yükle. */
@@ -546,6 +565,74 @@ export class MarketService {
         }
       }
     });
+    await this.emailCustomer(id, order.customerEmail, `Sipariş güncellemesi (${order.code})`, STATUS_MSG[status] ?? `Durum: ${status}`);
+    return this.getOrder(id);
+  }
+
+  /* ---------------------- Teslimat saati değişikliği ---------------------- */
+
+  /**
+   * Müşteri teslimat saatini değiştirmek İSTER (onay akışı): yalnız sipariş
+   * henüz hazırlanmaya başlamadıysa (CONFIRMED). Talep siparişe "bekliyor"
+   * olarak işlenir; admin onaylayınca gerçek slot güncellenir ve müşteri
+   * bilgilendirilir. Yeni talep, bekleyen talebin üzerine yazar.
+   */
+  async requestSlotChange(id: string, date: string, window: string) {
+    const order = await this.getOrder(id);
+    if (order.status !== 'CONFIRMED') {
+      throw new BadRequestException('Siparişiniz hazırlanmaya başladı; teslimat saati artık değiştirilemez.');
+    }
+    const valid = this.availableSlots().some((s) => s.date === date && s.window === window);
+    if (!valid) throw new BadRequestException('Geçersiz teslimat saati.');
+    const sameAsCurrent = order.deliveryDate?.toISOString().slice(0, 10) === date && order.deliveryWindow === window;
+    if (sameAsCurrent) throw new BadRequestException('Siparişiniz zaten bu teslimat saatinde.');
+
+    await this.prisma.$transaction([
+      this.prisma.order.update({
+        where: { id },
+        data: { slotChangeDate: dateOnly(date), slotChangeWindow: window, slotChangeStatus: 'PENDING' },
+      }),
+      this.prisma.notification.create({
+        data: { tenantId: DEV_TENANT_ID, orderId: id, message: `Teslimat saati değişikliği talebiniz alındı: ${date} ${window}. Onaylandığında bilgilendirileceksiniz.` },
+      }),
+    ]);
+    return this.getOrder(id);
+  }
+
+  /** Admin karar verir: onayda slot gerçekten değişir, redde mevcut saat kalır — iki durumda da müşteri bilgilendirilir. */
+  async decideSlotChange(id: string, approve: boolean, actor?: string) {
+    const order = await this.getOrder(id);
+    if (order.slotChangeStatus !== 'PENDING' || !order.slotChangeDate || !order.slotChangeWindow) {
+      throw new BadRequestException('Bu siparişte bekleyen teslimat saati talebi yok.');
+    }
+    const reqDate = order.slotChangeDate.toISOString().slice(0, 10);
+    const reqLabel = `${reqDate} ${order.slotChangeWindow}`;
+    const curLabel = `${order.deliveryDate?.toISOString().slice(0, 10) ?? '—'} ${order.deliveryWindow ?? ''}`.trim();
+
+    const message = approve
+      ? `Teslimat saatiniz güncellendi: ${reqLabel}.`
+      : `Teslimat saati değişikliği talebiniz onaylanamadı; mevcut saatiniz (${curLabel}) geçerli.`;
+
+    await this.prisma.$transaction([
+      this.prisma.order.update({
+        where: { id },
+        data: {
+          ...(approve ? { deliveryDate: order.slotChangeDate, deliveryWindow: order.slotChangeWindow } : {}),
+          slotChangeDate: null,
+          slotChangeWindow: null,
+          slotChangeStatus: null,
+        },
+      }),
+      this.prisma.orderStatusHistory.create({
+        data: {
+          tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: order.status,
+          changedBy: actor ?? null,
+          note: approve ? `Teslimat saati güncellendi: ${curLabel} → ${reqLabel}` : `Saat değişikliği reddedildi (talep: ${reqLabel})`,
+        },
+      }),
+      this.prisma.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message } }),
+    ]);
+    await this.emailCustomer(id, order.customerEmail, `Teslimat saati (${order.code})`, message);
     return this.getOrder(id);
   }
 }

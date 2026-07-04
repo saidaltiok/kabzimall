@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsEmail,
   IsIn,
   IsNumber,
   IsOptional,
@@ -50,6 +51,10 @@ export class CustomerInput {
   /** Teslimat ilçesi (hizmet bölgesi varsa zorunlu/doğrulanır). */
   @IsOptional() @IsString()
   district?: string;
+
+  /** Sipariş bildirimleri için opsiyonel e-posta (onay, durum, saat değişikliği). */
+  @IsOptional() @IsEmail()
+  email?: string;
 
   /** Haritadan seçilen teslimat noktası (WGS84). */
   @IsOptional() @IsNumber() @Min(-90) @Max(90)

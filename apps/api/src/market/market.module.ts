@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MarketService } from './market.service';
+import { MailService } from './mail.service';
 import { StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController } from './market.controller';
 
 /**
@@ -8,6 +9,6 @@ import { StorefrontController, AdminOrdersController, DeliveryZonesController, A
  */
 @Module({
   controllers: [StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController],
-  providers: [MarketService],
+  providers: [MarketService, MailService],
 })
 export class MarketModule {}

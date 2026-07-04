@@ -11,6 +11,7 @@ interface Order {
   id: string; code: string; customerName: string; customerPhone: string; addressText: string;
   lat: number | null; lng: number | null;
   substitutionPref: string;
+  slotChangeDate: string | null; slotChangeWindow: string | null; slotChangeStatus: string | null;
   status: string; subtotal: number; deliveryFee: number; grandTotal: number; note: string | null;
   estimatedTotal: number; finalTotal: number | null;
   deliveryDate: string | null; deliveryWindow: string | null;
@@ -65,6 +66,17 @@ export default function SiparislerPage() {
     setError(null);
     try {
       await apiSend('PATCH', `/admin/orders/${id}/status`, { status });
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  /** Bekleyen teslimat saati talebini onayla/reddet — müşteri her iki durumda da bilgilendirilir. */
+  async function decideSlot(o: Order, approve: boolean) {
+    setError(null);
+    try {
+      await apiSend('POST', `/admin/orders/${o.id}/slot-change`, { approve });
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -141,7 +153,7 @@ export default function SiparislerPage() {
                 {orders.map((o) => (
                   <Fragment key={o.id}>
                     <tr>
-                      <td><b>{o.code}</b></td>
+                      <td><b>{o.code}</b>{o.slotChangeStatus === 'PENDING' && <span title="Bekleyen teslimat saati talebi" style={{ marginLeft: 5 }}>🕒</span>}</td>
                       <td>{o.customerName}<div className="muted" style={{ fontSize: 11 }}>{o.customerPhone}</div></td>
                       <td className="num">{o.items.length}</td>
                       <td className="num">{tl(o.subtotal)}</td>
@@ -171,6 +183,14 @@ export default function SiparislerPage() {
                               <> · <span className="muted">📍 harita konumu yok</span></>
                             )}
                             {o.note && <> · <b>Not:</b> {o.note}</>}
+                            {o.slotChangeStatus === 'PENDING' && (
+                              <div style={{ margin: '10px 0', padding: '8px 10px', background: '#fff7ed', border: '1px solid var(--honey)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                <span>🕒 <b>Saat değişikliği talebi:</b> {o.deliveryDate?.slice(0, 10)} {o.deliveryWindow} → <b>{o.slotChangeDate?.slice(0, 10)} {o.slotChangeWindow}</b></span>
+                                <button className="btn" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => decideSlot(o, true)}>✓ Onayla</button>
+                                <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px', color: 'var(--berry)' }} onClick={() => decideSlot(o, false)}>✕ Reddet</button>
+                                <span className="muted" style={{ fontSize: 11 }}>İki durumda da müşteri bilgilendirilir.</span>
+                              </div>
+                            )}
                             <table style={{ marginTop: 8, background: '#fff', borderRadius: 10 }}>
                               <thead>
                                 <tr>

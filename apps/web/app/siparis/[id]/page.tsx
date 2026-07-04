@@ -16,6 +16,7 @@ interface StoreProduct {
 interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
   deliveryDate: string | null; deliveryWindow: string | null;
+  slotChangeDate: string | null; slotChangeWindow: string | null; slotChangeStatus: string | null;
   subtotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null; items: OrderItem[];
   notifications: { id: string; message: string; createdAt: string }[];
   statusHistory: { id: string; fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }[];
@@ -38,6 +39,12 @@ export default function OrderPage() {
   const [cancelErr, setCancelErr] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
   const [reorderMsg, setReorderMsg] = useState<string | null>(null);
+  // Teslimat saati değişikliği (yalnız CONFIRMED'da; admin onayıyla kesinleşir).
+  const [slotOpen, setSlotOpen] = useState(false);
+  const [slots, setSlots] = useState<{ date: string; window: string; label: string }[]>([]);
+  const [slotKey, setSlotKey] = useState('');
+  const [slotBusy, setSlotBusy] = useState(false);
+  const [slotErr, setSlotErr] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -71,6 +78,37 @@ export default function OrderPage() {
       setCancelErr((e as Error).message);
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function openSlotChange() {
+    setSlotErr(null);
+    setSlotOpen(true);
+    if (slots.length === 0) {
+      try {
+        const r = await apiGet<{ data: { date: string; window: string; label: string }[] }>('/storefront/slots');
+        // Mevcut slotu listeden çıkar — "değişiklik" ancak farklı bir saate olabilir.
+        setSlots(r.data.filter((s) => !(s.date === order?.deliveryDate?.slice(0, 10) && s.window === order?.deliveryWindow)));
+      } catch (e) {
+        setSlotErr((e as Error).message);
+      }
+    }
+  }
+
+  async function submitSlotChange() {
+    const s = slots.find((x) => `${x.date}|${x.window}` === slotKey);
+    if (!s) return;
+    setSlotBusy(true);
+    setSlotErr(null);
+    try {
+      const updated = await apiPost<Order>(`/storefront/orders/${params.id}/slot-change`, { date: s.date, window: s.window });
+      setOrder(updated);
+      setSlotOpen(false);
+      setSlotKey('');
+    } catch (e) {
+      setSlotErr((e as Error).message);
+    } finally {
+      setSlotBusy(false);
     }
   }
 
@@ -168,6 +206,43 @@ export default function OrderPage() {
                 <span className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(s.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</span>
               </div>
             ))}
+          </div>
+        )}
+        {order.status === 'CONFIRMED' && (
+          <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+            {order.slotChangeStatus === 'PENDING' ? (
+              <div style={{ fontSize: 13 }}>
+                🕒 <b>Saat değişikliği talebin onay bekliyor:</b> {order.slotChangeDate?.slice(0, 10)} · {order.slotChangeWindow}
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Mağaza onaylayınca teslimat saatin güncellenir ve bilgilendirilirsin.</div>
+              </div>
+            ) : !slotOpen ? (
+              <>
+                <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, padding: 0 }} onClick={openSlotChange}>
+                  🕒 Teslimat saatini değiştir
+                </button>
+                <span className="muted" style={{ fontSize: 12, marginLeft: 10 }}>Hazırlanmaya başlamadan önce değiştirebilirsin.</span>
+              </>
+            ) : (
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>Yeni teslimat saati seç</div>
+                {slotErr && <div className="error" style={{ marginBottom: 8 }}>{slotErr}</div>}
+                {slots.map((s) => {
+                  const key = `${s.date}|${s.window}`;
+                  return (
+                    <div key={key} className={`choice ${slotKey === key ? 'sel' : ''}`} style={{ marginBottom: 6, cursor: 'pointer' }} onClick={() => setSlotKey(key)}>
+                      <span>{s.label}</span><span>{slotKey === key ? '✓' : ''}</span>
+                    </div>
+                  );
+                })}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8 }}>
+                  <button className="cta" style={{ marginTop: 0, width: 'auto', padding: '10px 18px' }} onClick={submitSlotChange} disabled={slotBusy || !slotKey}>
+                    {slotBusy ? 'Gönderiliyor…' : 'Talebi gönder'}
+                  </button>
+                  <button className="rm" onClick={() => { setSlotOpen(false); setSlotKey(''); }}>Vazgeç</button>
+                </div>
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Talebin mağaza onayına gider; onaylanınca yeni saat kesinleşir.</p>
+              </div>
+            )}
           </div>
         )}
         {CANCELLABLE.includes(order.status) && (
