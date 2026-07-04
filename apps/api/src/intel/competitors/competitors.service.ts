@@ -272,7 +272,7 @@ export class CompetitorsService {
         const floorMargin = rule?.floorMargin ?? DEFAULT_FLOOR_MARGIN;
         const floorPrice = Math.round(priceForMargin(cost.breakdown, floorMargin));
         if (competitorPrice < floorPrice) {
-          price = Math.round(floorPrice / 50) * 50;
+          price = Math.ceil(floorPrice / 50) * 50; // YUKARI yuvarla — tabanın kuruş altına inilmez
           floored = true;
           flooredCount++;
         }

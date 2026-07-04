@@ -131,6 +131,14 @@ export class CostComponentsService {
   }
 
   /**
+   * Henüz OLUŞTURULMAMIŞ bir sepetin maliyeti (katalogdan sepet yaratılırken
+   * fiyat taban kontrolü için): parça listesi doğrudan verilir, DB'de sepet aranmaz.
+   */
+  basketPartsCost(parts: { slug: string; qty: number }[]): Promise<CostBreakdownResult> {
+    return this.costForBasket('(yeni-sepet)', parts.map((p) => ({ qty: p.qty, component: { slug: p.slug } })));
+  }
+
+  /**
    * Sepet (BASKET) maliyeti: bileşenlerin kendi directCost'u × miktar toplanır
    * (fire/işçilik/ambalaj bileşen seviyesinde zaten hesaplı — tekrar uygulanmaz).
    * Sepetin kendi maliyet bileşeni varsa (montaj işçiliği/kutusu) ek olarak eklenir;

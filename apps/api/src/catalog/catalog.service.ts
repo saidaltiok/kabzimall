@@ -1,13 +1,51 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { priceForMargin, DEFAULT_FLOOR_MARGIN } from '../pricing-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
 import { CreateCategoryDto, CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { CreateBasketDto } from './dto/basket.dto';
+import { CostComponentsService } from '../intel/cost-components/cost-components.service';
+import { PricingRulesService } from '../intel/pricing-rules/pricing-rules.service';
+
+const tl = (k: number) => (k / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly costs: CostComponentsService,
+    private readonly rules: PricingRulesService,
+  ) {}
+
+  /**
+   * Fiyat güvenlik ağı (katalog kapısı): maliyet verisi varsa, elle yazılan satış
+   * fiyatı (indirimli dâhil) taban marjın altına inemez — zararına satış yalnızca
+   * Fiyat Öneri Motoru'ndaki bilinçli fırsat akışıyla yapılabilir. Maliyet/hal
+   * verisi yoksa kontrol atlanır (doğrulanamaz — publishPopular ile aynı politika).
+   */
+  private async assertNotBelowFloor(opts: {
+    slug: string;
+    parts?: { slug: string; qty: number }[];
+    basePrice?: number | null;
+    discountedPrice?: number | null;
+  }) {
+    const prices = [opts.basePrice, opts.discountedPrice].filter((p): p is number => p != null && p > 0);
+    if (prices.length === 0) return;
+    const cost = opts.parts
+      ? await this.costs.basketPartsCost(opts.parts).catch(() => null)
+      : await this.costs.costForProduct(opts.slug).catch(() => null);
+    if (!cost?.breakdown || cost.directCost == null) return;
+    const rule = await this.rules.resolveEffective(opts.slug).catch(() => null);
+    const floor = Math.round(priceForMargin(cost.breakdown, rule?.floorMargin ?? DEFAULT_FLOOR_MARGIN));
+    const lowest = Math.min(...prices);
+    if (lowest < floor) {
+      throw new BadRequestException(
+        `Fiyat güvenli tabanın altında: ${tl(lowest)} < taban ${tl(floor)} (maliyet ${tl(cost.directCost)}). ` +
+        `Zararına satış bilinçli bir kararsa Fiyat Öneri Motoru'ndan fırsat ürünü olarak fiyatlayın.`,
+      );
+    }
+  }
 
   /* ---------------------------- Kategoriler --------------------------- */
 
@@ -58,6 +96,7 @@ export class CatalogService {
 
   async createProduct(dto: CreateProductDto) {
     await this.assertCategory(dto.categoryId);
+    await this.assertNotBelowFloor({ slug: dto.slug, basePrice: dto.basePrice, discountedPrice: dto.discountedPrice });
     try {
       const row = await this.prisma.product.create({
         data: {
@@ -87,8 +126,16 @@ export class CatalogService {
   }
 
   async updateProduct(id: string, dto: UpdateProductDto) {
-    await this.findOne(id); // 404 kontrolü
+    const current = await this.findOne(id); // 404 kontrolü
     if (dto.categoryId !== undefined) await this.assertCategory(dto.categoryId);
+    // Fiyata dokunuluyorsa taban kontrolü (dokunulmayan taraf mevcut değeriyle birleştirilir).
+    if (dto.basePrice !== undefined || dto.discountedPrice !== undefined) {
+      await this.assertNotBelowFloor({
+        slug: current.slug,
+        basePrice: dto.basePrice !== undefined ? dto.basePrice : current.basePrice,
+        discountedPrice: dto.discountedPrice !== undefined ? dto.discountedPrice : current.discountedPrice,
+      });
+    }
     const row = await this.prisma.product.update({
       where: { id },
       data: { ...dto },
@@ -119,6 +166,12 @@ export class CatalogService {
       const p = bySlug.get(c.productSlug);
       if (!p) throw new BadRequestException(`Ürün bulunamadı: ${c.productSlug}`);
       return { componentId: p.id, qty: c.qty };
+    });
+    await this.assertNotBelowFloor({
+      slug: dto.slug,
+      parts: dto.components.map((c) => ({ slug: c.productSlug, qty: c.qty })),
+      basePrice: dto.basePrice,
+      discountedPrice: dto.discountedPrice,
     });
     try {
       const row = await this.prisma.product.create({

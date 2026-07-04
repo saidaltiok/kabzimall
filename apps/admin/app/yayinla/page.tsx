@@ -57,7 +57,7 @@ export default function YayinlaPage() {
     const raw = basis === 'min' ? r.minComp : r.medianComp;
     const competitorPrice = Math.max(50, Math.round(raw / 50) * 50);
     if (r.floorPrice != null && competitorPrice < r.floorPrice) {
-      return Math.max(50, Math.round(r.floorPrice / 50) * 50);
+      return Math.max(50, Math.ceil(r.floorPrice / 50) * 50); // yukarı — tabanın altına inilmez
     }
     return competitorPrice;
   }
