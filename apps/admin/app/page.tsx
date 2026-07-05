@@ -74,6 +74,7 @@ export default function BugunPage() {
   const [dec, setDec] = useState<Decisions | null>(null);
   const [ops, setOps] = useState<OpsSummary | null>(null);
   const [trend, setTrend] = useState<Overview | null>(null);
+  const [brief, setBrief] = useState<{ source: string; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // productId | '__all__'
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -83,6 +84,7 @@ export default function BugunPage() {
     apiGet<Decisions>('/intel/dashboard/decisions').then(setDec).catch(() => {});
     apiGet<OpsSummary>('/admin/orders/summary').then(setOps).catch(() => {});
     apiGet<Overview>('/intel/analytics/overview?days=7').then(setTrend).catch(() => {});
+    apiGet<{ source: string; text: string }>('/intel/ai/daily-brief').then(setBrief).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -151,6 +153,15 @@ export default function BugunPage() {
               {!rakipOk && <> · <Link href="/rakip" style={{ color: 'var(--forest)', fontWeight: 600 }}>Şimdi güncelle →</Link></>}
             </span>
             <span className="muted" style={{ fontSize: 12 }}>Hal 11:00–15:00, rakip 10:00'da otomatik çekilir.</span>
+          </div>
+        )}
+
+        {/* 1.5 — AI günlük özet */}
+        {brief && (
+          <div className="aibox" style={{ marginBottom: 16 }}>
+            <span className="k">{brief.source === 'llm' ? '🤖 AI Sabah Brifingi' : '📋 Sabah Brifingi'}</span>
+            {brief.text}
+            {brief.source === 'rules' && <span className="muted" style={{ fontSize: 11 }}> (kural bazlı — ANTHROPIC_API_KEY takılınca AI yazar)</span>}
           </div>
         )}
 
