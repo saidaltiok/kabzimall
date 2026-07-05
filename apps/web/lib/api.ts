@@ -29,11 +29,14 @@ export function customerSession(): { token: string; email: string } | null {
 export function setCustomerSession(token: string, email: string) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(EMAIL_KEY, email);
+  // Header gibi kalıcı bileşenler oturum değişimini anında yansıtsın.
+  window.dispatchEvent(new Event('km-session'));
 }
 
 export function clearCustomerSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(EMAIL_KEY);
+  window.dispatchEvent(new Event('km-session'));
 }
 
 export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {

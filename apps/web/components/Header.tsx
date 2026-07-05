@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/lib/cart';
+import { customerSession } from '@/lib/api';
 
 const NAV: [string, string][] = [
   ['/', 'Ürünler'],
@@ -16,9 +17,25 @@ export default function Header() {
   const { items } = useCart();
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  // Müşteri oturumu (e-posta OTP) — giriş/çıkışta 'km-session' olayıyla anında tazelenir.
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const read = () => setEmail(customerSession()?.email ?? null);
+    read();
+    window.addEventListener('km-session', read);
+    window.addEventListener('storage', read); // başka sekmede giriş/çıkış
+    return () => {
+      window.removeEventListener('km-session', read);
+      window.removeEventListener('storage', read);
+    };
+  }, []);
 
   const isActive = (href: string) =>
     href === '/' ? path === '/' : path === href.split('?')[0] && href !== '/?kategori=yoresel';
+
+  /** "ayse@ornek.com" → "ayse" (header'da kısa görünüm). */
+  const shortName = email ? email.split('@')[0] : null;
 
   return (
     <header className="hdr">
@@ -38,7 +55,9 @@ export default function Header() {
         </nav>
 
         <div className="spacer" />
-        <Link href="/siparislerim" className="hdr-orders">Siparişlerim</Link>
+        <Link href="/siparislerim" className="hdr-orders" title={email ? `${email} — siparişlerin ve çıkış` : 'E-postana gelen kodla giriş yap'}>
+          {email ? <>👤 {shortName} · Siparişlerim</> : <>Giriş yap · Siparişlerim</>}
+        </Link>
         <Link href="/sepet" onClick={() => setOpen(false)}>
           <button className="cartbtn">
             🛒 Sepet
@@ -58,7 +77,7 @@ export default function Header() {
           {NAV.map(([href, label]) => (
             <Link key={href} href={href}>{label}</Link>
           ))}
-          <Link href="/siparislerim">Siparişlerim</Link>
+          <Link href="/siparislerim">{email ? `👤 ${shortName} · Siparişlerim` : 'Giriş yap · Siparişlerim'}</Link>
         </nav>
       )}
     </header>
