@@ -107,6 +107,7 @@ export class CatalogService {
           saleType: dto.saleType,
           unitLabel: dto.unitLabel ?? null,
           imageUrl: dto.imageUrl ?? null,
+          description: dto.description ?? null,
           basePrice: dto.basePrice ?? null,
           discountedPrice: dto.discountedPrice ?? null,
           stockQty: dto.stockQty ?? null,
@@ -309,14 +310,14 @@ export class CatalogService {
 
   private toResponse(r: {
     id: string; slug: string; name: string; kind: string; saleType: string; unitLabel: string | null;
-    imageUrl: string | null; basePrice: number | null; discountedPrice: number | null;
+    imageUrl: string | null; description: string | null; basePrice: number | null; discountedPrice: number | null;
     stockQty: number | null; maxPerOrder: number | null; originRegion: string | null;
     isActive: boolean; isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
     categoryId: string | null; category: { id: string; name: string } | null; updatedAt: Date;
   }) {
     return {
       id: r.id, slug: r.slug, name: r.name, kind: r.kind, saleType: r.saleType, unitLabel: r.unitLabel,
-      imageUrl: r.imageUrl, basePrice: r.basePrice, discountedPrice: r.discountedPrice,
+      imageUrl: r.imageUrl, description: r.description, basePrice: r.basePrice, discountedPrice: r.discountedPrice,
       stockQty: r.stockQty, maxPerOrder: r.maxPerOrder, originRegion: r.originRegion,
       isActive: r.isActive, isFeatured: r.isFeatured, isFreshDaily: r.isFreshDaily, isLocal: r.isLocal,
       category: r.category, updatedAt: r.updatedAt.toISOString(),

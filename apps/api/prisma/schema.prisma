@@ -69,6 +69,8 @@ model Product {
   saleType     String   @default("WEIGHT") @map("sale_type")
   unitLabel    String?  @map("unit_label")
   imageUrl     String?  @map("image_url")
+  /// Ürün açıklaması (vitrin detay sayfası). Yöresel ürünlerde köken/içerik anlatısı.
+  description  String?  @db.Text
   /// Mevcut stok (kg/adet). null = stok takibi yok (sınırsız); 0 = tükendi.
   stockQty     Float?   @map("stock_qty")
   /// Sipariş başına azami miktar (kg/adet). null = sınır yok.

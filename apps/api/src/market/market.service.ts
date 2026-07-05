@@ -38,6 +38,7 @@ const PUBLIC_PRODUCT_SELECT = {
   saleType: true,
   unitLabel: true,
   imageUrl: true,
+  description: true,
   stockQty: true,
   maxPerOrder: true,
   basePrice: true,
@@ -47,6 +48,7 @@ const PUBLIC_PRODUCT_SELECT = {
   isFeatured: true,
   isFreshDaily: true,
   isLocal: true,
+  createdAt: true,
   category: { select: { slug: true, name: true } },
 } as const;
 

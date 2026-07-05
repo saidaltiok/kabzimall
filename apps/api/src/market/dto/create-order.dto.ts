@@ -9,10 +9,19 @@ import {
   IsString,
   Matches,
   Max,
+  MaxLength,
   Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
+
+/**
+ * TR cep telefonu: boşluk/tire/parantez toleranslı; +90/0 önekli ya da öneksiz,
+ * 5 ile başlayan 10 hane. "0555 123 45 67", "+90 555 123 45 67", "5551234567" geçer.
+ */
+export const TR_PHONE = /^(\+?90[\s-]?|0)?5\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/;
+/** İsim: en az bir harf içermeli (harf/boşluk/kesme/tire/nokta), rakam/sembol yığını olamaz. */
+export const PERSON_NAME = /^(?=.*\p{L})[\p{L}\s'.-]{2,}$/u;
 
 export class OrderItemInput {
   @IsString()
@@ -40,21 +49,23 @@ export class SlotInput {
 }
 
 export class CustomerInput {
-  @IsString() @MinLength(2)
+  @IsString() @MinLength(2) @MaxLength(80)
+  @Matches(PERSON_NAME, { message: 'Geçerli bir ad soyad girin.' })
   name!: string;
 
-  @IsString() @MinLength(7)
+  @IsString() @MaxLength(24)
+  @Matches(TR_PHONE, { message: 'Geçerli bir cep telefonu girin (05XX XXX XX XX).' })
   phone!: string;
 
-  @IsString() @MinLength(5)
+  @IsString() @MinLength(5) @MaxLength(300)
   address!: string;
 
   /** Teslimat ilçesi (hizmet bölgesi varsa zorunlu/doğrulanır). */
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(60)
   district?: string;
 
   /** Sipariş bildirimleri için opsiyonel e-posta (onay, durum, saat değişikliği). */
-  @IsOptional() @IsEmail()
+  @IsOptional() @IsEmail({}, { message: 'Geçerli bir e-posta girin.' })
   email?: string;
 
   /** Haritadan seçilen teslimat noktası (WGS84). */
