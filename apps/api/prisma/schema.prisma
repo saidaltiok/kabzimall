@@ -91,6 +91,8 @@ model Product {
   components    ProductComponent[] @relation("BasketParent")
   inBaskets     ProductComponent[] @relation("BasketComponent")
   stockMovements StockMovement[]
+  substitutes    ProductSubstitute[] @relation("SubstituteOf")
+  substituteFor  ProductSubstitute[] @relation("SubstituteFor")
 
   @@unique([tenantId, slug])
   @@index([tenantId, categoryId])
@@ -205,6 +207,23 @@ model Coupon {
 
   @@unique([tenantId, code])
   @@map("coupons")
+}
+
+/// İkame ürün: stok bitince paketleyiciye ve müşteriye önerilecek
+/// alternatifler (sıralı, ürün başına en fazla 5).
+model ProductSubstitute {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  productId    String @map("product_id") @db.Uuid
+  substituteId String @map("substitute_id") @db.Uuid
+  sortOrder    Int    @default(0) @map("sort_order")
+
+  product    Product @relation("SubstituteOf", fields: [productId], references: [id], onDelete: Cascade)
+  substitute Product @relation("SubstituteFor", fields: [substituteId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, substituteId])
+  @@index([tenantId, productId])
+  @@map("product_substitutes")
 }
 
 /// Destek talebi: web iletişim formundan gelir; admin yanıtlar/kapatır.

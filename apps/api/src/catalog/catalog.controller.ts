@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { CATALOG_WRITERS, type JwtUser } from '../auth/auth.constants';
@@ -55,6 +55,21 @@ export class ProductsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
+  }
+
+  /** GET /catalog/products/:id/substitutes — ikame listesi (sıralı). */
+  @Get(':id/substitutes')
+  async substitutes(@Param('id') id: string) {
+    const data = await this.service.getSubstitutes(id);
+    return { data };
+  }
+
+  /** PUT /catalog/products/:id/substitutes { slugs: [...] } — ikameleri değiştir (max 5, sıra dizi sırası). */
+  @Put(':id/substitutes')
+  @Roles(...CATALOG_WRITERS)
+  async setSubstitutes(@Param('id') id: string, @Body('slugs') slugs: string[]) {
+    const data = await this.service.setSubstitutes(id, Array.isArray(slugs) ? slugs : []);
+    return { data };
   }
 
   @Post()

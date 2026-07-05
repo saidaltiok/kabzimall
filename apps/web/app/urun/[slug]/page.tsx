@@ -7,10 +7,15 @@ import { apiGet } from '@/lib/api';
 import { tl, emojiFor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 
+interface Substitute {
+  slug: string; name: string; unitLabel: string | null; imageUrl: string | null;
+  basePrice: number; discountedPrice: number | null;
+}
 interface Product {
   slug: string; name: string; unitLabel: string | null; imageUrl: string | null;
   stockQty: number | null; maxPerOrder: number | null; basePrice: number; discountedPrice: number | null; originRegion: string | null;
   isFreshDaily: boolean; isLocal: boolean; category: { slug: string; name: string } | null;
+  substitutes: Substitute[];
 }
 
 export default function ProductDetailPage() {
@@ -74,7 +79,33 @@ export default function ProductDetailPage() {
           <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>/ {p.unitLabel ?? 'birim'}</div>
 
           {soldOut ? (
-            <div className="error">Bu ürün şu an tükendi.</div>
+            <>
+              <div className="error">Bu ürün şu an tükendi.</div>
+              {p.substitutes.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div className="muted" style={{ fontSize: 13, marginBottom: 8 }}>Yerine şunlara bakabilirsin:</div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {p.substitutes.map((s) => {
+                      const se = s.discountedPrice != null && s.discountedPrice > 0 && s.discountedPrice < s.basePrice ? s.discountedPrice : s.basePrice;
+                      return (
+                        <Link key={s.slug} href={`/urun/${s.slug}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 14, border: '1.5px solid var(--line)', background: '#fff', textDecoration: 'none', color: 'inherit' }}>
+                          <span style={{ fontSize: 20 }}>
+                            {s.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={s.imageUrl} alt={s.name} style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 8 }} />
+                            ) : emojiFor(s.slug, p.category?.slug)}
+                          </span>
+                          <span>
+                            <b style={{ fontSize: 13 }}>{s.name}</b>
+                            <div className="muted" style={{ fontSize: 11.5 }}>{tl(se)} / {s.unitLabel ?? 'birim'}</div>
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <div className="block" style={{ boxShadow: 'none', border: '1px solid var(--line)' }}>

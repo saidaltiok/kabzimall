@@ -6,7 +6,11 @@ import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import OrdersBoard from '@/components/OrdersBoard';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; unitPrice: number; lineTotal: number; note: string | null }
+interface OrderItem {
+  id: string; productName: string; orderedQty: number; pickedQty: number | null;
+  unitLabel: string | null; unitPrice: number; lineTotal: number; note: string | null;
+  product?: { stockQty: number | null; substitutes: { substitute: { name: string; stockQty: number | null; isActive: boolean } }[] } | null;
+}
 interface Order {
   id: string; code: string; customerName: string; customerPhone: string; addressText: string;
   lat: number | null; lng: number | null;
@@ -205,7 +209,16 @@ export default function SiparislerPage() {
                                   <tr key={it.id}>
                                     <td>
                                       {it.productName}
+                                      {it.product?.stockQty != null && it.product.stockQty <= 0 && <span className="tagp zararina" style={{ marginLeft: 6 }}>stok bitti</span>}
                                       {it.note && <div style={{ fontSize: 11, color: 'var(--persimmon-d)', fontStyle: 'italic' }}>📝 {it.note}</div>}
+                                      {(it.product?.substitutes?.length ?? 0) > 0 && (
+                                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                                          🔄 İkame: {it.product!.substitutes
+                                            .filter((s) => s.substitute.isActive)
+                                            .map((s) => `${s.substitute.name}${s.substitute.stockQty != null && s.substitute.stockQty <= 0 ? ' (stok yok)' : ''}`)
+                                            .join(', ')}
+                                        </div>
+                                      )}
                                     </td>
                                     <td className="num">{it.orderedQty} {it.unitLabel ?? ''}</td>
                                     <td className="num">

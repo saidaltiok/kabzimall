@@ -51,6 +51,7 @@ const SALE_TYPES: [string, string][] = [
 const empty = {
   id: '', slug: '', name: '', categoryId: '', saleType: 'WEIGHT', unitLabel: 'kg',
   priceTl: '', discountedTl: '', originRegion: '', imageUrl: '', stockQty: '', maxPerOrder: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
+  substitutes: '', // virgüllü slug listesi (max 5) — stok bitince önerilecek ikameler
 };
 
 export default function KatalogPage() {
@@ -89,7 +90,12 @@ export default function KatalogPage() {
       maxPerOrder: p.maxPerOrder != null ? String(p.maxPerOrder) : '',
       isActive: p.isActive, isFeatured: p.isFeatured,
       isFreshDaily: p.isFreshDaily, isLocal: p.isLocal,
+      substitutes: '',
     });
+    // mevcut ikameleri arkadan doldur (form açık kalır)
+    apiGet<{ data: { slug: string }[] }>(`/catalog/products/${p.id}/substitutes`)
+      .then((r) => setForm((f) => (f.id === p.id ? { ...f, substitutes: r.data.map((s) => s.slug).join(', ') } : f)))
+      .catch(() => {});
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function reset() { setEditing(false); setForm({ ...empty }); setError(null); setOk(null); }
@@ -112,6 +118,9 @@ export default function KatalogPage() {
       };
       if (editing) {
         await apiSend('PATCH', `/catalog/products/${form.id}`, payload);
+        await apiSend('PUT', `/catalog/products/${form.id}/substitutes`, {
+          slugs: form.substitutes.split(',').map((s) => s.trim()).filter(Boolean),
+        });
         setOk(`✓ ${form.name} güncellendi.`);
       } else {
         await apiSend('POST', '/catalog/products', { slug: form.slug, ...payload });
@@ -231,6 +240,12 @@ export default function KatalogPage() {
               <input value={form.imageUrl.startsWith('data:') ? '' : form.imageUrl} onChange={setF('imageUrl')} placeholder="…ya da https://… .jpg" style={{ minWidth: 200, marginTop: 6 }} />
             </div>
           </div>
+          {editing && (
+            <div className="field" style={{ marginTop: 10 }}>
+              <label>İkame ürünler (virgüllü slug, max 5 — stok bitince paketleyiciye ve müşteriye önerilir)</label>
+              <input value={form.substitutes} onChange={setF('substitutes')} placeholder="cilek, ahududu" style={{ maxWidth: 420 }} />
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', margin: '14px 0', fontSize: 13 }}>
             <label><input type="checkbox" checked={form.isActive} onChange={setF('isActive')} /> Yayında</label>
             <label><input type="checkbox" checked={form.isFeatured} onChange={setF('isFeatured')} /> Vitrin</label>

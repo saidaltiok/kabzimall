@@ -153,6 +153,37 @@ export class CatalogService {
     return this.toResponse(row);
   }
 
+  /**
+   * İkame listesi ata (tümünü değiştirir, sıra = dizideki yer). Kendisi ve
+   * bilinmeyen slug reddedilir; en fazla 5 ikame.
+   */
+  async setSubstitutes(id: string, slugs: string[]) {
+    const current = await this.findOne(id);
+    const clean = [...new Set((slugs ?? []).map((s) => s?.trim()).filter(Boolean))].slice(0, 5);
+    if (clean.includes(current.slug)) throw new BadRequestException('Ürün kendisinin ikamesi olamaz.');
+    const subs = await this.prisma.product.findMany({ where: { tenantId: DEV_TENANT_ID, slug: { in: clean } }, select: { id: true, slug: true } });
+    const bySlug = new Map(subs.map((p) => [p.slug, p.id]));
+    const missing = clean.filter((s) => !bySlug.has(s));
+    if (missing.length) throw new BadRequestException(`Ürün bulunamadı: ${missing.join(', ')}`);
+    await this.prisma.$transaction([
+      this.prisma.productSubstitute.deleteMany({ where: { productId: id } }),
+      this.prisma.productSubstitute.createMany({
+        data: clean.map((s, i) => ({ tenantId: DEV_TENANT_ID, productId: id, substituteId: bySlug.get(s)!, sortOrder: i })),
+      }),
+    ]);
+    return this.getSubstitutes(id);
+  }
+
+  /** Ürünün ikameleri (sıralı, ad/stok/fiyatla). */
+  async getSubstitutes(id: string) {
+    const rows = await this.prisma.productSubstitute.findMany({
+      where: { productId: id, tenantId: DEV_TENANT_ID },
+      orderBy: { sortOrder: 'asc' },
+      include: { substitute: { select: { slug: true, name: true, unitLabel: true, basePrice: true, discountedPrice: true, stockQty: true, imageUrl: true, isActive: true } } },
+    });
+    return rows.map((r) => r.substitute);
+  }
+
   /** Stok hareket defteri: son N gün, istenirse tek ürün (slug) için. */
   async stockMovements(opts: { product?: string; days?: number; limit?: number }) {
     const days = Math.min(180, Math.max(1, opts.days ?? 30));

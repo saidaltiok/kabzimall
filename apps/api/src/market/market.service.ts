@@ -106,10 +106,23 @@ export class MarketService {
   async getProduct(slug: string) {
     const p = await this.prisma.product.findFirst({
       where: { tenantId: DEV_TENANT_ID, slug, isActive: true },
-      select: PUBLIC_PRODUCT_SELECT,
+      select: {
+        ...PUBLIC_PRODUCT_SELECT,
+        substitutes: {
+          orderBy: { sortOrder: 'asc' as const },
+          select: { substitute: { select: { slug: true, name: true, unitLabel: true, basePrice: true, discountedPrice: true, stockQty: true, imageUrl: true, isActive: true } } },
+        },
+      },
     });
     if (!p) throw new NotFoundException(`Ürün bulunamadı: ${slug}`);
-    return p;
+    const { substitutes, ...rest } = p;
+    // yalnız yayında + fiyatlı + stoğu olan ikameler müşteriye gösterilir
+    return {
+      ...rest,
+      substitutes: substitutes
+        .map((s) => s.substitute)
+        .filter((s) => s.isActive && s.basePrice != null && s.basePrice > 0 && (s.stockQty == null || s.stockQty > 0)),
+    };
   }
 
   /* ----------------------------- Ayarlar ----------------------------- */
@@ -454,7 +467,18 @@ export class MarketService {
       .findFirst({
         where: { id, tenantId: DEV_TENANT_ID },
         include: {
-          items: { include: { product: { select: { slug: true } } } }, // slug: "tekrar sipariş" için
+          items: {
+            include: {
+              product: {
+                select: {
+                  slug: true, // "tekrar sipariş" için
+                  stockQty: true,
+                  // paketleyiciye ikame önerisi (eksik üründe müşteri tercihiyle birlikte kullanılır)
+                  substitutes: { orderBy: { sortOrder: 'asc' }, select: { substitute: { select: { slug: true, name: true, stockQty: true, isActive: true } } } },
+                },
+              },
+            },
+          },
           notifications: { orderBy: { createdAt: 'asc' } },
           statusHistory: { orderBy: { createdAt: 'asc' } },
         },
@@ -518,7 +542,21 @@ export class MarketService {
           : {}),
       },
       orderBy: { createdAt: 'desc' },
-      include: { items: true, notifications: { orderBy: { createdAt: 'asc' } }, statusHistory: { orderBy: { createdAt: 'asc' } } },
+      include: {
+        items: {
+          include: {
+            // paketleyiciye ikame önerisi + eldeki stok
+            product: {
+              select: {
+                stockQty: true,
+                substitutes: { orderBy: { sortOrder: 'asc' }, select: { substitute: { select: { name: true, stockQty: true, isActive: true } } } },
+              },
+            },
+          },
+        },
+        notifications: { orderBy: { createdAt: 'asc' } },
+        statusHistory: { orderBy: { createdAt: 'asc' } },
+      },
     });
   }
 
