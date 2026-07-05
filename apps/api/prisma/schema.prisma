@@ -207,6 +207,28 @@ model Coupon {
   @@map("coupons")
 }
 
+/// Destek talebi: web iletişim formundan gelir; admin yanıtlar/kapatır.
+/// Yanıt müşteriye e-postayla gider (MailService — anahtar yoksa LOG modu).
+model SupportTicket {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  email     String?
+  phone     String?
+  orderCode String?  @map("order_code")
+  message   String
+  status    String   @default("OPEN") // OPEN | CLOSED
+  reply     String?
+  repliedBy String?  @map("replied_by")
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("support_tickets")
+}
+
 /// Stok hareket defteri: stok takipli üründe her değişim iz bırakır.
 /// ORDER (sipariş düşümü) | CANCEL (iptalde geri yükleme) | MANUAL (elle giriş/düzeltme).
 model StockMovement {

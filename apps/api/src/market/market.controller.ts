@@ -6,6 +6,9 @@ import { MarketService } from './market.service';
 import { CustomerAuthService } from './customer-auth.service';
 import { CouponService } from './coupon.service';
 import { BannerService } from './banner.service';
+import { SupportService } from './support.service';
+import { CustomersService } from './customers.service';
+import { SupportRequestDto } from './dto/support.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
 import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
@@ -21,12 +24,20 @@ export class StorefrontController {
     private readonly customerAuth: CustomerAuthService,
     private readonly coupons: CouponService,
     private readonly banners: BannerService,
+    private readonly supportService: SupportService,
   ) {}
 
   /** GET /storefront/banners — aktif vitrin duyuruları (sortOrder sırasıyla). */
   @Get('banners')
   async storefrontBanners() {
     return { data: await this.banners.activeForStorefront() };
+  }
+
+  /** POST /storefront/support — destek/iletişim formu (IP başına günlük sınırlı). */
+  @Post('support')
+  @ApiBody({ schema: { example: { name: 'Ayşe', email: 'ayse@example.com', orderCode: 'KM123ABC', message: 'Siparişim hakkında...' } } })
+  support(@Body() dto: SupportRequestDto, @Ip() ip: string) {
+    return this.supportService.create(dto, ip ?? 'unknown');
   }
 
   /** POST /storefront/auth/request-otp — e-postaya 6 haneli giriş kodu gönder. */
@@ -275,6 +286,54 @@ export class AdminCouponsController {
   @Roles(...PRICE_WRITERS)
   setActive(@Param('id') id: string, @Body('isActive') isActive: boolean) {
     return this.coupons.setActive(id, !!isActive);
+  }
+}
+
+@ApiTags('market: destek (admin)')
+@Controller('admin/support')
+export class AdminSupportController {
+  constructor(private readonly supportService: SupportService) {}
+
+  /** GET /admin/support?status=OPEN — açıklar önce, en yeni üstte. */
+  @Get()
+  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'CLOSED'] })
+  async list(@Query('status') status?: string) {
+    const data = await this.supportService.list(status);
+    return { data, meta: { total: data.length, open: data.filter((t) => t.status === 'OPEN').length } };
+  }
+
+  /** PATCH /admin/support/:id — { reply?, status? }; yanıt e-postalı müşteriye gider. */
+  @Patch(':id')
+  @Roles(...ORDER_WRITERS)
+  update(
+    @Param('id') id: string,
+    @Body() dto: { reply?: string; status?: 'OPEN' | 'CLOSED' },
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.supportService.update(id, dto, user?.email);
+  }
+}
+
+@ApiTags('market: müşteriler (admin)')
+@Controller('admin/customers')
+export class AdminCustomersController {
+  constructor(private readonly customers: CustomersService) {}
+
+  /** GET /admin/customers?search= — sipariş geçmişinden türetilen müşteri kartları. */
+  @Get()
+  @ApiQuery({ name: 'search', required: false })
+  async list(@Query('search') search?: string) {
+    const data = await this.customers.list(search);
+    return { data, meta: { total: data.length } };
+  }
+
+  /** GET /admin/customers/orders?phone= — tek müşterinin sipariş geçmişi. */
+  @Get('orders')
+  @ApiQuery({ name: 'phone', required: true })
+  async orders(@Query('phone') phone?: string) {
+    if (!phone?.trim()) throw new BadRequestException('phone gerekli');
+    const data = await this.customers.ordersOf(phone.trim());
+    return { data, meta: { total: data.length } };
   }
 }
 

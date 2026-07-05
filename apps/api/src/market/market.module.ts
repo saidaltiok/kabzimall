@@ -6,7 +6,9 @@ import { MailService } from './mail.service';
 import { CustomerAuthService } from './customer-auth.service';
 import { CouponService } from './coupon.service';
 import { BannerService } from './banner.service';
-import { StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController, AdminCouponsController, AdminBannersController } from './market.controller';
+import { SupportService } from './support.service';
+import { CustomersService } from './customers.service';
+import { StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController, AdminCouponsController, AdminBannersController, AdminSupportController, AdminCustomersController } from './market.controller';
 
 /**
  * Market — müşteri tarafı (Faz 1). Public vitrin + misafir sipariş (kapıda ödeme)
@@ -14,7 +16,7 @@ import { StorefrontController, AdminOrdersController, DeliveryZonesController, A
  */
 @Module({
   imports: [JwtModule.register({ secret: JWT_SECRET })], // müşteri OTP token imzası (kind: customer)
-  controllers: [StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController, AdminCouponsController, AdminBannersController],
-  providers: [MarketService, MailService, CustomerAuthService, CouponService, BannerService],
+  controllers: [StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController, AdminCouponsController, AdminBannersController, AdminSupportController, AdminCustomersController],
+  providers: [MarketService, MailService, CustomerAuthService, CouponService, BannerService, SupportService, CustomersService],
 })
 export class MarketModule {}

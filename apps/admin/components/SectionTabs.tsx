@@ -25,6 +25,10 @@ export const COST_TABS: SectionTab[] = [
   { href: '/maliyet', label: 'Maliyet & Fire', icon: '💸' },
   { href: '/kurallar', label: 'Fiyat kuralları', icon: '📐' },
 ];
+export const CUSTOMERS_TABS: SectionTab[] = [
+  { href: '/musteriler', label: 'Müşteriler', icon: '👥' },
+  { href: '/destek', label: 'Destek', icon: '🎧' },
+];
 export const SETTINGS_TABS: SectionTab[] = [
   { href: '/ayarlar', label: 'Mağaza', icon: '⚙️' },
   { href: '/bolgeler', label: 'Teslimat bölgeleri', icon: '📍' },

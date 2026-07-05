@@ -60,6 +60,7 @@ export async function resetDb(app: INestApplication): Promise<void> {
   await prisma.storeSetting.deleteMany();
   await prisma.coupon.deleteMany();
   await prisma.banner.deleteMany();
+  await prisma.supportTicket.deleteMany();
 }
 
 /** Geçerli bir JWT üretir (DB kullanıcısı gerekmez — guard stateless). */

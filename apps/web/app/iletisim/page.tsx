@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SupportForm from '@/components/SupportForm';
 
 export const metadata: Metadata = {
   title: 'İletişim',
@@ -58,6 +59,7 @@ export default async function IletisimPage() {
         Sipariş sorunlarında en hızlı çözüm için sipariş kodunuzu (KM…) hazır bulundurun.
         Siparişinizi <a href="/siparislerim" style={{ color: 'var(--forest, #1F4D38)', fontWeight: 600 }}>Siparişlerim</a> sayfasından da takip edebilirsiniz.
       </p>
+      <SupportForm />
     </div>
   );
 }
