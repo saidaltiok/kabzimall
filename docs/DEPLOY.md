@@ -26,6 +26,14 @@ PORT=3001
 JWT_SECRET="<64+ karakter rastgele üret>"        # ÜRETİMDE MUTLAKA DEĞİŞTİR
 AUTH_SEED_EMAIL="admin@ALANADIN.com"
 AUTH_SEED_PASSWORD="<güçlü parola>"               # ilk admin; sonra panelden değiştir
+
+# E-posta (sipariş bildirimleri + müşteri OTP girişi). BOŞ bırakılırsa LOG MODU:
+# gönderim yapılmaz ama akış çalışır — canlıda MUTLAKA doldurun.
+SMTP_HOST="smtp.SAGLAYICI.com"
+SMTP_PORT=587
+SMTP_USER="..."
+SMTP_PASS="..."
+MAIL_FROM="KabzıMall <no-reply@ALANADIN.com>"
 ```
 - [ ] `JWT_SECRET` güçlü ve benzersiz (ör. `openssl rand -base64 48`). Varsayılan `dev-secret-*` **kalmasın**.
 - [ ] `AUTH_SEED_PASSWORD` güçlü. İlk açılışta admin kullanıcı bu değerlerle **otomatik oluşturulur** (`auth.service.ts onModuleInit`).
@@ -35,6 +43,8 @@ AUTH_SEED_PASSWORD="<güçlü parola>"               # ilk admin; sonra panelden
 ### apps/web/.env.local ve apps/admin/.env.local
 ```
 NEXT_PUBLIC_API_BASE="https://api.ALANADIN.com/api/v1"
+# yalnız apps/web: sitemap/OG mutlak URL tabanı
+NEXT_PUBLIC_SITE_URL="https://ALANADIN.com"
 ```
 - [ ] Her iki frontend de prod API URL'ini gösteriyor (varsayılan `localhost:3001` DEĞİL).
 - [ ] `NEXT_PUBLIC_*` **build sırasında** gömülür → değişince yeniden build gerekir.
@@ -90,15 +100,21 @@ cd apps/web && npm run build && npm run start      # :3002
 - [ ] Vitrinde sepete ekle → ödeme → sipariş oluştu; panel Siparişler'de görünüyor.
 - [ ] Sipariş durum akışı (Pano: onay→hazırla→paketle→yola→teslim) çalışıyor.
 - [ ] Telefonla sipariş takibi + müşteri iptali çalışıyor.
-- [ ] `npm test` (apps/api) yeşil (111 e2e) — CI'da her push'ta koşsun (öneri).
+- [ ] `npm test` (apps/api) yeşil (139 e2e). CI kurulu: `.github/workflows/ci.yml` — her push/PR'da fiyat motoru + API e2e (PostGIS servisiyle) + web/admin build koşar.
 
 ---
 
-## 5b. İBB hal fiyatı otomatik çekimi (kurulu — zamanlama notu)
+## 5b. Otomatik veri toplama (YERLEŞİK cron'lar — API süreci 7/24 çalışmalı)
+
+API süreci içinde @nestjs/schedule cron'ları çalışır — PM2/systemd ile SÜREKLİ açık tutun:
+- **10:00** — rakip senkronu: resmî marketfiyati (A101/BİM/ŞOK/Migros/Carrefour/Tarım Kredi)
+  + SSR online manavlar (sebzemeyvedunyasi, tazedukkan). Manuel: panel → Piyasa Verisi → Rakip → "Şimdi güncelle".
+- **11:00/13:00/15:00** — İBB hal fiyatları (günde bir başarı yeter; mükerrer korumalı).
+
+### İBB kaynak notları
 - Kaynak: `tarim.ibb.istanbul` günlük hal fiyatları (Avrupa=HalTurId 2, doğrulandı; Anadolu=1 deneysel).
-  Panel → Hal Fiyatları → "🏛️ İBB'den çek / ⤵ Tümünü içeri al" ile eksik ürünleri oluşturur + fiyat yazar.
-- **ÖNEMLİ — zamanlama:** İBB günlük fiyatı **gündüz yayında**, akşam servis boşalıyor (öğlen 59 satır,
-  22:24'te 0). İçe aktarımı/scheduler'ı **iş saatinde** çalıştır (öneri: cron ~11:00, market günü).
+  Panel → Piyasa Verisi → Hal → "İBB'den çek / Tümünü içeri al" ile eksik ürünleri oluşturur + fiyat yazar.
+- İBB günlük fiyatı **gündüz yayında**, akşam servis boşalıyor — yerleşik cron saatleri buna göre seçildi.
 - Alternatif kaynak `halfiyatlaripublicdata.ibb.gov.tr` (swagger) daha zengin (geçmiş fiyat) ama spec ucu
   tarayıcı-dışı istemcileri resetliyor; gündüz erişilebiliyorsa değerlendirilebilir.
 - Rakip fiyatları (Migros/Carrefour web'den okunabiliyor; Getir/Trendyol app-gated): otomatik sunucu
@@ -111,14 +127,14 @@ cd apps/web && npm run build && npm run start      # :3002
 |---|---|
 | Kart ödeme (pre-auth + partial capture) | iyzico / PayTR |
 | SMS/push bildirim (gramaj kesinleşme, durum) | Firebase (FCM/APNs) / SMS gateway |
-| Müşteri OTP giriş/hesap | SMS gateway |
+| Müşteri OTP — e-posta ile KURULU; SMS istenirse | SMS gateway (Netgsm vb.) |
 | Harita poligon hizmet bölgesi + adres doğrulama | PostGIS + harita sağlayıcı |
-| Otomatik hal/rakip fiyat kaynağı | İBB endpoint / hukuki netlik |
+| Tarayıcı-destekli ek rakipler (Getir/Trendyol/Hepsiexpress) | yarı-otomatik; hukuki not: sahip riski üstlendi |
 | E-fatura | e-fatura entegratörü |
 | Görsel object storage + OCR | S3 uyumlu depolama |
 | Çok-kiracılık (RLS) | Postgres RLS politikaları |
 
-Şu an görseller data URL olarak DB'de; küçük katalog için yeterli, ileride object storage'a taşınır (`imageUrl` sözleşmesi değişmez).
+Ürün görselleri `apps/web/public/urunler/` altında repo içinde (45 dosya, ~6MB; lisans kökeni `_kaynaklar.json`, CC BY atıfları web /kaynaklar sayfasında). Web deploy'uyla birlikte gider; ileride object storage'a taşınabilir (`imageUrl` sözleşmesi değişmez).
 
 ---
 

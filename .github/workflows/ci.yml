@@ -1,0 +1,89 @@
+# KabzıMall CI — her push/PR'da, oturumlarda elle koştuğumuz kalite kapılarının aynısı:
+# fiyat motoru birim testleri · API typecheck+build+139 e2e (gerçek PostGIS'e karşı)
+# · web+admin typecheck + üretim build'i.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pricing:
+    name: Fiyat motoru (birim)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/pricing/package-lock.json
+      - run: npm ci
+        working-directory: packages/pricing
+      - run: npm run typecheck
+        working-directory: packages/pricing
+      - run: npm test
+        working-directory: packages/pricing
+
+  api:
+    name: API (typecheck + build + e2e)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: kabzimall
+          POSTGRES_PASSWORD: kabzimall
+          POSTGRES_DB: kabzimall
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kabzimall -d kabzimall"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://kabzimall:kabzimall@localhost:5432/kabzimall?schema=public
+      JWT_SECRET: ci-test-secret
+      AUTH_SEED_EMAIL: admin@kabzimall.local
+      AUTH_SEED_PASSWORD: kabzimall123
+      # SMTP kasıtlı BOŞ → MailService log modu (OTP e2e testleri devCode bekler).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci # postinstall prisma generate'i çalıştırır
+        working-directory: apps/api
+      - run: npx prisma migrate deploy
+        working-directory: apps/api
+      - run: npm run typecheck
+        working-directory: apps/api
+      - run: npm run build
+        working-directory: apps/api
+      - run: npm test
+        working-directory: apps/api
+
+  frontends:
+    name: Web + Admin (typecheck + build)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [web, admin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
+      - run: npm ci
+        working-directory: apps/${{ matrix.app }}
+      - run: npx tsc --noEmit
+        working-directory: apps/${{ matrix.app }}
+      # API kapalıyken de derlenir: sitemap/iletisim fetch'leri hataya dayanıklı.
+      - run: npx next build
+        working-directory: apps/${{ matrix.app }}
