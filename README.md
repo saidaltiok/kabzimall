@@ -4,58 +4,64 @@ Meyve-sebze odaklı **online manav + teslimat** (KabzıMall Market) ve veriyle f
 yöneten **yönetim paneli** (KabzıMall Intelligence). İki sütun: (1) içeride veriyle
 fiyat/marj zekâsı, (2) dışarıda kaliteli ürünü güvenle teslim.
 
-Detaylı bağlam ve iş kuralları için **[CLAUDE.md](CLAUDE.md)**; en güncel ürün/teknik
-kararlar `KabziMall_Guncelleme_v1_1.pdf`, API/veri modeli `KabziMall_Teknik_Temel_API.pdf`.
+Detaylı bağlam, iş kuralları ve güncel durum için **[CLAUDE.md](CLAUDE.md)**;
+derin referanslar `KabziMall_Guncelleme_v1_1.docx` ve `KabziMall_Teknik_Temel_API.pdf`.
 
 ## Monorepo
 
 ```
-apps/api          NestJS backend (Intelligence+Katalog+Market) — VAR (76 test)
-apps/admin        Next.js (yönetim paneli)           — VAR (8 ekran, :3000)
-apps/web          Next.js (müşteri vitrini)          — VAR (vitrin/sepet/ödeme, :3002)
-apps/mobile       React Native (müşteri)             — henüz yok
-packages/pricing  FİYAT MOTORU — tek kaynak (test edilmiş)
+apps/api          NestJS backend (Intelligence+Katalog+Market) — 139 e2e test
+apps/admin        Next.js yönetim paneli (:3000) — 9 girişli sidebar + kurye PWA
+apps/web          Next.js müşteri vitrini (:3002) — sipariş döngüsü + OTP + yasal sayfalar + SEO/PWA
+apps/mobile       React Native (müşteri)         — henüz yok
+packages/pricing  FİYAT MOTORU — tek kaynak (birim testli)
 ```
+
+Öne çıkanlar: İBB hal fiyatı + rakip fiyatları (resmî marketfiyati + online
+manavlar) **günlük otomatik** çekilir; maliyet tabanı güvenlik ağı zararına
+satışı engeller; "Bugün" ekranı önerilen fiyatları tek tıkla uygular; siparişte
+eksik-ürün tercihi, teslimat saati değişikliği onay akışı, e-posta bildirimleri
+ve rota optimizasyonu + kurye PWA görünümü vardır.
 
 ## Hızlı başlangıç
 
 ```bash
-# 1) Veritabanı (PostGIS'li Postgres)
+# 1) Veritabanı (PostGIS'li Postgres, kabzimall-db)
 docker compose up -d
 
 # 2) Fiyat motoru testleri
-cd packages/pricing && npm install && npm test     # 22/22
+cd packages/pricing && npm install && npm test
 
-# 3) Intelligence API
+# 3) API  (NOT: start:dev çalışmıyor — dist'ten çalıştırılır)
 cd ../../apps/api
 cp .env.example .env
 npm install
 npx prisma migrate dev
-npm test                                           # 18/18 (DB açık olmalı)
-npm run start:dev                                  # http://localhost:3001/api/v1
+npm run build && npm start          # http://localhost:3001/api/v1  (Swagger: /api/docs)
+
+# 4) Panel + vitrin
+npm --prefix apps/admin run dev     # :3000  (admin@kabzimall.local / kabzimall123)
+npm --prefix apps/web run dev       # :3002
 ```
 
-### Yönetim paneli (apps/admin)
+> **Test notu:** `apps/api && npm test` paylaşılan dev DB'yi sıfırlar. Gerçek
+> veri (İBB/rakip fiyatları) varken önce `pg_dump`, sonra `pg_restore` —
+> komutlar CLAUDE.md → "Testler" bölümünde.
 
-```bash
-cd apps/admin
-npm install
-npm run dev        # http://localhost:3000  (API 3001'de çalışıyor olmalı)
-```
+## Panel (apps/admin)
 
-Ekranlar (prototip tasarımıyla uyumlu): **Dashboard**, **Hal Fiyatları**,
-**Rakip Fiyatları**, **Maliyet & Fire**, **Fiyat Öneri Motoru**, **Ürünler & Marj**.
-API tabanı `NEXT_PUBLIC_API_BASE` (varsayılan `http://localhost:3001/api/v1`).
+Günlük İş: **Bugün** (karar ekranı) · **Piyasa Verisi** (Hal|Rakip) ·
+**Fiyatlandırma** (Öneri|Toplu yayın|Marj|Senaryo) · **Siparişler** (Pano|Liste) ·
+**Dağıtım Rotası** (+kurye PWA). Yönetim: **Ürünler** · **Satış Analizi** ·
+**Maliyet & Kurallar** · **Ayarlar**.
 
-### Müşteri vitrini (apps/web)
+## Vitrin (apps/web)
 
-```bash
-cd apps/web
-npm install
-npm run dev        # http://localhost:3002  (API 3001'de çalışıyor olmalı)
-```
-
-Akış: ürünleri gez/ara → sepete ekle → adres/telefon gir → **kapıda ödeme** ile
-sipariş ver → onay/takip. Sipariş panelde **Siparişler** ekranında görünür.
+Ürünler (Meyve/Sebze/**Yöresel Ürünler**) → sepet → harita destekli adres +
+eksik-ürün tercihi → **kapıda ödeme** → canlı sipariş takibi (30 sn), iptal ve
+saat değişikliği talebi. E-posta OTP ile giriş → cihazdan bağımsız "Siparişlerim".
+Kurumsal/yasal: Hakkımızda, İletişim, KVKK, Gizlilik, Mesafeli Satış, İade,
+Görsel Kaynakları. API tabanı `NEXT_PUBLIC_API_BASE`
+(varsayılan `http://localhost:3001/api/v1`).
 
 Detaylı API kullanımı: [apps/api/README.md](apps/api/README.md).
