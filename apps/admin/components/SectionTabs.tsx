@@ -27,6 +27,7 @@ export const COST_TABS: SectionTab[] = [
 export const SETTINGS_TABS: SectionTab[] = [
   { href: '/ayarlar', label: 'Mağaza', icon: '⚙️' },
   { href: '/bolgeler', label: 'Teslimat bölgeleri', icon: '📍' },
+  { href: '/kuponlar', label: 'Kuponlar', icon: '🎟️' },
 ];
 
 /** Grup içi sekme gezinmesi (ör. Piyasa Verisi: Hal | Rakip). URL'ler değişmez. */

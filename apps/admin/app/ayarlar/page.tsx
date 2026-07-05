@@ -7,7 +7,7 @@ import Topbar from '@/components/Topbar';
 import SectionTabs, { SETTINGS_TABS } from '@/components/SectionTabs';
 
 interface Tier { minSubtotal: number; fee: number }
-interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; depotLat: number | null; depotLng: number | null; contactPhone: string | null; contactWhatsapp: string | null; contactEmail: string | null; contactAddress: string | null; contactInstagram: string | null }
+interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; deliveryWindows: string[]; depotLat: number | null; depotLng: number | null; contactPhone: string | null; contactWhatsapp: string | null; contactEmail: string | null; contactAddress: string | null; contactInstagram: string | null }
 
 const toTl = (k: number) => (k ? (k / 100).toFixed(2) : '');
 const toKurus = (v: string) => (v.trim() === '' ? 0 : Math.round(parseFloat(v.replace(',', '.')) * 100));
@@ -23,6 +23,7 @@ export default function AyarlarPage() {
   const [cEmail, setCEmail] = useState('');
   const [cAddress, setCAddress] = useState('');
   const [cInstagram, setCInstagram] = useState('');
+  const [windowsText, setWindowsText] = useState('');
   const [rows, setRows] = useState<TierRow[]>([]);
   const [saved, setSaved] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,6 +37,7 @@ export default function AyarlarPage() {
     setDepotLng(s.depotLng != null ? String(s.depotLng) : '');
     setCPhone(s.contactPhone ?? ''); setCWhatsapp(s.contactWhatsapp ?? ''); setCEmail(s.contactEmail ?? '');
     setCAddress(s.contactAddress ?? ''); setCInstagram(s.contactInstagram ?? '');
+    setWindowsText((s.deliveryWindows ?? []).join('\n'));
     setRows(s.deliveryTiers.map((t) => ({ minTl: toTl(t.minSubtotal), feeTl: t.fee ? toTl(t.fee) : '0' })));
   }
 
@@ -57,7 +59,7 @@ export default function AyarlarPage() {
         .map((r) => ({ minSubtotal: toKurus(r.minTl), fee: toKurus(r.feeTl) }));
       const dLat = depotLat.trim() === '' ? null : parseFloat(depotLat.replace(',', '.'));
       const dLng = depotLng.trim() === '' ? null : parseFloat(depotLng.replace(',', '.'));
-      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers, depotLat: dLat, depotLng: dLng, contactPhone: cPhone.trim() || null, contactWhatsapp: cWhatsapp.trim() || null, contactEmail: cEmail.trim() || null, contactAddress: cAddress.trim() || null, contactInstagram: cInstagram.trim() || null });
+      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers, depotLat: dLat, depotLng: dLng, contactPhone: cPhone.trim() || null, contactWhatsapp: cWhatsapp.trim() || null, contactEmail: cEmail.trim() || null, contactAddress: cAddress.trim() || null, contactInstagram: cInstagram.trim() || null, deliveryWindows: windowsText.split(/\n+/).map((w) => w.trim()).filter(Boolean) });
       apply(r);
       setOk('✓ Mağaza ayarları kaydedildi.');
     } catch (e) {
@@ -108,6 +110,14 @@ export default function AyarlarPage() {
             <div className="field"><label>Instagram</label><input value={cInstagram} onChange={(e) => setCInstagram(e.target.value)} placeholder="@kabzimall" /></div>
           </div>
           <div className="field"><label>Adres</label><input value={cAddress} onChange={(e) => setCAddress(e.target.value)} placeholder="Moda Cad. No:1, Kadıköy / İstanbul" /></div>
+        </div>
+
+        <div className="card" style={{ maxWidth: 420 }}>
+          <div className="ct">Teslimat saat pencereleri</div>
+          <p className="note2" style={{ marginTop: 0 }}>Her satıra bir pencere, biçim <b>SS:DD-SS:DD</b> (ör. 10:00-13:00). Müşteri checkout ve saat değişikliğinde bunlardan seçer.</p>
+          <div className="field">
+            <textarea rows={4} value={windowsText} onChange={(e) => setWindowsText(e.target.value)} style={{ width: "100%", fontFamily: "monospace" }} placeholder={'10:00-13:00\n13:00-16:00\n16:00-19:00'} />
+          </div>
         </div>
 
         <div className="card" style={{ maxWidth: 520 }}>

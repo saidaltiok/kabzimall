@@ -13,6 +13,7 @@ interface Order {
   substitutionPref: string;
   slotChangeDate: string | null; slotChangeWindow: string | null; slotChangeStatus: string | null;
   status: string; subtotal: number; deliveryFee: number; grandTotal: number; note: string | null;
+  couponCode: string | null; discountTotal: number;
   estimatedTotal: number; finalTotal: number | null;
   deliveryDate: string | null; deliveryWindow: string | null;
   createdAt: string; items: OrderItem[];
@@ -158,7 +159,7 @@ export default function SiparislerPage() {
                       <td className="num">{o.items.length}</td>
                       <td className="num">{tl(o.subtotal)}</td>
                       <td className="num">{o.deliveryFee === 0 ? 'Ücretsiz' : tl(o.deliveryFee)}</td>
-                      <td className="num savecell">{tl(o.grandTotal)}</td>
+                      <td className="num savecell">{tl(o.grandTotal)}{o.discountTotal > 0 && <span title={`Kupon ${o.couponCode}: −${tl(o.discountTotal)}`} style={{ marginLeft: 4 }}>🎟️</span>}</td>
                       <td><span className={`tagp ${cls(o.status)}`}>{label(o.status)}</span></td>
                       <td className="muted" style={{ fontSize: 11 }}>{dt(o.createdAt)}</td>
                       <td className="num">
@@ -183,6 +184,7 @@ export default function SiparislerPage() {
                               <> · <span className="muted">📍 harita konumu yok</span></>
                             )}
                             {o.note && <> · <b>Not:</b> {o.note}</>}
+                            {o.discountTotal > 0 && <> · 🎟️ <b>Kupon {o.couponCode}:</b> −{tl(o.discountTotal)}</>}
                             {o.slotChangeStatus === 'PENDING' && (
                               <div style={{ margin: '10px 0', padding: '8px 10px', background: '#fff7ed', border: '1px solid var(--honey)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                                 <span>🕒 <b>Saat değişikliği talebi:</b> {o.deliveryDate?.slice(0, 10)} {o.deliveryWindow} → <b>{o.slotChangeDate?.slice(0, 10)} {o.slotChangeWindow}</b></span>
