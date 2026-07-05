@@ -58,6 +58,8 @@ a { color: inherit; text-decoration: none; }
 .pill.fresh { background: #eaf3ea; color: var(--forest); } .pill.local { background: #fbeee6; color: var(--persimmon-d); }
 .prod .add { position: absolute; right: 16px; top: 96px; width: 34px; height: 34px; border-radius: 12px; background: var(--forest); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 21px; box-shadow: 0 8px 14px -8px var(--forest); border: none; cursor: pointer; }
 .prod .add:hover { background: var(--persimmon); }
+.prod .fav { position: absolute; right: 16px; top: 16px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; font-size: 15px; border: none; cursor: pointer; box-shadow: var(--shadow-sm); z-index: 1; }
+.prod .fav:hover { transform: scale(1.12); }
 .prod .nm { font-size: 14px; font-weight: 600; margin: 12px 0 1px; }
 .prod .or { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .prod .pr { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--forest); }

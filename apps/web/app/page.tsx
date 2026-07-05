@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { tl, emojiFor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
+import { useFavs } from '@/lib/favs';
 
 interface Product {
   slug: string; name: string; saleType: string; unitLabel: string | null;
@@ -43,6 +44,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const { add, items } = useCart();
+  const { favs, isFav, toggle } = useFavs();
 
   // Sepetteki miktar (normal ürün/sepet; basketSlug'suz satır).
   const inCart = (slug: string) => items.find((i) => i.slug === slug && !i.basketSlug)?.qty ?? 0;
@@ -69,11 +71,12 @@ export default function HomePage() {
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
-      if (cat !== 'all' && p.category?.slug !== cat) return false;
+      if (cat === 'favs') { if (!favs.includes(p.slug)) return false; }
+      else if (cat !== 'all' && p.category?.slug !== cat) return false;
       if (q && !p.name.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr'))) return false;
       return true;
     });
-  }, [products, cat, q]);
+  }, [products, cat, q, favs]);
 
   const deals = useMemo(
     () =>
@@ -121,6 +124,11 @@ export default function HomePage() {
             {c.name}
           </button>
         ))}
+        {favs.length > 0 && (
+          <button className={`cat ${cat === 'favs' ? 'sel' : ''}`} onClick={() => setCat('favs')}>
+            <span className="ring">❤️</span>Favorilerim
+          </button>
+        )}
       </div>
 
       {cat === 'all' && !q && deals.length > 0 && (
@@ -133,6 +141,7 @@ export default function HomePage() {
               return (
                 <div className="prod deal" key={p.slug}>
                   <span className="pill" style={{ position: 'absolute', top: 10, left: 10, background: 'var(--persimmon)', color: '#fff', zIndex: 1 }}>%{discPct}</span>
+                  <button className="fav" onClick={() => toggle(p.slug)} aria-label={isFav(p.slug) ? 'Favorilerden çıkar' : 'Favorilere ekle'}>{isFav(p.slug) ? '❤️' : '🤍'}</button>
                   <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
                   <Link href={`/urun/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                     <div className="ph">
@@ -187,10 +196,14 @@ export default function HomePage() {
 
       <input className="search" placeholder="🔍 Domates, çilek, muz…" value={q} onChange={(e) => setQ(e.target.value)} />
 
-      <div className="sectit"><h2 className="serif">{cat === 'all' ? 'Tüm ürünler' : categories.find((c) => c.slug === cat)?.name}</h2></div>
+      <div className="sectit"><h2 className="serif">{cat === 'all' ? 'Tüm ürünler' : cat === 'favs' ? '❤️ Favorilerim' : categories.find((c) => c.slug === cat)?.name}</h2></div>
 
       {filtered.length === 0 ? (
-        <div className="empty"><div className="big">🧺</div><h2 className="serif">Ürün bulunamadı</h2><div>Farklı bir kategori ya da arama dene.</div></div>
+        cat === 'favs' ? (
+          <div className="empty"><div className="big">🤍</div><h2 className="serif">Henüz favorin yok</h2><div>Ürün kartlarındaki kalbe dokunarak favorilerine ekle.</div></div>
+        ) : (
+          <div className="empty"><div className="big">🧺</div><h2 className="serif">Ürün bulunamadı</h2><div>Farklı bir kategori ya da arama dene.</div></div>
+        )
       ) : (
         <div className="grid">
           {filtered.map((p) => {
@@ -209,6 +222,7 @@ export default function HomePage() {
                 ) : p.isLocal ? (
                   <span className="pill local">YÖRESEL</span>
                 ) : null}
+                <button className="fav" onClick={() => toggle(p.slug)} aria-label={isFav(p.slug) ? 'Favorilerden çıkar' : 'Favorilere ekle'}>{isFav(p.slug) ? '❤️' : '🤍'}</button>
                 {!soldOut && (
                   <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
                 )}
