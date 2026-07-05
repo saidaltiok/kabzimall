@@ -36,7 +36,7 @@ export default function Footer() {
         </div>
         <div>
           <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 10, opacity: 0.95 }}>Kurumsal</div>
-          {[['/hakkimizda', 'Hakkımızda'], ['/iletisim', 'İletişim'], ['/iade', 'İade & Teslimat'], ['/mesafeli-satis', 'Mesafeli Satış Sözleşmesi'], ['/gizlilik', 'Gizlilik & Çerezler'], ['/kvkk', 'KVKK Aydınlatma Metni'], ['/kaynaklar', 'Görsel Kaynakları']].map(([href, label]) => (
+          {[['/hakkimizda', 'Hakkımızda'], ['/iletisim', 'İletişim'], ['/sss', 'Sıkça Sorulan Sorular'], ['/iade', 'İade & Teslimat'], ['/mesafeli-satis', 'Mesafeli Satış Sözleşmesi'], ['/gizlilik', 'Gizlilik & Çerezler'], ['/kvkk', 'KVKK Aydınlatma Metni'], ['/kaynaklar', 'Görsel Kaynakları']].map(([href, label]) => (
             <div key={href} style={{ marginBottom: 6 }}><Link href={href} style={{ color: '#F6F1E7', opacity: 0.8, fontSize: 13, textDecoration: 'none' }}>{label}</Link></div>
           ))}
         </div>
