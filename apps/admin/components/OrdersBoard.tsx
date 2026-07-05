@@ -10,6 +10,7 @@ interface Order {
   status: string; grandTotal: number; estimatedTotal: number; finalTotal: number | null; note: string | null;
   substitutionPref: string;
   deliveryDate: string | null; deliveryWindow: string | null;
+  slotChangeStatus: string | null; slotChangeDate: string | null; slotChangeWindow: string | null;
   createdAt: string; items: OrderItem[];
 }
 
@@ -34,7 +35,7 @@ const FLOW: [string, string, string][] = [
  * Eskiden ayrı "Operasyon Panosu" ekranıydı; aynı işi iki yerde yapmamak için
  * Siparişler'in bir görünümü haline getirildi.
  */
-export default function OrdersBoard() {
+export default function OrdersBoard({ onDetail }: { onDetail?: (id: string) => void }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -132,7 +133,14 @@ export default function OrdersBoard() {
                   return (
                     <div className="ocard" key={o.id}>
                       <div className="oc-top">
-                        <b>{o.code}</b>
+                        <button
+                          type="button"
+                          className="oc-code"
+                          onClick={() => onDetail?.(o.id)}
+                          title="Sipariş detayını aç"
+                        >
+                          {o.code} <span className="oc-detail">detay ›</span>
+                        </button>
                         <span className="oc-amt">{tl(o.finalTotal ?? o.grandTotal)}</span>
                       </div>
                       <div className="oc-cust">{o.customerName} · <span className="muted">{o.customerPhone}</span></div>
@@ -140,6 +148,11 @@ export default function OrdersBoard() {
                         {o.items.length} kalem
                         {o.deliveryWindow && <> · {o.deliveryDate?.slice(5, 10).replace('-', '.')} {o.deliveryWindow}</>}
                         {hasNote && <span className="oc-note" title="Müşteri notu var">📝</span>}
+                        {o.slotChangeStatus === 'PENDING' && (
+                          <span className="oc-slot" title={`Saat değişikliği talebi: ${o.slotChangeDate?.slice(5, 10).replace('-', '.')} ${o.slotChangeWindow}`}>
+                            🕒 saat talebi
+                          </span>
+                        )}
                       </div>
                       <div className="oc-items">{o.items.map((it) => `${it.productName} ${it.orderedQty}${it.unitLabel === 'kg' ? 'kg' : ''}`).join(' · ')}</div>
 

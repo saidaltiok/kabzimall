@@ -162,6 +162,11 @@ td .savecell, .savecell { font-weight: 700; color: var(--forest); }
 .ocard .oc-cust { font-size: 12.5px; margin-top: 3px; }
 .ocard .oc-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .ocard .oc-note { margin-left: 5px; }
+.ocard .oc-code { border: none; background: none; padding: 0; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink, #1a1a1a); display: inline-flex; align-items: baseline; gap: 5px; }
+.ocard .oc-code:hover { color: var(--forest); }
+.ocard .oc-code .oc-detail { font-size: 10.5px; font-weight: 600; color: var(--persimmon-d); opacity: 0; transition: opacity .12s; }
+.ocard:hover .oc-code .oc-detail { opacity: 1; }
+.ocard .oc-slot { margin-left: 6px; background: #fff7ed; color: var(--honey-d, #b8860b); border: 1px solid var(--honey, #E6B450); border-radius: 20px; padding: 1px 7px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .ocard .oc-items { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; max-height: 44px; overflow: hidden; }
 .ocard .oc-act { display: flex; gap: 6px; margin-top: 10px; }
 .ocard .oc-act .btn { flex: 1; font-size: 12px; padding: 7px 10px; }

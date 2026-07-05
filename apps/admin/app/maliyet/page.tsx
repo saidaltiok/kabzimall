@@ -35,13 +35,14 @@ export default function MaliyetPage() {
   const [form, setForm] = useState<Form>({ fire: '15', labor: '1.20', pack: '0.70', fuel: '0.50', cold: '0', amort: '0', comm: '3' });
   const [serverCost, setServerCost] = useState<CostResult | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
+  const [floorPrice, setFloorPrice] = useState<number | null>(null); // komisyon DAHİL taban satış fiyatı
   const [scenario, setScenario] = useState<{ fire: number; directCost: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (pid: string) => {
-    setError(null); setSaved(null); setPreview(null); setScenario([]);
+    setError(null); setSaved(null); setPreview(null); setFloorPrice(null); setScenario([]);
     try {
       const c = await apiGet<CostResult>(`/intel/cost/${encodeURIComponent(pid)}`);
       setServerCost(c);
@@ -80,9 +81,10 @@ export default function MaliyetPage() {
       const fires = [10, Number(form.fire), 20, 30].filter((v, i, a) => a.indexOf(v) === i);
       const calls = [costInput(), ...fires.map((f) => costInput(f))];
       const results = await Promise.all(
-        calls.map((cost) => apiSend<{ directCost: number }>('POST', '/intel/price/suggest', { cost, strategy: 'FLOOR' })),
+        calls.map((cost) => apiSend<{ directCost: number; price: number }>('POST', '/intel/price/suggest', { cost, strategy: 'FLOOR' })),
       );
       setPreview(results[0].directCost);
+      setFloorPrice(results[0].price); // taban marj + komisyon dahil satış fiyatı
       setScenario(fires.map((f, i) => ({ fire: f, directCost: results[i + 1].directCost })));
     } catch (e) {
       setError((e as Error).message);
@@ -159,6 +161,17 @@ export default function MaliyetPage() {
                 {serverCost && <> · Kayıtlı kaynak: <b>{serverCost.source}</b></>}
               </div>
             </div>
+
+            {floorPrice != null && (
+              <div className="result" style={{ marginTop: 12 }}>
+                <div className="l">Taban satış fiyatı (taban marj + %{form.comm} komisyon dahil)</div>
+                <div className="big">{tl(floorPrice)}</div>
+                <div className="note2">
+                  Komisyon birim maliyete girmez; <b>satış fiyatını</b> etkiler. Kart komisyonunu değiştirip
+                  <b> Hesapla</b>&apos;ya basınca bu değer değişir (maliyet sabit kalır).
+                </div>
+              </div>
+            )}
 
             {scenario.length > 0 && (
               <div className="card" style={{ marginTop: 14 }}>

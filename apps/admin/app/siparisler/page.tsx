@@ -122,7 +122,10 @@ export default function SiparislerPage() {
         </div>
 
         {view === 'pano' ? (
-          <OrdersBoard />
+          <OrdersBoard onDetail={(id) => {
+            setFilter(''); setSearch(''); setView('liste'); setOpen(id);
+            setTimeout(() => document.getElementById(`order-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+          }} />
         ) : (
           <>
         <div className="form-row" style={{ marginBottom: 16 }}>
@@ -157,7 +160,7 @@ export default function SiparislerPage() {
               <tbody>
                 {orders.map((o) => (
                   <Fragment key={o.id}>
-                    <tr>
+                    <tr id={`order-${o.id}`} style={open === o.id ? { background: 'var(--cream)' } : undefined}>
                       <td><b>{o.code}</b>{o.slotChangeStatus === 'PENDING' && <span title="Bekleyen teslimat saati talebi" style={{ marginLeft: 5 }}>🕒</span>}</td>
                       <td>{o.customerName}<div className="muted" style={{ fontSize: 11 }}>{o.customerPhone}</div></td>
                       <td className="num">{o.items.length}</td>
