@@ -14,6 +14,7 @@ interface Substitute {
 interface Product {
   slug: string; name: string; unitLabel: string | null; imageUrl: string | null;
   stockQty: number | null; maxPerOrder: number | null; basePrice: number; discountedPrice: number | null; originRegion: string | null;
+  description: string | null;
   isFreshDaily: boolean; isLocal: boolean; category: { slug: string; name: string } | null;
   substitutes: Substitute[];
 }
@@ -77,6 +78,10 @@ export default function ProductDetailPage() {
             {discounted && <span className="pill" style={{ background: 'var(--persimmon)', color: '#fff' }}>%{Math.round((1 - eff / p.basePrice) * 100)}</span>}
           </div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>/ {p.unitLabel ?? 'birim'}</div>
+
+          {p.description && (
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--ink, #26241f)', marginBottom: 18 }}>{p.description}</p>
+          )}
 
           {soldOut ? (
             <>

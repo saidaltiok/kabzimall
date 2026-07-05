@@ -4,15 +4,14 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiGet } from '@/lib/api';
-import { tl, emojiFor } from '@/lib/format';
+import { tl } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import { useFavs } from '@/lib/favs';
+import ProductCard, { CardProduct } from '@/components/ProductCard';
 
-interface Product {
-  slug: string; name: string; saleType: string; unitLabel: string | null;
-  imageUrl: string | null; basePrice: number; discountedPrice: number | null; stockQty: number | null; maxPerOrder: number | null; originRegion: string | null;
-  isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
-  category: { slug: string; name: string } | null;
+interface Product extends CardProduct {
+  isFeatured: boolean;
+  createdAt: string;
 }
 interface Category { slug: string; name: string }
 interface Banner { id: string; kicker: string | null; title: string; subtitle: string | null; couponCode: string | null }
@@ -24,6 +23,7 @@ interface Basket {
 }
 
 const CAT_ICON: Record<string, string> = { meyve: '🍑', sebze: '🥬', yag: '🫒', kahvalti: '🧀', yoresel: '🏺' };
+const NEW_WINDOW_DAYS = 21; // "Yeni gelenler" penceresi (kendiliğinden temizlenir)
 
 /** URL '?kategori=' parametresini kategori filtresine bağlar (header/footer linkleri). */
 function KategoriReader({ onCat }: { onCat: (c: string) => void }) {
@@ -46,17 +46,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const { add, items } = useCart();
-  const { favs, isFav, toggle } = useFavs();
+  const { favs } = useFavs();
 
-  // Sepetteki miktar (normal ürün/sepet; basketSlug'suz satır).
   const inCart = (slug: string) => items.find((i) => i.slug === slug && !i.basketSlug)?.qty ?? 0;
-  const cartLabel = (slug: string, unitLabel: string | null) => {
-    const q = inCart(slug);
-    return q > 0 ? `🛒 ${q} ${unitLabel === 'kg' ? 'kg' : (unitLabel ?? 'adet')} sepette` : null;
-  };
 
-  function flash(msg: string) {
-    setToast(msg);
+  function flash(name: string) {
+    setToast(`${name} sepete eklendi ✓`);
     window.setTimeout(() => setToast(null), 1800);
   }
 
@@ -69,20 +64,45 @@ export default function HomePage() {
       .then(([p, c, b]) => { setProducts(p.data); setCategories(c.data); setBaskets(b.data); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-    // banner ayrı ve sessiz: gelmezse varsayılan karşılama kalır
     apiGet<{ data: Banner[] }>('/storefront/banners').then((r) => setBanner(r.data[0] ?? null)).catch(() => {});
   }, []);
 
   async function copyCoupon(code: string) {
     try {
       await navigator.clipboard.writeText(code);
-      flash(`Kupon kodu kopyalandı: ${code} ✓`);
+      setToast(`Kupon kodu kopyalandı: ${code} ✓`);
     } catch {
-      flash(`Kupon kodu: ${code} — sepette girebilirsin`);
+      setToast(`Kupon kodu: ${code} — sepette girebilirsin`);
     }
+    window.setTimeout(() => setToast(null), 1800);
   }
 
-  const filtered = useMemo(() => {
+  const inStock = (p: Product) => !(p.stockQty != null && p.stockQty <= 0);
+
+  // Vitrin rafları (yalnız "Tümü" görünümü + arama yokken).
+  const deals = useMemo(
+    () => products.filter((p) => inStock(p) && p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice),
+    [products],
+  );
+  const featured = useMemo(() => products.filter((p) => p.isFeatured && inStock(p)).slice(0, 12), [products]);
+  const newArrivals = useMemo(() => {
+    const cutoff = Date.now() - NEW_WINDOW_DAYS * 86_400_000;
+    return products
+      .filter((p) => inStock(p) && new Date(p.createdAt).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 12);
+  }, [products]);
+
+  // "Tümü" görünümünde ürünler kategoriye göre gruplanır (karışık değil).
+  const grouped = useMemo(() => {
+    const byCat = categories.map((c) => ({ cat: c, items: products.filter((p) => p.category?.slug === c.slug) }));
+    const orphans = products.filter((p) => !p.category || !categories.some((c) => c.slug === p.category!.slug));
+    if (orphans.length) byCat.push({ cat: { slug: '__other', name: 'Diğer' }, items: orphans });
+    return byCat.filter((g) => g.items.length > 0);
+  }, [products, categories]);
+
+  // Tekil kategori / favori / arama görünümünde düz ızgara.
+  const flat = useMemo(() => {
     return products.filter((p) => {
       if (cat === 'favs') { if (!favs.includes(p.slug)) return false; }
       else if (cat !== 'all' && p.category?.slug !== cat) return false;
@@ -91,31 +111,23 @@ export default function HomePage() {
     });
   }, [products, cat, q, favs]);
 
-  const deals = useMemo(
-    () =>
-      products.filter((p) => {
-        const soldOut = p.stockQty != null && p.stockQty <= 0;
-        return !soldOut && p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice;
-      }),
-    [products],
-  );
-
-  function effective(p: Product) {
-    return p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice ? p.discountedPrice : p.basePrice;
-  }
-  function addToCart(p: Product) {
-    add({ slug: p.slug, name: p.name, unitPrice: effective(p), unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug), maxPerOrder: p.maxPerOrder ?? undefined });
-    flash(`${p.name} sepete eklendi ✓`);
-  }
   function addBasket(b: Basket) {
-    // Sepet AYRI BİR ÜRÜN — tek satır olarak, kendi fiyatıyla eklenir.
     add({ slug: b.slug, name: b.name, unitPrice: b.price, unitLabel: b.unitLabel ?? 'paket', emoji: '🧺' });
-    flash(`${b.name} sepete eklendi ✓`);
+    flash(b.name);
   }
 
   if (loading) return <div className="loading">Yükleniyor…</div>;
   if (error)
     return <div className="error" style={{ marginTop: 24 }}>Ürünler yüklenemedi: {error}<br />Sunucu çalışıyor mu? (apps/api)</div>;
+
+  const showcase = cat === 'all' && !q; // raflar + gruplu ızgara
+  const Rail = ({ title, icon, list }: { title: string; icon: string; list: Product[] }) =>
+    list.length === 0 ? null : (
+      <>
+        <div className="sectit"><h2 className="serif">{icon} {title}</h2></div>
+        <div className="rail">{list.map((p) => <ProductCard key={p.slug} product={p} onAdded={flash} />)}</div>
+      </>
+    );
 
   return (
     <>
@@ -149,123 +161,69 @@ export default function HomePage() {
         )}
       </div>
 
-      {cat === 'all' && !q && deals.length > 0 && (
+      <input className="search" placeholder="🔍 Domates, çilek, zeytin…" value={q} onChange={(e) => setQ(e.target.value)} />
+
+      {showcase ? (
         <>
-          <div className="sectit"><h2 className="serif">🔥 Bu haftanın fırsatları</h2></div>
-          <div className="deals">
-            {deals.map((p) => {
-              const eff = effective(p);
-              const discPct = Math.round((1 - eff / p.basePrice) * 100);
-              return (
-                <div className="prod deal" key={p.slug}>
-                  <span className="pill" style={{ position: 'absolute', top: 10, left: 10, background: 'var(--persimmon)', color: '#fff', zIndex: 1 }}>%{discPct}</span>
-                  <button className="fav" onClick={() => toggle(p.slug)} aria-label={isFav(p.slug) ? 'Favorilerden çıkar' : 'Favorilere ekle'}>{isFav(p.slug) ? '❤️' : '🤍'}</button>
-                  <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
-                  <Link href={`/urun/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                    <div className="ph">
-                      {p.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
-                      ) : emojiFor(p.slug, p.category?.slug)}
+          <Rail title="Bu haftanın fırsatları" icon="🔥" list={deals} />
+          <Rail title="Öne çıkanlar" icon="⭐" list={featured} />
+          <Rail title="Yeni gelenler" icon="🆕" list={newArrivals} />
+
+          {baskets.length > 0 && (
+            <>
+              <div className="sectit"><h2 className="serif">🧺 Hazır sepetler</h2></div>
+              <div className="rail">
+                {baskets.map((b) => {
+                  const discounted = b.discountedPrice != null && b.discountedPrice > 0 && b.discountedPrice < b.basePrice;
+                  return (
+                    <div className="prod" key={b.slug} style={{ display: 'flex', flexDirection: 'column' }}>
+                      {discounted && <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{Math.round((1 - b.price / b.basePrice) * 100)} İNDİRİM</span>}
+                      <div className="ph">
+                        {b.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={b.imageUrl} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                        ) : '🧺'}
+                      </div>
+                      <div className="nm">{b.name}</div>
+                      <div className="pr">
+                        {tl(b.price)} {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.basePrice)}</s>}
+                      </div>
+                      {inCart(b.slug) > 0 && <div className="incart">🛒 {inCart(b.slug)} paket sepette</div>}
+                      <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
                     </div>
-                    <div className="nm">{p.name}</div>
-                    <div className="pr">
-                      {tl(eff)} <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>
-                    </div>
-                    <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
-                    {cartLabel(p.slug, p.unitLabel) && <div className="incart">{cartLabel(p.slug, p.unitLabel)}</div>}
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {cat === 'all' && !q && baskets.length > 0 && (
-        <>
-          <div className="sectit"><h2 className="serif">Hazır sepetler</h2></div>
-          <div className="grid">
-            {baskets.map((b) => {
-              const discounted = b.discountedPrice != null && b.discountedPrice > 0 && b.discountedPrice < b.basePrice;
-              return (
-                <div className="prod" key={b.slug} style={{ display: 'flex', flexDirection: 'column' }}>
-                  {discounted && <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{Math.round((1 - b.price / b.basePrice) * 100)} İNDİRİM</span>}
-                  <div className="ph">
-                    {b.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={b.imageUrl} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
-                    ) : '🧺'}
-                  </div>
-                  <div className="nm">{b.name}</div>
-                  <div className="or" style={{ minHeight: 30 }}>İçinde: {b.components.map((c) => `${c.name} ${c.qty}${c.unitLabel === 'kg' ? 'kg' : ''}`).join(' · ')}</div>
-                  <div className="pr">
-                    {tl(b.price)}{' '}
-                    {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.basePrice)}</s>}
-                  </div>
-                  {inCart(b.slug) > 0 && <div className="incart">🛒 {inCart(b.slug)} paket sepette</div>}
-                  <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      <input className="search" placeholder="🔍 Domates, çilek, muz…" value={q} onChange={(e) => setQ(e.target.value)} />
-
-      <div className="sectit"><h2 className="serif">{cat === 'all' ? 'Tüm ürünler' : cat === 'favs' ? '❤️ Favorilerim' : categories.find((c) => c.slug === cat)?.name}</h2></div>
-
-      {filtered.length === 0 ? (
-        cat === 'favs' ? (
-          <div className="empty"><div className="big">🤍</div><h2 className="serif">Henüz favorin yok</h2><div>Ürün kartlarındaki kalbe dokunarak favorilerine ekle.</div></div>
-        ) : (
-          <div className="empty"><div className="big">🧺</div><h2 className="serif">Ürün bulunamadı</h2><div>Farklı bir kategori ya da arama dene.</div></div>
-        )
-      ) : (
-        <div className="grid">
-          {filtered.map((p) => {
-            const soldOut = p.stockQty != null && p.stockQty <= 0;
-            const eff = effective(p);
-            const discounted = eff < p.basePrice;
-            const discPct = discounted ? Math.round((1 - eff / p.basePrice) * 100) : 0;
-            return (
-              <div className="prod" key={p.slug} style={soldOut ? { opacity: 0.6 } : undefined}>
-                {soldOut ? (
-                  <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: '#eee', color: 'var(--muted)' }}>TÜKENDİ</span>
-                ) : discounted ? (
-                  <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{discPct} İNDİRİM</span>
-                ) : p.isFreshDaily ? (
-                  <span className="pill fresh">GÜNLÜK TAZE</span>
-                ) : p.isLocal ? (
-                  <span className="pill local">YÖRESEL</span>
-                ) : null}
-                <button className="fav" onClick={() => toggle(p.slug)} aria-label={isFav(p.slug) ? 'Favorilerden çıkar' : 'Favorilere ekle'}>{isFav(p.slug) ? '❤️' : '🤍'}</button>
-                {!soldOut && (
-                  <button className="add" onClick={() => addToCart(p)} aria-label="Sepete ekle">+</button>
-                )}
-                <Link href={`/urun/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                  <div className="ph">
-                    {p.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
-                    ) : (
-                      emojiFor(p.slug, p.category?.slug)
-                    )}
-                  </div>
-                  <div className="nm">{p.name}</div>
-                  <div className="or">{p.originRegion ?? '—'}</div>
-                  <div className="pr">
-                    {tl(eff)}{' '}
-                    {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>}
-                  </div>
-                  <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
-                  {cartLabel(p.slug, p.unitLabel) && <div className="incart">{cartLabel(p.slug, p.unitLabel)}</div>}
-                </Link>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </>
+          )}
+
+          {/* Tüm ürünler — kategoriye göre gruplu */}
+          {grouped.map((g) => (
+            <div className="catgroup" key={g.cat.slug}>
+              <h3>{CAT_ICON[g.cat.slug] ?? '🧺'} {g.cat.name} <span className="cnt">{g.items.length}</span></h3>
+              <div className="grid">
+                {g.items.map((p) => <ProductCard key={p.slug} product={p} onAdded={flash} />)}
+              </div>
+            </div>
+          ))}
+        </>
+      ) : (
+        <>
+          <div className="sectit">
+            <h2 className="serif">{cat === 'favs' ? '❤️ Favorilerim' : q ? `“${q}” için sonuçlar` : categories.find((c) => c.slug === cat)?.name}</h2>
+          </div>
+          {flat.length === 0 ? (
+            cat === 'favs' ? (
+              <div className="empty"><div className="big">🤍</div><h2 className="serif">Henüz favorin yok</h2><div>Ürün kartlarındaki kalbe dokunarak favorilerine ekle.</div></div>
+            ) : (
+              <div className="empty"><div className="big">🧺</div><h2 className="serif">Ürün bulunamadı</h2><div>Farklı bir kategori ya da arama dene.</div></div>
+            )
+          ) : (
+            <div className="grid">
+              {flat.map((p) => <ProductCard key={p.slug} product={p} onAdded={flash} />)}
+            </div>
+          )}
+        </>
       )}
     </>
   );

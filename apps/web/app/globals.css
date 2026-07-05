@@ -53,6 +53,13 @@ a { color: inherit; text-decoration: none; }
 /* Product grid */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; padding-bottom: 30px; }
 .deals { display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 20px; scroll-snap-type: x mandatory; }
+/* Merchandising rafı: yatay kaydırmalı, sabit genişlikli kartlar (fırsat/öne çıkan/yeni). */
+.rail { display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 22px; scroll-snap-type: x mandatory; scrollbar-width: thin; }
+.rail .prod { flex: 0 0 158px; scroll-snap-align: start; }
+.sectit .seelink { font-size: 12.5px; color: var(--persimmon-d); font-weight: 600; text-decoration: none; }
+.catgroup { margin-bottom: 6px; }
+.catgroup h3 { font-family: 'Fraunces', serif; font-size: 17px; margin: 20px 0 12px; display: flex; align-items: center; gap: 8px; }
+.catgroup h3 .cnt { font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--muted); background: var(--cream-d); padding: 2px 8px; border-radius: 20px; }
 .deal { flex: 0 0 165px; scroll-snap-align: start; }
 .incart { margin-top: 6px; font-size: 11px; font-weight: 700; color: var(--forest); background: #eaf3ea; border-radius: 20px; padding: 3px 9px; display: inline-block; }
 .prod { background: #fff; border-radius: 20px; padding: 11px; box-shadow: var(--shadow-sm); position: relative; }
