@@ -12,6 +12,7 @@ import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 import { rememberOrder } from '@/lib/orders';
 import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal } from '@/lib/delivery';
+import { isName, isPhone, isEmail, sanitizePhone, formatPhone } from '@/lib/validate';
 
 interface Slot { date: string; window: string; label: string }
 
@@ -54,6 +55,9 @@ export default function CheckoutPage() {
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Alanlara dokunulunca hata gösterilir (baştan kırmızı olmasın). */
+  const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
+  const touch = (f: string) => setTouched((t) => ({ ...t, [f]: true }));
 
   useEffect(() => {
     // Girişli müşterinin doğrulanmış e-postasını önden doldur (değiştirilebilir).
@@ -129,7 +133,13 @@ export default function CheckoutPage() {
   const { minOrderTotal, deliveryTiers } = settings;
   const fee = feeForSubtotal(subtotal, deliveryTiers);
   const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
-  const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district) && !belowMin && consent;
+  // Alan bazlı doğrulama (backend ile aynı kurallar).
+  const nameOk = isName(name);
+  const phoneOk = isPhone(phone);
+  const addressOk = address.trim().length >= 5;
+  const emailOk = email.trim() === '' || isEmail(email);
+  const valid = nameOk && phoneOk && addressOk && emailOk && !!slotKey && (zones.length === 0 || !!district) && !belowMin && consent;
+  const errStyle = { color: 'var(--berry, #b3261e)', fontSize: 12, marginTop: 4 } as const;
 
   return (
     <>
@@ -138,11 +148,25 @@ export default function CheckoutPage() {
         <div>
           <div className="block">
             <h3>Teslimat bilgileri</h3>
-            <div className="field"><label>Ad Soyad</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ayşe Yılmaz" /></div>
-            <div className="field"><label>Telefon</label><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0555 555 55 55" /></div>
+            <div className="field">
+              <label>Ad Soyad</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => touch('name')} placeholder="Ayşe Yılmaz" aria-invalid={touched.name && !nameOk} />
+              {touched.name && !nameOk && <div style={errStyle}>Adınızı ve soyadınızı girin (en az 2 harf).</div>}
+            </div>
+            <div className="field">
+              <label>Telefon</label>
+              <input
+                value={phone} inputMode="tel"
+                onChange={(e) => setPhone(sanitizePhone(e.target.value))}
+                onBlur={() => { setPhone((p) => formatPhone(p)); touch('phone'); }}
+                placeholder="0555 555 55 55" aria-invalid={touched.phone && !phoneOk}
+              />
+              {touched.phone && !phoneOk && <div style={errStyle}>Geçerli bir cep telefonu girin (05XX XXX XX XX).</div>}
+            </div>
             <div className="field">
               <label>E-posta <span className="muted" style={{ fontWeight: 400 }}>(isteğe bağlı — sipariş güncellemeleri için)</span></label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ornek@eposta.com" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => touch('email')} placeholder="ornek@eposta.com" aria-invalid={touched.email && !emailOk} />
+              {touched.email && !emailOk && <div style={errStyle}>Geçerli bir e-posta girin ya da boş bırakın.</div>}
             </div>
             {zones.length > 0 && (
               <div className="field">
@@ -153,7 +177,11 @@ export default function CheckoutPage() {
                 </select>
               </div>
             )}
-            <div className="field"><label>Adres</label><textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Mahalle, cadde, no, daire" /></div>
+            <div className="field">
+              <label>Adres</label>
+              <textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} onBlur={() => touch('address')} placeholder="Mahalle, cadde, no, daire" aria-invalid={touched.address && !addressOk} />
+              {touched.address && !addressOk && <div style={errStyle}>Kuryenin bulabilmesi için açık adres girin (mahalle, cadde, no).</div>}
+            </div>
             <div className="field">
               <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : <span className="muted">(kuryenin sizi kolay bulması için)</span>}</label>
               <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => setGeo({ lat, lng })} onGeolocate={(lat, lng) => setGeoSelf({ lat, lng })} />
