@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class DeliveryTierDto {
   /** Bu ara toplam ve üstüne uygulanan ücret (kuruş). */
@@ -19,6 +19,11 @@ export class UpdateStoreSettingsDto {
   /** Kademeli teslimat tarifesi: [{minSubtotal, fee}] (kuruş). */
   @IsOptional() @IsArray() @ArrayMaxSize(20) @ValidateNested({ each: true }) @Type(() => DeliveryTierDto)
   deliveryTiers?: DeliveryTierDto[];
+
+  /** Teslimat saat pencereleri (HH:MM-HH:MM); boş gönderilirse varsayılan korunur. */
+  @IsOptional() @IsArray() @ArrayMaxSize(8)
+  @Matches(/^\d{2}:\d{2}-\d{2}:\d{2}$/, { each: true, message: 'pencere HH:MM-HH:MM olmalı' })
+  deliveryWindows?: string[];
 
   /** Dükkân/depo başlangıç noktası (rota optimizasyonu). */
   @IsOptional() @IsNumber() @Min(-90) @Max(90)

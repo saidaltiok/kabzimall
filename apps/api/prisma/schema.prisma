@@ -105,6 +105,8 @@ model StoreSetting {
   /// Kademeli teslimat tarifesi: [{minSubtotal, fee}] (kuruş). Artan eşik;
   /// sepet ara toplamının geçtiği en yüksek kademe uygulanır (fee 0 = ücretsiz).
   deliveryTiers Json     @map("delivery_tiers")
+  /// Teslimat saat pencereleri (["10:00-13:00",...]) — panelden düzenlenir; boşsa varsayılan 3 pencere.
+  deliveryWindows Json?  @map("delivery_windows")
   /// Dükkân/depo başlangıç noktası — rota optimizasyonu buradan başlar/biter.
   depotLat      Float?   @map("depot_lat")
   depotLng      Float?   @map("depot_lng")
@@ -146,6 +148,9 @@ model Order {
   deliveryDate   DateTime? @map("delivery_date") @db.Date
   deliveryWindow String?   @map("delivery_window")
   subtotal       Int
+  /// Uygulanan kupon (varsa) ve indirimi (kuruş). grandTotal = subtotal − discount + fee.
+  couponCode     String?  @map("coupon_code")
+  discountTotal  Int      @default(0) @map("discount_total")
   deliveryFee    Int      @map("delivery_fee")
   grandTotal     Int      @map("grand_total")
   /// Tartılı ürünlerde ön provizyon tutarı (sipariş anı tahmini).
@@ -182,6 +187,25 @@ model OrderStatusHistory {
 }
 
 /// Müşteri bildirimi (sipariş durumu/paketleme). Şimdilik LOG; ileride SMS/push.
+/// Kupon: PERCENT (yüzde) ya da FIXED (kuruş) indirim; asgari sepet + son
+/// kullanma + kullanım limiti. Kod tenant içinde benzersiz, BÜYÜK harf saklanır.
+model Coupon {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  code        String
+  type        String // PERCENT | FIXED
+  value       Int // PERCENT: 1-100, FIXED: kuruş
+  minSubtotal Int       @default(0) @map("min_subtotal")
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(6)
+  maxUses     Int?      @map("max_uses")
+  usedCount   Int       @default(0) @map("used_count")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, code])
+  @@map("coupons")
+}
+
 /// Müşteri e-posta OTP girişi: kod hash'lenir, 5 dk geçerli, 5 deneme hakkı.
 /// Doğrulanınca müşteri JWT'si verilir (kind: customer — personel uçlarına GEÇMEZ).
 model CustomerOtp {

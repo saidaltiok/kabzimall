@@ -1,9 +1,10 @@
 import { BadRequestException, Body, Controller, Delete, Get, Headers, Ip, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Public, Roles } from '../auth/decorators';
-import { CATALOG_WRITERS, ORDER_WRITERS, type JwtUser } from '../auth/auth.constants';
+import { CATALOG_WRITERS, ORDER_WRITERS, PRICE_WRITERS, type JwtUser } from '../auth/auth.constants';
 import { MarketService } from './market.service';
 import { CustomerAuthService } from './customer-auth.service';
+import { CouponService } from './coupon.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
 import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
@@ -17,6 +18,7 @@ export class StorefrontController {
   constructor(
     private readonly service: MarketService,
     private readonly customerAuth: CustomerAuthService,
+    private readonly coupons: CouponService,
   ) {}
 
   /** POST /storefront/auth/request-otp — e-postaya 6 haneli giriş kodu gönder. */
@@ -61,10 +63,20 @@ export class StorefrontController {
     return this.service.getProduct(slug);
   }
 
-  /** GET /storefront/slots — ertesi gün teslimat slotları. */
+  /** GET /storefront/slots — ertesi gün teslimat slotları (pencereler ayarlardan). */
   @Get('slots')
-  slots() {
-    return { data: this.service.availableSlots() };
+  async slots() {
+    return { data: await this.service.availableSlots() };
+  }
+
+  /** GET /storefront/coupons/check?code=&subtotal= — kupon önizleme (indirim sunucuda). */
+  @Get('coupons/check')
+  @ApiQuery({ name: 'code', required: true })
+  @ApiQuery({ name: 'subtotal', required: true })
+  couponCheck(@Query('code') code: string, @Query('subtotal') subtotal: string) {
+    const st = Number(subtotal);
+    if (!Number.isFinite(st) || st < 0) throw new BadRequestException('subtotal (kuruş) gerekli');
+    return this.coupons.check(code ?? '', Math.round(st));
   }
 
   /** GET /storefront/baskets — yayındaki hazır sepetler (fiyatlı). */
@@ -228,5 +240,32 @@ export class DeliveryZonesController {
   @Roles(...CATALOG_WRITERS)
   remove(@Param('id') id: string) {
     return this.service.removeZone(id);
+  }
+}
+
+@ApiTags('market: kupon (admin)')
+@Controller('admin/coupons')
+export class AdminCouponsController {
+  constructor(private readonly coupons: CouponService) {}
+
+  @Get()
+  async list() {
+    const data = await this.coupons.list();
+    return { data, meta: { total: data.length } };
+  }
+
+  /** POST /admin/coupons — { code, type: PERCENT|FIXED, value, minSubtotal?, expiresAt?, maxUses? } */
+  @Post()
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ schema: { example: { code: 'HOSGELDIN10', type: 'PERCENT', value: 10, minSubtotal: 20000, maxUses: 100 } } })
+  create(@Body() dto: { code: string; type: 'PERCENT' | 'FIXED'; value: number; minSubtotal?: number; expiresAt?: string; maxUses?: number }) {
+    return this.coupons.create(dto);
+  }
+
+  /** PATCH /admin/coupons/:id/active { isActive } — kuponu aç/kapat. */
+  @Patch(':id/active')
+  @Roles(...PRICE_WRITERS)
+  setActive(@Param('id') id: string, @Body('isActive') isActive: boolean) {
+    return this.coupons.setActive(id, !!isActive);
   }
 }

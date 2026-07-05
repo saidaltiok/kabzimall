@@ -7,6 +7,7 @@ import { dateOnly } from '../common/date';
 import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
 import { optimize, haversineKm } from './route-optim';
 import { MailService } from './mail.service';
+import { CouponService } from './coupon.service';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
@@ -69,7 +70,11 @@ const LOW_STOCK_THRESHOLD = 5;
 
 @Injectable()
 export class MarketService {
-  constructor(private readonly prisma: PrismaService, private readonly mail: MailService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+    private readonly coupons: CouponService,
+  ) {}
 
   /* ----------------------------- Vitrin ------------------------------ */
 
@@ -122,12 +127,20 @@ export class MarketService {
     return tiers;
   }
 
+  /** Pencere listesi doğrula: "HH:MM-HH:MM"; boş/bozuksa varsayılan 3 pencere. */
+  private normalizeWindows(raw: unknown): string[] {
+    if (!Array.isArray(raw)) return [...DELIVERY_WINDOWS];
+    const ws = (raw as string[]).filter((w) => typeof w === 'string' && /^\d{2}:\d{2}-\d{2}:\d{2}$/.test(w));
+    return ws.length ? ws.slice(0, 8) : [...DELIVERY_WINDOWS];
+  }
+
   /** Mağaza ayarları (tenant başına tek satır; yoksa varsayılan). */
   async getStoreSettings() {
     const s = await this.prisma.storeSetting.findUnique({ where: { tenantId: DEV_TENANT_ID } });
     return {
       minOrderTotal: s?.minOrderTotal ?? 0,
       deliveryTiers: this.normalizeTiers(s?.deliveryTiers),
+      deliveryWindows: this.normalizeWindows(s?.deliveryWindows),
       depotLat: s?.depotLat ?? null,
       depotLng: s?.depotLng ?? null,
       contactPhone: s?.contactPhone ?? null,
@@ -139,11 +152,12 @@ export class MarketService {
   }
 
   /** Verilen alanları günceller; verilmeyenler korunur. */
-  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; depotLat?: number | null; depotLng?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; contactEmail?: string | null; contactAddress?: string | null; contactInstagram?: string | null }) {
+  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; deliveryWindows?: string[]; depotLat?: number | null; depotLng?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; contactEmail?: string | null; contactAddress?: string | null; contactInstagram?: string | null }) {
     const cur = await this.getStoreSettings();
     const next = {
       minOrderTotal: patch.minOrderTotal ?? cur.minOrderTotal,
       deliveryTiers: patch.deliveryTiers ? this.normalizeTiers(patch.deliveryTiers) : cur.deliveryTiers,
+      deliveryWindows: patch.deliveryWindows ? this.normalizeWindows(patch.deliveryWindows) : cur.deliveryWindows,
       depotLat: patch.depotLat !== undefined ? patch.depotLat : cur.depotLat,
       depotLng: patch.depotLng !== undefined ? patch.depotLng : cur.depotLng,
       contactPhone: patch.contactPhone !== undefined ? patch.contactPhone : cur.contactPhone,
@@ -155,10 +169,10 @@ export class MarketService {
     const tiersJson = next.deliveryTiers as unknown as Prisma.InputJsonValue;
     const s = await this.prisma.storeSetting.upsert({
       where: { tenantId: DEV_TENANT_ID },
-      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
-      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
+      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
+      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
     });
-    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), depotLat: s.depotLat, depotLng: s.depotLng, contactPhone: s.contactPhone, contactWhatsapp: s.contactWhatsapp, contactEmail: s.contactEmail, contactAddress: s.contactAddress, contactInstagram: s.contactInstagram };
+    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), deliveryWindows: this.normalizeWindows(s.deliveryWindows), depotLat: s.depotLat, depotLng: s.depotLng, contactPhone: s.contactPhone, contactWhatsapp: s.contactWhatsapp, contactEmail: s.contactEmail, contactAddress: s.contactAddress, contactInstagram: s.contactInstagram };
   }
 
   /**
@@ -255,7 +269,9 @@ export class MarketService {
   /* --------------------------- Teslimat slotu --------------------------- */
 
   /** Ertesi gün(ler) için teslimat slotları (Faz 1: SCHEDULED, sonraki 2 gün). */
-  availableSlots(): { date: string; window: string; label: string }[] {
+  async availableSlots(): Promise<{ date: string; window: string; label: string }[]> {
+    const settings = await this.getStoreSettings();
+    const windows = settings.deliveryWindows;
     const out: { date: string; window: string; label: string }[] = [];
     for (let off = 1; off <= 2; off++) {
       const d = new Date();
@@ -265,7 +281,7 @@ export class MarketService {
         off === 1
           ? 'Yarın'
           : `${DAY_TR[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-      for (const w of DELIVERY_WINDOWS) out.push({ date, window: w, label: `${dayLabel} ${w}` });
+      for (const w of windows) out.push({ date, window: w, label: `${dayLabel} ${w}` });
     }
     return out;
   }
@@ -325,7 +341,7 @@ export class MarketService {
     let deliveryDate: Date | null = null;
     let deliveryWindow: string | null = null;
     if (dto.slot) {
-      const valid = this.availableSlots().some((s) => s.date === dto.slot!.date && s.window === dto.slot!.window);
+      const valid = (await this.availableSlots()).some((s) => s.date === dto.slot!.date && s.window === dto.slot!.window);
       if (!valid) throw new BadRequestException('Geçersiz teslimat slotu');
       deliveryDate = dateOnly(dto.slot.date);
       deliveryWindow = dto.slot.window;
@@ -339,12 +355,20 @@ export class MarketService {
       throw new BadRequestException(`Asgari sipariş tutarı ${fmtTL(settings.minOrderTotal)}. Sepet ara toplamı: ${fmtTL(subtotal)}.`);
     }
 
-    const fee = deliveryFee(subtotal, settings.deliveryTiers);
-    const grandTotal = subtotal + fee;
+    const fee = deliveryFee(subtotal, settings.deliveryTiers); // eşik indirim ÖNCESİ ara toplama göre (müşteri lehine)
     const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);
 
     // Sipariş oluşturma + stok düşme atomik (ürün + sepet içeriği).
     const created = await this.prisma.$transaction(async (tx) => {
+      // Kupon: doğrulama + kullanım sayacı atomik (limit yarışı olmaz).
+      let couponCode: string | null = null;
+      let discountTotal = 0;
+      if (dto.couponCode?.trim()) {
+        const r = await this.coupons.redeem(tx, dto.couponCode, subtotal);
+        couponCode = r.code;
+        discountTotal = r.discount;
+      }
+      const grandTotal = subtotal - discountTotal + fee;
       for (const it of items) {
         const p = products.find((x) => x.id === it.productId)!;
         await this.adjustStock(tx, p, it.orderedQty, -1);
@@ -367,6 +391,8 @@ export class MarketService {
           deliveryDate,
           deliveryWindow,
           subtotal,
+          couponCode,
+          discountTotal,
           deliveryFee: fee,
           grandTotal,
           estimatedTotal: grandTotal,
@@ -544,8 +570,10 @@ export class MarketService {
           await tx.orderItem.update({ where: { id: it.id }, data: { pickedQty: picked.get(it.id)!, lineTotal: lt } });
         }
       }
-      const finalTotal = finalSubtotal + order.deliveryFee;
-      const updated = await tx.order.update({ where: { id }, data: { finalTotal, status: 'READY' }, include: { items: true } });
+      // Kupon: PERCENT gerçek gramaja ölçeklenir, FIXED sabit kalır.
+      const discount = await this.coupons.recompute(order.couponCode, order.discountTotal, finalSubtotal);
+      const finalTotal = finalSubtotal - discount + order.deliveryFee;
+      const updated = await tx.order.update({ where: { id }, data: { finalTotal, discountTotal: discount, status: 'READY' }, include: { items: true } });
       await tx.orderStatusHistory.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: 'READY', changedBy: actor ?? null, note: `Paketlendi · ${fmtTL(finalTotal)}` } });
       await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: `Siparişiniz paketlendi. Kesinleşen tutar: ${fmtTL(finalTotal)}.` } });
       return updated;
@@ -602,7 +630,7 @@ export class MarketService {
     if (order.status !== 'CONFIRMED') {
       throw new BadRequestException('Siparişiniz hazırlanmaya başladı; teslimat saati artık değiştirilemez.');
     }
-    const valid = this.availableSlots().some((s) => s.date === date && s.window === window);
+    const valid = (await this.availableSlots()).some((s) => s.date === date && s.window === window);
     if (!valid) throw new BadRequestException('Geçersiz teslimat saati.');
     const sameAsCurrent = order.deliveryDate?.toISOString().slice(0, 10) === date && order.deliveryWindow === window;
     if (sameAsCurrent) throw new BadRequestException('Siparişiniz zaten bu teslimat saatinde.');
