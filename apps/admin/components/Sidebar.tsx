@@ -22,7 +22,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
   {
     label: 'Yönetim',
     links: [
-      { href: '/katalog', icon: '🗂️', label: 'Ürünler', also: ['/sepetler'] },
+      { href: '/katalog', icon: '🗂️', label: 'Ürünler', also: ['/sepetler', '/stok'] },
       { href: '/satis', icon: '📈', label: 'Satış Analizi' },
       { href: '/maliyet', icon: '💸', label: 'Maliyet & Kurallar', also: ['/kurallar'] },
       { href: '/ayarlar', icon: '⚙️', label: 'Ayarlar', also: ['/bolgeler', '/kuponlar', '/bannerlar'] },

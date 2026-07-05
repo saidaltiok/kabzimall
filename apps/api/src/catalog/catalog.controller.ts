@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators';
-import { CATALOG_WRITERS } from '../auth/auth.constants';
+import { CurrentUser, Roles } from '../auth/decorators';
+import { CATALOG_WRITERS, type JwtUser } from '../auth/auth.constants';
 import { CatalogService } from './catalog.service';
 import { CreateCategoryDto, CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { CreateBasketDto } from './dto/basket.dto';
@@ -43,6 +43,15 @@ export class ProductsController {
     return { data, meta: { total: data.length } };
   }
 
+  /** GET /catalog/products/stock-movements?product=&days=30 — stok hareket defteri (":id"den ÖNCE tanımlı olmalı). */
+  @Get('stock-movements')
+  @ApiQuery({ name: 'product', required: false })
+  @ApiQuery({ name: 'days', required: false })
+  async stockMovements(@Query('product') product?: string, @Query('days') days?: string) {
+    const data = await this.service.stockMovements({ product, days: days ? Number(days) : 30 });
+    return { data, meta: { total: data.length } };
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
@@ -56,8 +65,8 @@ export class ProductsController {
 
   @Patch(':id')
   @Roles(...CATALOG_WRITERS)
-  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
-    return this.service.updateProduct(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateProductDto, @CurrentUser() user: JwtUser) {
+    return this.service.updateProduct(id, dto, user?.email);
   }
 
   @Delete(':id')

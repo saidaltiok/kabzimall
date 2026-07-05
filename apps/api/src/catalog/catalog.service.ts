@@ -125,7 +125,7 @@ export class CatalogService {
     }
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto) {
+  async updateProduct(id: string, dto: UpdateProductDto, actor?: string) {
     const current = await this.findOne(id); // 404 kontrolü
     if (dto.categoryId !== undefined) await this.assertCategory(dto.categoryId);
     // Fiyata dokunuluyorsa taban kontrolü (dokunulmayan taraf mevcut değeriyle birleştirilir).
@@ -141,7 +141,39 @@ export class CatalogService {
       data: { ...dto },
       include: { category: { select: { id: true, name: true } } },
     });
+    // Elle stok değişimi hareket defterine (fark ≠ 0 ise) — takip yeni açılıyorsa eski değer 0 sayılır.
+    if (dto.stockQty !== undefined && dto.stockQty !== current.stockQty) {
+      const delta = (dto.stockQty ?? 0) - (current.stockQty ?? 0);
+      if (delta !== 0) {
+        await this.prisma.stockMovement
+          .create({ data: { tenantId: DEV_TENANT_ID, productId: id, delta, reason: 'MANUAL', actor: actor ?? null } })
+          .catch(() => {});
+      }
+    }
     return this.toResponse(row);
+  }
+
+  /** Stok hareket defteri: son N gün, istenirse tek ürün (slug) için. */
+  async stockMovements(opts: { product?: string; days?: number; limit?: number }) {
+    const days = Math.min(180, Math.max(1, opts.days ?? 30));
+    const since = new Date(Date.now() - days * 86_400_000);
+    const where: Prisma.StockMovementWhereInput = { tenantId: DEV_TENANT_ID, createdAt: { gte: since } };
+    if (opts.product?.trim()) where.product = { slug: opts.product.trim() };
+    const rows = await this.prisma.stockMovement.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(500, Math.max(1, opts.limit ?? 200)),
+      include: { product: { select: { slug: true, name: true, unitLabel: true, stockQty: true } } },
+    });
+    return rows.map((m) => ({
+      id: m.id,
+      product: m.product,
+      delta: m.delta,
+      reason: m.reason,
+      refCode: m.refCode,
+      actor: m.actor,
+      createdAt: m.createdAt,
+    }));
   }
 
   /** Geçmişi olan ürün silinemez → pasifleştirme önerilir (409). */

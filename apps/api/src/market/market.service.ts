@@ -371,7 +371,7 @@ export class MarketService {
       const grandTotal = subtotal - discountTotal + fee;
       for (const it of items) {
         const p = products.find((x) => x.id === it.productId)!;
-        await this.adjustStock(tx, p, it.orderedQty, -1);
+        await this.adjustStock(tx, p, it.orderedQty, -1, code);
       }
       const order = await tx.order.create({
         data: {
@@ -423,20 +423,27 @@ export class MarketService {
       .catch(() => {});
   }
 
-  /** Stok ayarı: ürünün kendi stoğu + (BASKET ise) içeriği. dir=-1 düş, +1 geri yükle. */
+  /**
+   * Stok ayarı: ürünün kendi stoğu + (BASKET ise) içeriği. dir=-1 düş, +1 geri
+   * yükle. Stok takipli her değişim harekete (StockMovement) iz bırakır.
+   */
   private async adjustStock(
     tx: Prisma.TransactionClient,
     product: { id: string; stockQty: number | null; kind: string; components: { qty: number; component: { id: string; stockQty: number | null } }[] },
     qty: number,
     dir: 1 | -1,
+    refCode?: string,
   ) {
+    const reason = dir === -1 ? 'ORDER' : 'CANCEL';
     if (product.stockQty != null) {
       await tx.product.update({ where: { id: product.id }, data: { stockQty: { increment: dir * qty } } });
+      await tx.stockMovement.create({ data: { tenantId: DEV_TENANT_ID, productId: product.id, delta: dir * qty, reason, refCode: refCode ?? null } });
     }
     if (product.kind === 'BASKET') {
       for (const c of product.components) {
         if (c.component.stockQty != null) {
           await tx.product.update({ where: { id: c.component.id }, data: { stockQty: { increment: dir * c.qty * qty } } });
+          await tx.stockMovement.create({ data: { tenantId: DEV_TENANT_ID, productId: c.component.id, delta: dir * c.qty * qty, reason, refCode: refCode ?? null } });
         }
       }
     }
@@ -599,7 +606,7 @@ export class MarketService {
         const byId = new Map(prods.map((p) => [p.id, p]));
         for (const it of order.items) {
           const p = byId.get(it.productId);
-          if (p) await this.adjustStock(tx, p, it.orderedQty, 1);
+          if (p) await this.adjustStock(tx, p, it.orderedQty, 1, order.code);
         }
       }
     });

@@ -19,6 +19,7 @@ export const PRICING_TABS: SectionTab[] = [
 export const PRODUCTS_TABS: SectionTab[] = [
   { href: '/katalog', label: 'Katalog', icon: '🗂️' },
   { href: '/sepetler', label: 'Hazır sepetler', icon: '🧺' },
+  { href: '/stok', label: 'Stok hareketleri', icon: '📦' },
 ];
 export const COST_TABS: SectionTab[] = [
   { href: '/maliyet', label: 'Maliyet & Fire', icon: '💸' },
