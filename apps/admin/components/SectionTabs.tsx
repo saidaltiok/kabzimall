@@ -34,6 +34,7 @@ export const SETTINGS_TABS: SectionTab[] = [
   { href: '/bolgeler', label: 'Teslimat bölgeleri', icon: '📍' },
   { href: '/kuponlar', label: 'Kuponlar', icon: '🎟️' },
   { href: '/bannerlar', label: 'Banner', icon: '🖼️' },
+  { href: '/kullanicilar', label: 'Kullanıcılar', icon: '👤' },
 ];
 
 /** Grup içi sekme gezinmesi (ör. Piyasa Verisi: Hal | Rakip). URL'ler değişmez. */

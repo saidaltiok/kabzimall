@@ -26,7 +26,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
       { href: '/satis', icon: '📈', label: 'Satış Analizi' },
       { href: '/musteriler', icon: '👥', label: 'Müşteriler', also: ['/destek'] },
       { href: '/maliyet', icon: '💸', label: 'Maliyet & Kurallar', also: ['/kurallar'] },
-      { href: '/ayarlar', icon: '⚙️', label: 'Ayarlar', also: ['/bolgeler', '/kuponlar', '/bannerlar'] },
+      { href: '/ayarlar', icon: '⚙️', label: 'Ayarlar', also: ['/bolgeler', '/kuponlar', '/bannerlar', '/kullanicilar'] },
     ],
   },
 ];
