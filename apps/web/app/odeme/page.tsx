@@ -13,6 +13,7 @@ import { tl } from '@/lib/format';
 import { rememberOrder } from '@/lib/orders';
 import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal } from '@/lib/delivery';
 import { isName, isPhone, isEmail, sanitizePhone, formatPhone } from '@/lib/validate';
+import Modal from '@/components/Modal';
 
 interface Slot { date: string; window: string; label: string }
 
@@ -55,6 +56,7 @@ export default function CheckoutPage() {
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false); // sipariş onay modalı
   /** Alanlara dokunulunca hata gösterilir (baştan kırmızı olmasın). */
   const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
   const touch = (f: string) => setTouched((t) => ({ ...t, [f]: true }));
@@ -98,15 +100,12 @@ export default function CheckoutPage() {
       </div>
     );
 
-  async function placeOrder() {
-    // Pin, cihazın gerçek konumundan belirgin uzaktaysa (>250 m) bilinçli mi diye sor —
-    // yanlışlıkla haritaya dokunulup yanlış adrese gitmesin. Konum bilinmiyorsa atlanır.
-    if (geo && geoSelf) {
-      const km = distKm(geoSelf, geo);
-      if (km > 0.25 && !confirm(`Seçtiğiniz teslimat noktası şu anki konumunuzdan ~${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km uzakta. Farklı bir adrese sipariş verdiğinizden emin misiniz?`)) {
-        return;
-      }
-    }
+  // Pin, cihazın gerçek konumundan belirgin uzaktaysa (>250 m) onay modalında uyar.
+  const farKm = geo && geoSelf ? distKm(geoSelf, geo) : 0;
+  const farWarn = farKm > 0.25;
+
+  async function submitOrder() {
+    setConfirmOpen(false);
     setBusy(true);
     setError(null);
     try {
@@ -247,13 +246,44 @@ export default function CheckoutPage() {
             </span>
           </label>
           {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
-          <button className="cta" onClick={placeOrder} disabled={busy || !valid}>
+          <button className="cta" onClick={() => setConfirmOpen(true)} disabled={busy || !valid}>
             {busy ? 'Gönderiliyor…' : 'Siparişi onayla'}
           </button>
           {belowMin && <p className="note" style={{ color: 'var(--honey)' }}>Asgari sipariş tutarı {tl(minOrderTotal)}. Sepete {tl(minOrderTotal - subtotal)} daha ekleyin.</p>}
           {!valid && !belowMin && <p className="note">Ad, telefon, adresi doldurun; teslimat saatini seçin ve sözleşmeyi onaylayın.</p>}
         </div>
       </div>
+
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Siparişi onayla"
+        footer={
+          <>
+            <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, padding: '8px 12px' }} onClick={() => setConfirmOpen(false)}>Vazgeç</button>
+            <button className="cta" style={{ marginTop: 0, width: 'auto', padding: '10px 18px' }} disabled={busy} onClick={submitOrder}>
+              {busy ? 'Gönderiliyor…' : 'Evet, siparişi ver'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Ürün</span><span>{items.length} kalem</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Teslimat</span><span>{slots.find((s) => `${s.date}|${s.window}` === slotKey)?.label ?? '—'}</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Adres</span><span style={{ maxWidth: 220, textAlign: 'right' }}>{district ? `${district} · ` : ''}{address}</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Ödeme</span><span>Kapıda ödeme (nakit/kart)</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 16, marginTop: 4 }}>
+            <span>Tahmini toplam</span><span>{tl(subtotal - (coupon?.discount ?? 0) + fee)}</span>
+          </div>
+          <p className="muted" style={{ fontSize: 12, margin: '2px 0 0' }}>Tartılı üründe kesin tutar paketlemede gramajla kesinleşir.</p>
+          {farWarn && (
+            <div className="error" style={{ marginTop: 8 }}>
+              ⚠️ Seçtiğiniz teslimat noktası şu anki konumunuzdan ~{farKm < 10 ? farKm.toFixed(1).replace('.', ',') : Math.round(farKm)} km uzakta.
+              Farklı bir adrese sipariş veriyorsanız sorun yok; emin olun.
+            </div>
+          )}
+        </div>
+      </Modal>
     </>
   );
 }
