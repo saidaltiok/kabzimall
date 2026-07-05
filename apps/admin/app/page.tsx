@@ -53,6 +53,11 @@ interface Decisions {
   decisions: Decision[];
   info: { productId: string; name: string; flags: string[] }[];
 }
+interface Overview {
+  days: number;
+  series: { date: string; orders: number; revenue: number; discount: number }[];
+  summary: { totalOrders: number; totalRevenue: number; totalDiscount: number; avgOrderValue: number };
+}
 
 const FLAG_META: Record<string, { label: string; cls: string }> = {
   ZARARINA: { label: 'Zararına satılıyor', cls: 'zararina' },
@@ -68,6 +73,7 @@ export default function BugunPage() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [dec, setDec] = useState<Decisions | null>(null);
   const [ops, setOps] = useState<OpsSummary | null>(null);
+  const [trend, setTrend] = useState<Overview | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // productId | '__all__'
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -76,6 +82,7 @@ export default function BugunPage() {
     apiGet<Dashboard>('/intel/dashboard').then(setData).catch((e) => setError(e.message));
     apiGet<Decisions>('/intel/dashboard/decisions').then(setDec).catch(() => {});
     apiGet<OpsSummary>('/admin/orders/summary').then(setOps).catch(() => {});
+    apiGet<Overview>('/intel/analytics/overview?days=7').then(setTrend).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -226,6 +233,9 @@ export default function BugunPage() {
         {/* 4 — Bugünün operasyonu */}
         {ops && <Ops ops={ops} />}
 
+        {/* 4.5 — 7 günlük ciro trendi */}
+        {trend && trend.summary.totalOrders > 0 && <TrendCard trend={trend} />}
+
         {/* 5 — Son fiyat değişiklikleri */}
         {data && data.recentPriceChanges.length > 0 && (
           <div className="card" style={{ marginTop: 16 }}>
@@ -297,6 +307,32 @@ function Ops({ ops }: { ops: OpsSummary }) {
             </table>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const DAY_SHORT = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+
+/** Son 7 günün ciro çubukları — gün etiketli, sipariş sayısı çubuğun üstünde. */
+function TrendCard({ trend }: { trend: Overview }) {
+  const max = trend.series.reduce((m, p) => Math.max(m, p.revenue), 0);
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="ct">
+        Son 7 gün ciro <span>{tl(trend.summary.totalRevenue)} · {trend.summary.totalOrders} sipariş · ort. sepet {tl(trend.summary.avgOrderValue)}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 110, padding: '6px 2px 0' }}>
+        {trend.series.map((p) => {
+          const h = max ? Math.max(4, Math.round((p.revenue / max) * 84)) : 4;
+          return (
+            <div key={p.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }} title={`${p.date} · ${tl(p.revenue)} · ${p.orders} sipariş`}>
+              <div className="muted" style={{ fontSize: 10.5 }}>{p.orders > 0 ? p.orders : ''}</div>
+              <div style={{ width: '100%', maxWidth: 46, height: h, borderRadius: '8px 8px 3px 3px', background: p.revenue > 0 ? 'var(--forest)' : 'var(--line)' }} />
+              <div className="muted" style={{ fontSize: 10.5 }}>{DAY_SHORT[new Date(p.date + 'T00:00:00').getDay()]}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

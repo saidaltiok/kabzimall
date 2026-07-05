@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
@@ -12,6 +12,19 @@ interface Elasticity {
   changeAt?: string; oldPrice?: number; newPrice?: number; pricePct?: number;
   beforeAvgUnits?: number; afterAvgUnits?: number; unitsPct?: number; elasticity?: number | null;
 }
+interface Overview {
+  days: number;
+  series: { date: string; orders: number; revenue: number; discount: number }[];
+  summary: { totalOrders: number; totalRevenue: number; totalDiscount: number; avgOrderValue: number };
+}
+interface Mover {
+  slug: string; name: string; changes: number; avgAbsPct: number; netPct: number;
+  firstPrice: number; lastPrice: number; byDay: Record<string, number>;
+}
+interface Movers {
+  days: number; dayKeys: string[]; movers: Mover[];
+  summary: { changedProducts: number; unchangedProducts: number; totalChanges: number };
+}
 
 const pctStr = (r?: number | null) => (r == null ? '—' : `${r > 0 ? '+' : ''}${(r * 100).toFixed(1)}%`);
 
@@ -22,6 +35,16 @@ export default function SatisPage() {
   const [elast, setElast] = useState<Elasticity | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ovDays, setOvDays] = useState('7');
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [movers, setMovers] = useState<Movers | null>(null);
+
+  useEffect(() => {
+    apiGet<Overview>(`/intel/analytics/overview?days=${ovDays}`).then(setOverview).catch(() => {});
+  }, [ovDays]);
+  useEffect(() => {
+    apiGet<Movers>('/intel/analytics/price-movers?days=30').then(setMovers).catch(() => {});
+  }, []);
 
   async function load() {
     setBusy(true); setError(null);
@@ -49,6 +72,68 @@ export default function SatisPage() {
           (<b>fiyat esnekliği</b>: "fiyat %-10 → satış %+18") gör. Sipariş verisinden hesaplanır.
         </p>
         {error && <div className="error">{error}</div>}
+
+        {/* Mağaza geneli — günlük ciro/sipariş */}
+        {overview && (
+          <div className="card">
+            <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              Mağaza geneli
+              <span>{tl(overview.summary.totalRevenue)} ciro · {overview.summary.totalOrders} sipariş · ort. sepet {tl(overview.summary.avgOrderValue)}{overview.summary.totalDiscount > 0 && <> · 🎟️ {tl(overview.summary.totalDiscount)} indirim</>}</span>
+              <select value={ovDays} onChange={(e) => setOvDays(e.target.value)} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 8px' }}>
+                <option value="7">Son 7 gün</option>
+                <option value="30">Son 30 gün</option>
+                <option value="90">Son 90 gün</option>
+              </select>
+            </div>
+            {overview.summary.totalOrders === 0 ? (
+              <p className="muted">Bu dönemde sipariş yok.</p>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: overview.series.length > 31 ? 2 : 6, height: 96, padding: '4px 2px 0' }}>
+                {overview.series.map((p) => {
+                  const max = overview.series.reduce((m, q) => Math.max(m, q.revenue), 0);
+                  const h = max ? Math.max(3, Math.round((p.revenue / max) * 78)) : 3;
+                  return (
+                    <div key={p.date} title={`${p.date} · ${tl(p.revenue)} · ${p.orders} sipariş`} style={{ flex: 1, height: h, borderRadius: 3, background: p.revenue > 0 ? 'var(--forest)' : 'var(--line)' }} />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Fiyat hareketliliği — volatilite + ısı haritası */}
+        {movers && movers.summary.totalChanges > 0 && (
+          <div className="card">
+            <div className="ct">
+              Fiyat hareketliliği <span>son {movers.days} gün · {movers.summary.totalChanges} değişiklik · {movers.summary.changedProducts} ürün oynadı, {movers.summary.unchangedProducts} sabit</span>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Ürün</th><th className="num">Değişim</th><th className="num">Ort. |%|</th><th className="num">Net %</th><th className="num">İlk → Son</th><th>Yoğunluk (gün gün)</th></tr>
+              </thead>
+              <tbody>
+                {movers.movers.slice(0, 12).map((m) => (
+                  <tr key={m.slug}>
+                    <td><b>{m.name}</b></td>
+                    <td className="num">{m.changes}</td>
+                    <td className="num">{(m.avgAbsPct * 100).toFixed(1)}%</td>
+                    <td className="num" style={{ color: m.netPct > 0 ? 'var(--persimmon-d)' : m.netPct < 0 ? 'var(--forest)' : undefined }}>{pctStr(m.netPct)}</td>
+                    <td className="num muted" style={{ whiteSpace: 'nowrap' }}>{tl(m.firstPrice)} → {tl(m.lastPrice)}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 1.5 }}>
+                        {movers.dayKeys.map((day) => {
+                          const n = m.byDay[day] ?? 0;
+                          return <div key={day} title={`${day}: ${n} değişiklik`} style={{ width: 7, height: 16, borderRadius: 2, background: n === 0 ? 'var(--cream-d, #eee)' : n === 1 ? '#e8b04b' : 'var(--persimmon)' }} />;
+                        })}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>Isı haritası: gri = değişiklik yok · sarı = 1 · turuncu = 2+. En çok oynayan 12 ürün gösterilir.</p>
+          </div>
+        )}
 
         <div className="card">
           <div className="ct">Ürün</div>
