@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { apiGet } from '@/lib/api';
+import { apiGet, savedCoupon, saveCoupon, clearCoupon } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal, nextTier } from '@/lib/delivery';
@@ -12,10 +12,45 @@ export default function CartPage() {
   const { items, setQty, setNote, remove, clear, subtotal, keyOf } = useCart();
   const router = useRouter();
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
+  // Kupon — doğrulama ve indirim SUNUCUDA (storefront/coupons/check).
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState<{ code: string; discount: number; message: string } | null>(null);
+  const [couponErr, setCouponErr] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
 
   useEffect(() => {
     apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
   }, []);
+
+  // Kayıtlı kupon varsa güncel ara toplamla yeniden doğrula (sepet değişmiş olabilir).
+  useEffect(() => {
+    const code = savedCoupon();
+    if (!code || subtotal <= 0) { if (!code) setCoupon(null); return; }
+    apiGet<{ valid: boolean; code: string; discount: number; message: string }>(
+      `/storefront/coupons/check?code=${encodeURIComponent(code)}&subtotal=${subtotal}`,
+    ).then((r) => {
+      if (r.valid) setCoupon({ code: r.code, discount: r.discount, message: r.message });
+      else { setCoupon(null); setCouponErr(r.message); clearCoupon(); }
+    }).catch(() => {});
+  }, [subtotal]);
+
+  async function applyCoupon() {
+    if (!couponInput.trim()) return;
+    setCouponBusy(true); setCouponErr(null);
+    try {
+      const r = await apiGet<{ valid: boolean; code: string; discount: number; message: string }>(
+        `/storefront/coupons/check?code=${encodeURIComponent(couponInput.trim())}&subtotal=${subtotal}`,
+      );
+      if (r.valid) { setCoupon({ code: r.code, discount: r.discount, message: r.message }); saveCoupon(r.code); setCouponInput(''); }
+      else setCouponErr(r.message);
+    } catch (e) {
+      setCouponErr((e as Error).message);
+    } finally {
+      setCouponBusy(false);
+    }
+  }
+
+  function removeCoupon() { setCoupon(null); clearCoupon(); }
 
   if (items.length === 0)
     return (
@@ -84,11 +119,27 @@ export default function CartPage() {
 
         <div className="summary">
           <div className="ln"><span>Ara toplam</span><span>{tl(subtotal)}</span></div>
+          {coupon && (
+            <div className="ln">
+              <span>Kupon <b>{coupon.code}</b> <button onClick={removeCoupon} style={{ border: 'none', background: 'none', color: 'var(--berry)', cursor: 'pointer', fontSize: 12 }}>kaldır</button></span>
+              <span className="save">−{tl(coupon.discount)}</span>
+            </div>
+          )}
           <div className="ln">
             <span>Teslimat</span>
             <span className="save">{fee === 0 ? 'Ücretsiz 🎉' : tl(fee)}</span>
           </div>
-          <div className="ln tot serif"><span>Toplam (tahmini)</span><span>{tl(subtotal + fee)}</span></div>
+          <div className="ln tot serif"><span>Toplam (tahmini)</span><span>{tl(subtotal - (coupon?.discount ?? 0) + fee)}</span></div>
+          {!coupon && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+              <input className="notein" style={{ flex: 1, marginTop: 0 }} placeholder="🎟️ Kupon kodu" value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applyCoupon()} />
+              <button className="cta" style={{ marginTop: 0, width: 'auto', padding: '8px 14px', fontSize: 13 }} disabled={couponBusy || !couponInput.trim()} onClick={applyCoupon}>
+                {couponBusy ? '…' : 'Uygula'}
+              </button>
+            </div>
+          )}
+          {couponErr && <div className="note" style={{ color: 'var(--berry)' }}>{couponErr}</div>}
           <div className="note">
             {next && (next.fee === 0
               ? `${tl(next.minSubtotal - subtotal)} daha ekle, teslimat ücretsiz olsun. `

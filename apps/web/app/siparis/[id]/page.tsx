@@ -17,7 +17,7 @@ interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
   deliveryDate: string | null; deliveryWindow: string | null;
   slotChangeDate: string | null; slotChangeWindow: string | null; slotChangeStatus: string | null;
-  subtotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null; items: OrderItem[];
+  subtotal: number; couponCode: string | null; discountTotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null; items: OrderItem[];
   notifications: { id: string; message: string; createdAt: string }[];
   statusHistory: { id: string; fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }[];
 }
@@ -167,6 +167,9 @@ export default function OrderPage() {
         <div className="ln" style={{ borderTop: '1px solid var(--line)', paddingTop: 10, marginTop: 6 }}>
           <span className="muted">Ara toplam</span><span>{tl(order.subtotal)}</span>
         </div>
+        {order.discountTotal > 0 && (
+          <div className="ln"><span className="muted">Kupon {order.couponCode}</span><span style={{ color: 'var(--forest)' }}>−{tl(order.discountTotal)}</span></div>
+        )}
         <div className="ln"><span className="muted">Teslimat</span><span>{order.deliveryFee === 0 ? 'Ücretsiz' : tl(order.deliveryFee)}</span></div>
         <div className="ln serif" style={{ fontSize: 18, fontWeight: 600 }}>
           <span>{order.finalTotal != null ? 'Tahmini toplam' : 'Toplam (kapıda ödeme)'}</span><span>{tl(order.grandTotal)}</span>

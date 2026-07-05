@@ -33,6 +33,16 @@ export function setCustomerSession(token: string, email: string) {
   window.dispatchEvent(new Event('km-session'));
 }
 
+/* ---------------- Kupon (sepette uygulanır, siparişle gönderilir) ---------------- */
+
+const COUPON_KEY = 'km_coupon';
+
+export function savedCoupon(): string | null {
+  return typeof window === 'undefined' ? null : localStorage.getItem(COUPON_KEY);
+}
+export function saveCoupon(code: string) { localStorage.setItem(COUPON_KEY, code); }
+export function clearCoupon() { localStorage.removeItem(COUPON_KEY); }
+
 export function clearCustomerSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(EMAIL_KEY);

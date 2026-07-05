@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { apiGet, apiPost, customerSession } from '@/lib/api';
+import { apiGet, apiPost, customerSession, savedCoupon, clearCoupon } from '@/lib/api';
 
 // Harita yalnızca istemcide (leaflet SSR'a girmez).
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
@@ -48,6 +48,9 @@ export default function CheckoutPage() {
   /** Cihazın gerçek konumu (pin'den bağımsız) — "farklı yer seçtiniz" teyidi için. */
   const [geoSelf, setGeoSelf] = useState<{ lat: number; lng: number } | null>(null);
   const [subPref, setSubPref] = useState<SubPref>('CALL');
+  /** Mesafeli satış + KVKK onayı — işaretlenmeden sipariş verilemez (yasal gereklilik). */
+  const [consent, setConsent] = useState(false);
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +75,15 @@ export default function CheckoutPage() {
       }).catch(() => {});
     } catch { /* eski tarayıcı → teyit atlanır */ }
   }, []);
+
+  // Sepette uygulanan kupon — sepet hydrate olduktan sonra güncel ara toplamla doğrula.
+  useEffect(() => {
+    const cc = savedCoupon();
+    if (!cc || subtotal <= 0) return;
+    apiGet<{ valid: boolean; code: string; discount: number }>(
+      `/storefront/coupons/check?code=${encodeURIComponent(cc)}&subtotal=${subtotal}`,
+    ).then((r) => { if (r.valid) setCoupon({ code: r.code, discount: r.discount }); else { setCoupon(null); clearCoupon(); } }).catch(() => {});
+  }, [subtotal]);
 
   if (items.length === 0)
     return (
@@ -101,7 +113,9 @@ export default function CheckoutPage() {
         slot: slot ? { date: slot.date, window: slot.window } : undefined,
         note: note || undefined,
         substitutionPref: subPref,
+        couponCode: coupon?.code,
       });
+      clearCoupon();
       rememberOrder(order.id, order.code);
       clear();
       router.push(`/siparis/${order.id}`);
@@ -115,7 +129,7 @@ export default function CheckoutPage() {
   const { minOrderTotal, deliveryTiers } = settings;
   const fee = feeForSubtotal(subtotal, deliveryTiers);
   const belowMin = minOrderTotal > 0 && subtotal < minOrderTotal;
-  const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district) && !belowMin;
+  const valid = name.trim().length >= 2 && phone.trim().length >= 7 && address.trim().length >= 5 && !!slotKey && (zones.length === 0 || !!district) && !belowMin && consent;
 
   return (
     <>
@@ -193,15 +207,23 @@ export default function CheckoutPage() {
 
         <div className="summary">
           <div className="ln"><span>Ara toplam ({items.length} ürün)</span><span>{tl(subtotal)}</span></div>
+          {coupon && <div className="ln"><span>Kupon <b>{coupon.code}</b></span><span className="save">−{tl(coupon.discount)}</span></div>}
           <div className="ln"><span>Teslimat</span><span className="save">{fee === 0 ? 'Ücretsiz' : tl(fee)}</span></div>
-          <div className="ln tot serif"><span>Tahmini toplam</span><span>{tl(subtotal + fee)}</span></div>
+          <div className="ln tot serif"><span>Tahmini toplam</span><span>{tl(subtotal - (coupon?.discount ?? 0) + fee)}</span></div>
           <div className="note">Kesin tutar tartılı üründe paketlemede gramajla kesinleşir.</div>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, marginTop: 12, cursor: 'pointer', lineHeight: 1.5 }}>
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 2 }} />
+            <span>
+              <a href="/mesafeli-satis" target="_blank" style={{ color: 'var(--forest)', fontWeight: 600 }}>Mesafeli Satış Sözleşmesi</a>&apos;ni ve{' '}
+              <a href="/kvkk" target="_blank" style={{ color: 'var(--forest)', fontWeight: 600 }}>KVKK Aydınlatma Metni</a>&apos;ni okudum, kabul ediyorum.
+            </span>
+          </label>
           {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
           <button className="cta" onClick={placeOrder} disabled={busy || !valid}>
             {busy ? 'Gönderiliyor…' : 'Siparişi onayla'}
           </button>
           {belowMin && <p className="note" style={{ color: 'var(--honey)' }}>Asgari sipariş tutarı {tl(minOrderTotal)}. Sepete {tl(minOrderTotal - subtotal)} daha ekleyin.</p>}
-          {!valid && !belowMin && <p className="note">Ad, telefon, adresi doldurun ve teslimat saatini seçin.</p>}
+          {!valid && !belowMin && <p className="note">Ad, telefon, adresi doldurun; teslimat saatini seçin ve sözleşmeyi onaylayın.</p>}
         </div>
       </div>
     </>
