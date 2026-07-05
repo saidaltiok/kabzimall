@@ -14,21 +14,21 @@ describe('Intel /analytics — mağaza geneli + fiyat hareketliliği', () => {
     http = authed(app);
     server = app.getHttpServer();
 
-    await http.post('/api/v1/catalog/products').send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
-    await http.post('/api/v1/catalog/products').send({ slug: 'salatalik', name: 'Salatalık', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2000 }).expect(201);
+    await http.post('/api/v1/catalog/products').send({ slug: 'gnl-a', name: 'Genel A', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
+    await http.post('/api/v1/catalog/products').send({ slug: 'gnl-b', name: 'Genel B', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2000 }).expect(201);
 
     const cust = { name: 'Genel', phone: '05551110077', address: 'Adres 3' };
-    const o1 = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 2 }], customer: cust }).expect(201);
-    const o2 = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'salatalik', qty: 1 }], customer: cust }).expect(201);
+    const o1 = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'gnl-a', qty: 2 }], customer: cust }).expect(201);
+    const o2 = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'gnl-b', qty: 1 }], customer: cust }).expect(201);
     expectedRevenue = o1.body.grandTotal + o2.body.grandTotal;
 
     // iptal edilen sipariş ciroya girmemeli
-    const iptal = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 5 }], customer: cust }).expect(201);
+    const iptal = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'gnl-a', qty: 5 }], customer: cust }).expect(201);
     await http.patch(`/api/v1/admin/orders/${iptal.body.id}/status`).send({ status: 'CANCELLED' }).expect(200);
 
-    // fiyat hareketleri: domates 2 kez, salatalık 0 kez
-    await http.post('/api/v1/intel/price/apply').send({ productId: 'domates', price: 3990, strategy: 'MANUAL' }).expect(200);
-    await http.post('/api/v1/intel/price/apply').send({ productId: 'domates', price: 3790, strategy: 'MANUAL' }).expect(200);
+    // fiyat hareketleri: gnl-a 2 kez, salatalık 0 kez
+    await http.post('/api/v1/intel/price/apply').send({ productId: 'gnl-a', price: 3990, strategy: 'MANUAL' }).expect(200);
+    await http.post('/api/v1/intel/price/apply').send({ productId: 'gnl-a', price: 3790, strategy: 'MANUAL' }).expect(200);
   });
 
   afterAll(async () => {
@@ -58,7 +58,7 @@ describe('Intel /analytics — mağaza geneli + fiyat hareketliliği', () => {
     expect(res.body.summary.totalChanges).toBe(2);
 
     const m = res.body.movers[0];
-    expect(m.slug).toBe('domates');
+    expect(m.slug).toBe('gnl-a');
     expect(m.changes).toBe(2);
     expect(m.firstPrice).toBe(3590);
     expect(m.lastPrice).toBe(3790);

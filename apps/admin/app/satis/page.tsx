@@ -25,8 +25,24 @@ interface Movers {
   days: number; dayKeys: string[]; movers: Mover[];
   summary: { changedProducts: number; unchangedProducts: number; totalChanges: number };
 }
+interface Affinity {
+  days: number; ordersAnalyzed: number;
+  topProducts: { slug: string; name: string; orders: number }[];
+  pairs: { a: { slug: string; name: string }; b: { slug: string; name: string }; together: number; confidence: number }[];
+  suggestedBasket: { slug: string; name: string }[];
+}
 
 const pctStr = (r?: number | null) => (r == null ? '—' : `${r > 0 ? '+' : ''}${(r * 100).toFixed(1)}%`);
+
+/** YYYY-AA-GG → "YYYY-Wnn" ISO haftası (uzun dönem ısı haritası kırılımı). */
+function isoWeek(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day); // haftanın perşembesi hangi yıla düşerse
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
 
 export default function SatisPage() {
   const [productId, setProductId] = useState('domates');
@@ -37,14 +53,31 @@ export default function SatisPage() {
   const [error, setError] = useState<string | null>(null);
   const [ovDays, setOvDays] = useState('7');
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [mvDays, setMvDays] = useState('30');
   const [movers, setMovers] = useState<Movers | null>(null);
+  const [affinity, setAffinity] = useState<Affinity | null>(null);
 
   useEffect(() => {
     apiGet<Overview>(`/intel/analytics/overview?days=${ovDays}`).then(setOverview).catch(() => {});
   }, [ovDays]);
   useEffect(() => {
-    apiGet<Movers>('/intel/analytics/price-movers?days=30').then(setMovers).catch(() => {});
+    apiGet<Movers>(`/intel/analytics/price-movers?days=${mvDays}`).then(setMovers).catch(() => {});
+  }, [mvDays]);
+  useEffect(() => {
+    apiGet<Affinity>('/intel/analytics/basket-affinity?days=90').then(setAffinity).catch(() => {});
   }, []);
+
+  // 45 günden uzun dönemde ısı haritası haftalık kırılıma iner (hücre = ISO haftası).
+  const weekly = movers != null && movers.days > 45;
+  const heatCols: { key: string; label: string }[] = movers
+    ? weekly
+      ? [...new Set(movers.dayKeys.map(isoWeek))].map((w) => ({ key: w, label: w.slice(5) }))
+      : movers.dayKeys.map((d) => ({ key: d, label: d }))
+    : [];
+  const cellCount = (m: Mover, key: string) =>
+    weekly
+      ? Object.entries(m.byDay).reduce((s, [day, n]) => (isoWeek(day) === key ? s + n : s), 0)
+      : m.byDay[key] ?? 0;
 
   async function load() {
     setBusy(true); setError(null);
@@ -101,11 +134,17 @@ export default function SatisPage() {
           </div>
         )}
 
-        {/* Fiyat hareketliliği — volatilite + ısı haritası */}
+        {/* Fiyat hareketliliği — volatilite + ısı haritası (45+ günde haftalık kırılım) */}
         {movers && movers.summary.totalChanges > 0 && (
           <div className="card">
-            <div className="ct">
-              Fiyat hareketliliği <span>son {movers.days} gün · {movers.summary.totalChanges} değişiklik · {movers.summary.changedProducts} ürün oynadı, {movers.summary.unchangedProducts} sabit</span>
+            <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              Fiyat hareketliliği
+              <span>son {movers.days} gün · {movers.summary.totalChanges} değişiklik · {movers.summary.changedProducts} ürün oynadı, {movers.summary.unchangedProducts} sabit</span>
+              <select value={mvDays} onChange={(e) => setMvDays(e.target.value)} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 8px' }}>
+                <option value="7">Son 7 gün</option>
+                <option value="30">Son 30 gün</option>
+                <option value="90">Son 90 gün (haftalık)</option>
+              </select>
             </div>
             <table>
               <thead>
@@ -121,9 +160,9 @@ export default function SatisPage() {
                     <td className="num muted" style={{ whiteSpace: 'nowrap' }}>{tl(m.firstPrice)} → {tl(m.lastPrice)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 1.5 }}>
-                        {movers.dayKeys.map((day) => {
-                          const n = m.byDay[day] ?? 0;
-                          return <div key={day} title={`${day}: ${n} değişiklik`} style={{ width: 7, height: 16, borderRadius: 2, background: n === 0 ? 'var(--cream-d, #eee)' : n === 1 ? '#e8b04b' : 'var(--persimmon)' }} />;
+                        {heatCols.map((col) => {
+                          const n = cellCount(m, col.key);
+                          return <div key={col.key} title={`${weekly ? col.key + ' haftası' : col.key}: ${n} değişiklik`} style={{ width: weekly ? 14 : 7, height: 16, borderRadius: 2, background: n === 0 ? 'var(--cream-d, #eee)' : n === 1 ? '#e8b04b' : 'var(--persimmon)' }} />;
                         })}
                       </div>
                     </td>
@@ -131,7 +170,46 @@ export default function SatisPage() {
                 ))}
               </tbody>
             </table>
-            <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>Isı haritası: gri = değişiklik yok · sarı = 1 · turuncu = 2+. En çok oynayan 12 ürün gösterilir.</p>
+            <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+              Isı haritası ({weekly ? 'hücre = hafta' : 'hücre = gün'}): gri = değişiklik yok · sarı = 1 · turuncu = 2+. En çok oynayan 12 ürün gösterilir.
+            </p>
+          </div>
+        )}
+
+        {/* İdeal sepet önerisi — birlikte-satın-alma analizi */}
+        {affinity && affinity.pairs.length > 0 && (
+          <div className="card">
+            <div className="ct">🧺 İdeal sepet önerisi <span>son {affinity.days} gün · {affinity.ordersAnalyzed} sipariş analiz edildi</span></div>
+            {affinity.suggestedBasket.length >= 2 && (
+              <div className="aibox" style={{ marginBottom: 12 }}>
+                <span className="k">Önerilen bileşim</span>
+                {affinity.suggestedBasket.map((s) => s.name).join(' + ')} — bu ürünler sık birlikte alınıyor.
+                Hazır sepet olarak satmak için: <a href="/sepetler" style={{ color: 'var(--forest)', fontWeight: 700 }}>Hazır sepetler →</a>
+              </div>
+            )}
+            <table>
+              <thead>
+                <tr><th>Birlikte alınan çift</th><th className="num">Kaç siparişte</th><th className="num">Birliktelik</th></tr>
+              </thead>
+              <tbody>
+                {affinity.pairs.map((p) => (
+                  <tr key={`${p.a.slug}|${p.b.slug}`}>
+                    <td><b>{p.a.name}</b> + <b>{p.b.name}</b></td>
+                    <td className="num">{p.together}</td>
+                    <td className="num">
+                      %{Math.round(p.confidence * 100)}
+                      <div style={{ background: 'var(--line)', borderRadius: 3, height: 5, width: 90, display: 'inline-block', marginLeft: 8, verticalAlign: 'middle' }}>
+                        <div style={{ background: 'var(--forest)', height: 5, borderRadius: 3, width: `${Math.min(100, Math.round(p.confidence * 100))}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+              Birliktelik: çifti birlikte içeren siparişlerin, çiftin daha az satan ürününün geçtiği siparişlere oranı.
+              Hazır sepetler analiz dışıdır (kendileri zaten paket).
+            </p>
           </div>
         )}
 

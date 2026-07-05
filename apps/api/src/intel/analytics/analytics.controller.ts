@@ -30,6 +30,13 @@ export class AnalyticsController {
     return this.service.priceMovers(days ? Number(days) : 30);
   }
 
+  /** GET /intel/analytics/basket-affinity?days=90 — birlikte-satın-alma + önerilen sepet. */
+  @Get('basket-affinity')
+  @ApiQuery({ name: 'days', required: false })
+  basketAffinity(@Query('days') days?: string) {
+    return this.service.basketAffinity(days ? Number(days) : 90);
+  }
+
   /** GET /intel/analytics/elasticity?productId=&window=14 — fiyat esnekliği. */
   @Get('elasticity')
   @ApiQuery({ name: 'productId', required: true })

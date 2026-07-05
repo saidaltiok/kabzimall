@@ -38,21 +38,21 @@ describe('Teslimat saat pencereleri (Ayarlar → storefront slots)', () => {
   });
 
   it('yeni pencereyle sipariş verilebilir, eski pencere reddedilir', async () => {
-    await http.post('/api/v1/catalog/products').send({ slug: 'salatalik', name: 'Salatalık', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2000 }).expect(201);
+    await http.post('/api/v1/catalog/products').send({ slug: 'slt-urun', name: 'Slot Ürünü', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 2000 }).expect(201);
     const slots = await request(server).get('/api/v1/storefront/slots').expect(200);
     const first = slots.body.data[0];
     const customer = { name: 'Slot Testi', phone: '05551110088', address: 'Test Sok. 2' };
 
     const ok = await request(server)
       .post('/api/v1/storefront/orders')
-      .send({ items: [{ slug: 'salatalik', qty: 2 }], customer, slot: { date: first.date, window: first.window } })
+      .send({ items: [{ slug: 'slt-urun', qty: 2 }], customer, slot: { date: first.date, window: first.window } })
       .expect(201);
     expect(ok.body.deliveryWindow).toBe(first.window);
 
     // ayarlarda artık olmayan pencere → kapasite listesinde yok → 400
     await request(server)
       .post('/api/v1/storefront/orders')
-      .send({ items: [{ slug: 'salatalik', qty: 2 }], customer, slot: { date: first.date, window: '10:00-13:00' } })
+      .send({ items: [{ slug: 'slt-urun', qty: 2 }], customer, slot: { date: first.date, window: '10:00-13:00' } })
       .expect(400);
   });
 });

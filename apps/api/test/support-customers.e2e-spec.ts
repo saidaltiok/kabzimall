@@ -16,13 +16,13 @@ describe('Destek talepleri + müşteri kartları', () => {
     http = authed(app);
     server = app.getHttpServer();
 
-    await http.post('/api/v1/catalog/products').send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
+    await http.post('/api/v1/catalog/products').send({ slug: 'dstk-urun', name: 'Destek Ürünü', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
     // iki müşteri: Ayşe 2 sipariş (1 iptal), Mehmet 1 sipariş
     const ayse = { name: 'Ayşe Test', phone: '05551110001', address: 'A Mah.', email: 'ayse@test.local' };
-    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 2 }], customer: ayse }).expect(201);
-    const iptal = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 1 }], customer: ayse }).expect(201);
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'dstk-urun', qty: 2 }], customer: ayse }).expect(201);
+    const iptal = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'dstk-urun', qty: 1 }], customer: ayse }).expect(201);
     await http.patch(`/api/v1/admin/orders/${iptal.body.id}/status`).send({ status: 'CANCELLED' }).expect(200);
-    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 3 }], customer: { name: 'Mehmet Test', phone: '05551110002', address: 'B Mah.' } }).expect(201);
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'dstk-urun', qty: 3 }], customer: { name: 'Mehmet Test', phone: '05551110002', address: 'B Mah.' } }).expect(201);
   });
 
   afterAll(async () => {
@@ -80,7 +80,7 @@ describe('Destek talepleri + müşteri kartları', () => {
     it('tek müşterinin sipariş geçmişi döner', async () => {
       const res = await http.get('/api/v1/admin/customers/orders?phone=05551110001').expect(200);
       expect(res.body.data).toHaveLength(2);
-      expect(res.body.data[0].items[0].productName).toBe('Domates');
+      expect(res.body.data[0].items[0].productName).toBe('Destek Ürünü');
     });
 
     it('token olmadan kapalı', async () => {

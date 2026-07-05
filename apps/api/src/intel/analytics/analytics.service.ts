@@ -163,6 +163,85 @@ export class AnalyticsService {
   }
 
   /**
+   * İdeal sepet önerisi (PRD Faz 2): sipariş verisinden birlikte-satın-alma
+   * analizi. En sık birlikte alınan ürün çiftleri + en popüler üründen
+   * açgözlü (greedy) genişletmeyle önerilen sepet bileşimi döner.
+   */
+  async basketAffinity(days = 90) {
+    const d = Math.min(365, Math.max(7, days));
+    const since = new Date(Date.now() - d * 86_400_000);
+
+    const orders = await this.prisma.order.findMany({
+      where: { tenantId: DEV_TENANT_ID, status: { not: 'CANCELLED' }, createdAt: { gte: since } },
+      select: { items: { select: { product: { select: { slug: true, name: true, kind: true } } } } },
+    });
+
+    // Sipariş başına tekil ürünler (hazır sepetler analiz dışı — kendileri zaten paket).
+    const perOrder = orders
+      .map((o) => [...new Map(o.items.filter((i) => i.product.kind !== 'BASKET').map((i) => [i.product.slug, i.product])).values()])
+      .filter((items) => items.length > 0);
+
+    const productCount = new Map<string, { slug: string; name: string; orders: number }>();
+    const pairCount = new Map<string, { a: string; b: string; together: number }>();
+    for (const items of perOrder) {
+      for (const p of items) {
+        const e = productCount.get(p.slug) ?? { slug: p.slug, name: p.name, orders: 0 };
+        e.orders += 1;
+        productCount.set(p.slug, e);
+      }
+      const slugs = items.map((p) => p.slug).sort();
+      for (let i = 0; i < slugs.length; i++) {
+        for (let j = i + 1; j < slugs.length; j++) {
+          const key = `${slugs[i]}|${slugs[j]}`;
+          const e = pairCount.get(key) ?? { a: slugs[i], b: slugs[j], together: 0 };
+          e.together += 1;
+          pairCount.set(key, e);
+        }
+      }
+    }
+
+    const nameOf = (slug: string) => productCount.get(slug)?.name ?? slug;
+    const pairs = [...pairCount.values()]
+      .filter((p) => p.together >= 2) // tek tesadüf çift sayılmaz
+      .sort((x, y) => y.together - x.together)
+      .slice(0, 10)
+      .map((p) => ({
+        a: { slug: p.a, name: nameOf(p.a) },
+        b: { slug: p.b, name: nameOf(p.b) },
+        together: p.together,
+        // birliktelik oranı: çift, iki üründen az geçenin siparişlerinin yüzde kaçında?
+        confidence: +(p.together / Math.min(productCount.get(p.a)!.orders, productCount.get(p.b)!.orders)).toFixed(2),
+      }));
+
+    // Önerilen sepet: en güçlü çiftten başla (popüler ürün hiçbir çifte girmemiş
+    // olabilir), kümeyle birlikteliği en yüksek ürünü ekleyerek 4'e tamamla (greedy).
+    const popular = [...productCount.values()].sort((x, y) => y.orders - x.orders);
+    const suggested: { slug: string; name: string }[] = [];
+    if (pairs.length > 0) {
+      suggested.push({ slug: pairs[0].a.slug, name: pairs[0].a.name }, { slug: pairs[0].b.slug, name: pairs[0].b.name });
+      while (suggested.length < 4) {
+        const inSet = new Set(suggested.map((s) => s.slug));
+        let best: { slug: string; score: number } | null = null;
+        for (const p of pairCount.values()) {
+          const [inside, outside] = inSet.has(p.a) ? [p.a, p.b] : inSet.has(p.b) ? [p.b, p.a] : [null, null];
+          if (!inside || !outside || inSet.has(outside)) continue;
+          if (!best || p.together > best.score) best = { slug: outside, score: p.together };
+        }
+        if (!best || best.score < 2) break;
+        suggested.push({ slug: best.slug, name: nameOf(best.slug) });
+      }
+    }
+
+    return {
+      days: d,
+      ordersAnalyzed: perOrder.length,
+      topProducts: popular.slice(0, 8).map((p) => ({ slug: p.slug, name: p.name, orders: p.orders })),
+      pairs,
+      suggestedBasket: suggested.length >= 2 ? suggested : [],
+    };
+  }
+
+  /**
    * Basit fiyat esnekliği: en son fiyat değişiminin öncesi/sonrası penceresinde
    * ortalama günlük satışları karşılaştırır ("fiyat %-10 → satış %+18").
    * Yeterli veri yoksa available=false döner.

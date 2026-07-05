@@ -23,9 +23,9 @@ describe('Katalog — maliyet tabanı guard', () => {
     await http.put('/api/v1/intel/cost-components')
       .send({ scope: 'GLOBAL', fireRate: 0.15, labor: 120, packaging: 70, fuel: 50, commissionRate: 0.03 })
       .expect(200);
-    // 'domates' için hal fiyatı → maliyet hesaplanabilir olsun.
+    // suite'e özel slug — paralel koşan suite'lerin 'domates'iyle çakışmasın. Hal fiyatı → maliyet hesaplanabilir olsun.
     await http.post('/api/v1/intel/hal/entries')
-      .send({ productId: 'domates', price: 4000, date: '2026-07-04', source: 'MANUAL' })
+      .send({ productId: 'taban-urunu', price: 4000, date: '2026-07-04', source: 'MANUAL' })
       .expect(201);
   });
 
@@ -33,30 +33,30 @@ describe('Katalog — maliyet tabanı guard', () => {
 
   it('taban ÜSTÜ fiyatla ürün oluşturulur (201)', async () => {
     const res = await http.post('/api/v1/catalog/products')
-      .send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 8000 })
+      .send({ slug: 'taban-urunu', name: 'Taban Ürünü', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 8000 })
       .expect(201);
     expect(res.body.basePrice).toBe(8000);
   });
 
   it('taban ALTI basePrice güncellemesi reddedilir (400)', async () => {
-    const id = (await http.get('/api/v1/catalog/products?search=domates').expect(200)).body.data[0].id;
+    const id = (await http.get('/api/v1/catalog/products?search=taban-urunu').expect(200)).body.data[0].id;
     const res = await http.patch(`/api/v1/catalog/products/${id}`).send({ basePrice: FLOOR - 1000 }).expect(400);
     expect(String(res.body.message)).toMatch(/taban/i);
   });
 
   it('taban ALTI indirimli fiyat da reddedilir (basePrice güvenli olsa bile) (400)', async () => {
-    const id = (await http.get('/api/v1/catalog/products?search=domates').expect(200)).body.data[0].id;
+    const id = (await http.get('/api/v1/catalog/products?search=taban-urunu').expect(200)).body.data[0].id;
     await http.patch(`/api/v1/catalog/products/${id}`).send({ discountedPrice: 3000 }).expect(400);
   });
 
   it('taban ÜSTÜ güncelleme geçer (200)', async () => {
-    const id = (await http.get('/api/v1/catalog/products?search=domates').expect(200)).body.data[0].id;
+    const id = (await http.get('/api/v1/catalog/products?search=taban-urunu').expect(200)).body.data[0].id;
     const res = await http.patch(`/api/v1/catalog/products/${id}`).send({ basePrice: 7000 }).expect(200);
     expect(res.body.basePrice).toBe(7000);
   });
 
   it('fiyata dokunmayan güncelleme (stok) tabandan etkilenmez (200)', async () => {
-    const id = (await http.get('/api/v1/catalog/products?search=domates').expect(200)).body.data[0].id;
+    const id = (await http.get('/api/v1/catalog/products?search=taban-urunu').expect(200)).body.data[0].id;
     const res = await http.patch(`/api/v1/catalog/products/${id}`).send({ stockQty: 25 }).expect(200);
     expect(res.body.stockQty).toBe(25);
   });
@@ -70,13 +70,13 @@ describe('Katalog — maliyet tabanı guard', () => {
   });
 
   it('taban ALTI fiyatla YENİ ürün oluşturma da reddedilir (400)', async () => {
-    // 'domates' hal'i var; ikinci bir domates-benzeri slug aynı GLOBAL maliyetle
+    // 'taban-urunu' hal'i var; ikinci bir domates-benzeri slug aynı GLOBAL maliyetle
     // ama kendi hal'i yok → guard atlar. Bunun yerine mevcut hal'li slug'ı
     // silip taban altı yeniden oluşturmayı dene:
-    const id = (await http.get('/api/v1/catalog/products?search=domates').expect(200)).body.data[0].id;
+    const id = (await http.get('/api/v1/catalog/products?search=taban-urunu').expect(200)).body.data[0].id;
     await http.delete(`/api/v1/catalog/products/${id}`).expect(200);
     const res = await http.post('/api/v1/catalog/products')
-      .send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: FLOOR - 500 })
+      .send({ slug: 'taban-urunu', name: 'Taban Ürünü', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: FLOOR - 500 })
       .expect(400);
     expect(String(res.body.message)).toMatch(/taban/i);
   });

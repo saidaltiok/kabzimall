@@ -20,7 +20,7 @@ describe('Kuponlar (admin CRUD + storefront check + sipariş entegrasyonu)', () 
     prisma = app.get(PrismaService);
 
     // Fiyatlı ürün: 35,90 ₺/kg → 10 kg = 359,00 ₺ ara toplam
-    await http.post('/api/v1/catalog/products').send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
+    await http.post('/api/v1/catalog/products').send({ slug: 'kpn-urun', name: 'Kupon Ürünü', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
   });
 
   afterAll(async () => {
@@ -98,7 +98,7 @@ describe('Kuponlar (admin CRUD + storefront check + sipariş entegrasyonu)', () 
     it('kuponlu sipariş: discountTotal + grandTotal doğru, sayaç artar', async () => {
       const res = await request(server)
         .post('/api/v1/storefront/orders')
-        .send({ items: [{ slug: 'domates', qty: 10 }], customer: CUSTOMER, couponCode: 'indirim10' })
+        .send({ items: [{ slug: 'kpn-urun', qty: 10 }], customer: CUSTOMER, couponCode: 'indirim10' })
         .expect(201);
       expect(res.body.subtotal).toBe(35900);
       expect(res.body.discountTotal).toBe(3590);
@@ -112,18 +112,18 @@ describe('Kuponlar (admin CRUD + storefront check + sipariş entegrasyonu)', () 
     it('kullanım limiti dolunca sipariş 400 ile durur (sessizce indirimsiz geçmez)', async () => {
       await request(server)
         .post('/api/v1/storefront/orders')
-        .send({ items: [{ slug: 'domates', qty: 10 }], customer: CUSTOMER, couponCode: 'INDIRIM10' })
+        .send({ items: [{ slug: 'kpn-urun', qty: 10 }], customer: CUSTOMER, couponCode: 'INDIRIM10' })
         .expect(400);
     });
 
     it('geçersiz kuponla sipariş 400, kuponsuz sipariş indirimsiz geçer', async () => {
       await request(server)
         .post('/api/v1/storefront/orders')
-        .send({ items: [{ slug: 'domates', qty: 1 }], customer: CUSTOMER, couponCode: 'YOKBOYLEKOD' })
+        .send({ items: [{ slug: 'kpn-urun', qty: 1 }], customer: CUSTOMER, couponCode: 'YOKBOYLEKOD' })
         .expect(400);
       const res = await request(server)
         .post('/api/v1/storefront/orders')
-        .send({ items: [{ slug: 'domates', qty: 1 }], customer: CUSTOMER })
+        .send({ items: [{ slug: 'kpn-urun', qty: 1 }], customer: CUSTOMER })
         .expect(201);
       expect(res.body.discountTotal).toBe(0);
       expect(res.body.couponCode).toBeNull();
@@ -134,7 +134,7 @@ describe('Kuponlar (admin CRUD + storefront check + sipariş entegrasyonu)', () 
       await http.post('/api/v1/admin/coupons').send({ code: 'PAKET10', type: 'PERCENT', value: 10 }).expect(201);
       const order = await request(server)
         .post('/api/v1/storefront/orders')
-        .send({ items: [{ slug: 'domates', qty: 10 }], customer: CUSTOMER, couponCode: 'PAKET10' })
+        .send({ items: [{ slug: 'kpn-urun', qty: 10 }], customer: CUSTOMER, couponCode: 'PAKET10' })
         .expect(201);
       expect(order.body.discountTotal).toBe(3590);
 

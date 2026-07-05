@@ -14,8 +14,8 @@ describe('AI günlük özet (anahtar yokken kural bazlı)', () => {
     http = authed(app);
     server = app.getHttpServer();
 
-    await http.post('/api/v1/catalog/products').send({ slug: 'domates', name: 'Domates', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
-    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 2 }], customer: { name: 'Brif', phone: '05551110044', address: 'D Mah.' } }).expect(201);
+    await http.post('/api/v1/catalog/products').send({ slug: 'brf-urun', name: 'Brifing Ürünü', saleType: 'WEIGHT', unitLabel: 'kg', basePrice: 3590 }).expect(201);
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'brf-urun', qty: 2 }], customer: { name: 'Brif', phone: '05551110044', address: 'D Mah.' } }).expect(201);
   });
 
   afterAll(async () => {
@@ -32,7 +32,7 @@ describe('AI günlük özet (anahtar yokken kural bazlı)', () => {
   it('gün içinde önbellekten döner, force ile tazelenir', async () => {
     const a = await http.get('/api/v1/intel/ai/daily-brief').expect(200);
     // yeni sipariş — önbellek eski rakamı korur
-    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'domates', qty: 1 }], customer: { name: 'Brif', phone: '05551110044', address: 'D Mah.' } }).expect(201);
+    await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'brf-urun', qty: 1 }], customer: { name: 'Brif', phone: '05551110044', address: 'D Mah.' } }).expect(201);
     const b = await http.get('/api/v1/intel/ai/daily-brief').expect(200);
     expect(b.body.generatedAt).toBe(a.body.generatedAt);
     const c = await http.get('/api/v1/intel/ai/daily-brief?force=1').expect(200);
