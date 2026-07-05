@@ -206,6 +206,23 @@ model Coupon {
   @@map("coupons")
 }
 
+/// Vitrin duyurusu — ana sayfadaki promo alanını panelden yönetir.
+/// Aktif banner'lardan sortOrder'ı en küçük olan gösterilir; couponCode
+/// doluysa müşteriye kopyalanabilir kupon rozetiyle sunulur.
+model Banner {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  kicker     String? // üst küçük etiket (ör. "Taze · Yöresel")
+  title      String
+  subtitle   String?
+  couponCode String?  @map("coupon_code")
+  sortOrder  Int      @default(0) @map("sort_order")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("banners")
+}
+
 /// Müşteri e-posta OTP girişi: kod hash'lenir, 5 dk geçerli, 5 deneme hakkı.
 /// Doğrulanınca müşteri JWT'si verilir (kind: customer — personel uçlarına GEÇMEZ).
 model CustomerOtp {

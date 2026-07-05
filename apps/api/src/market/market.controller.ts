@@ -5,6 +5,7 @@ import { CATALOG_WRITERS, ORDER_WRITERS, PRICE_WRITERS, type JwtUser } from '../
 import { MarketService } from './market.service';
 import { CustomerAuthService } from './customer-auth.service';
 import { CouponService } from './coupon.service';
+import { BannerService } from './banner.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
 import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
@@ -19,7 +20,14 @@ export class StorefrontController {
     private readonly service: MarketService,
     private readonly customerAuth: CustomerAuthService,
     private readonly coupons: CouponService,
+    private readonly banners: BannerService,
   ) {}
+
+  /** GET /storefront/banners — aktif vitrin duyuruları (sortOrder sırasıyla). */
+  @Get('banners')
+  async storefrontBanners() {
+    return { data: await this.banners.activeForStorefront() };
+  }
 
   /** POST /storefront/auth/request-otp — e-postaya 6 haneli giriş kodu gönder. */
   @Post('auth/request-otp')
@@ -267,5 +275,38 @@ export class AdminCouponsController {
   @Roles(...PRICE_WRITERS)
   setActive(@Param('id') id: string, @Body('isActive') isActive: boolean) {
     return this.coupons.setActive(id, !!isActive);
+  }
+}
+
+@ApiTags('market: banner (admin)')
+@Controller('admin/banners')
+export class AdminBannersController {
+  constructor(private readonly banners: BannerService) {}
+
+  @Get()
+  async list() {
+    const data = await this.banners.list();
+    return { data, meta: { total: data.length } };
+  }
+
+  /** POST /admin/banners — { title, kicker?, subtitle?, couponCode?, sortOrder? } */
+  @Post()
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ schema: { example: { title: 'Hoş geldin — ilk siparişe %10', kicker: 'Kampanya', couponCode: 'HOSGELDIN10' } } })
+  create(@Body() dto: { title: string; kicker?: string; subtitle?: string; couponCode?: string; sortOrder?: number }) {
+    return this.banners.create(dto);
+  }
+
+  /** PATCH /admin/banners/:id/active { isActive } — yayına al/kaldır. */
+  @Patch(':id/active')
+  @Roles(...PRICE_WRITERS)
+  setActive(@Param('id') id: string, @Body('isActive') isActive: boolean) {
+    return this.banners.setActive(id, !!isActive);
+  }
+
+  @Delete(':id')
+  @Roles(...PRICE_WRITERS)
+  remove(@Param('id') id: string) {
+    return this.banners.remove(id);
   }
 }

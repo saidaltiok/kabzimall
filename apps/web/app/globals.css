@@ -32,6 +32,9 @@ a { color: inherit; text-decoration: none; }
 .promo .k { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--honey); font-weight: 700; }
 .promo .t { font-family: 'Fraunces', serif; font-size: 26px; margin: 6px 0 4px; max-width: 60%; }
 .promo .s { font-size: 13px; color: rgba(255, 255, 255, 0.82); max-width: 60%; }
+.promo-coupon { margin-top: 12px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 30px; border: 1.5px dashed var(--honey); background: rgba(255,255,255,.08); color: #fff; font-weight: 700; font-size: 13.5px; letter-spacing: .04em; cursor: pointer; position: relative; z-index: 1; }
+.promo-coupon:hover { background: rgba(255,255,255,.16); }
+.promo-coupon .cp { font-size: 10.5px; font-weight: 600; color: var(--honey); text-transform: uppercase; letter-spacing: .1em; }
 
 /* Categories */
 .cats { display: flex; gap: 12px; overflow-x: auto; padding: 18px 0 8px; }

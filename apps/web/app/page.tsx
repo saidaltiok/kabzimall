@@ -15,6 +15,7 @@ interface Product {
   category: { slug: string; name: string } | null;
 }
 interface Category { slug: string; name: string }
+interface Banner { id: string; kicker: string | null; title: string; subtitle: string | null; couponCode: string | null }
 interface BasketComponent { slug: string; name: string; unitLabel: string | null; qty: number }
 interface Basket {
   slug: string; name: string; imageUrl: string | null; unitLabel: string | null;
@@ -38,6 +39,7 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [baskets, setBaskets] = useState<Basket[]>([]);
+  const [banner, setBanner] = useState<Banner | null>(null);
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,18 @@ export default function HomePage() {
       .then(([p, c, b]) => { setProducts(p.data); setCategories(c.data); setBaskets(b.data); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+    // banner ayrı ve sessiz: gelmezse varsayılan karşılama kalır
+    apiGet<{ data: Banner[] }>('/storefront/banners').then((r) => setBanner(r.data[0] ?? null)).catch(() => {});
   }, []);
+
+  async function copyCoupon(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      flash(`Kupon kodu kopyalandı: ${code} ✓`);
+    } catch {
+      flash(`Kupon kodu: ${code} — sepette girebilirsin`);
+    }
+  }
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -109,9 +122,14 @@ export default function HomePage() {
       <Suspense fallback={null}><KategoriReader onCat={setCat} /></Suspense>
       {toast && <div className="toast">{toast}</div>}
       <div className="promo">
-        <div className="k">Taze · Yöresel</div>
-        <div className="t serif">Dalından sofrana, özenle</div>
-        <div className="s">Sabah toplanan ürünler, ertesi gün kapında.</div>
+        <div className="k">{banner?.kicker ?? 'Taze · Yöresel'}</div>
+        <div className="t serif">{banner?.title ?? 'Dalından sofrana, özenle'}</div>
+        <div className="s">{banner?.subtitle ?? 'Sabah toplanan ürünler, ertesi gün kapında.'}</div>
+        {banner?.couponCode && (
+          <button className="promo-coupon" onClick={() => copyCoupon(banner.couponCode!)} title="Kodu kopyala">
+            🎟️ {banner.couponCode} <span className="cp">kopyala</span>
+          </button>
+        )}
       </div>
 
       <div className="cats">
