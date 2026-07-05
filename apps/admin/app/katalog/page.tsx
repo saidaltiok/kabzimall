@@ -9,7 +9,7 @@ import SectionTabs, { PRODUCTS_TABS } from '@/components/SectionTabs';
 interface Category { id: string; name: string; slug: string }
 interface Product {
   id: string; slug: string; name: string; kind: string; saleType: string; unitLabel: string | null;
-  imageUrl: string | null; basePrice: number | null; discountedPrice: number | null; stockQty: number | null; maxPerOrder: number | null; originRegion: string | null;
+  imageUrl: string | null; description: string | null; basePrice: number | null; discountedPrice: number | null; stockQty: number | null; maxPerOrder: number | null; originRegion: string | null;
   isActive: boolean; isFeatured: boolean; isFreshDaily: boolean; isLocal: boolean;
   category: { id: string; name: string } | null;
 }
@@ -50,7 +50,7 @@ const SALE_TYPES: [string, string][] = [
 
 const empty = {
   id: '', slug: '', name: '', categoryId: '', saleType: 'WEIGHT', unitLabel: 'kg',
-  priceTl: '', discountedTl: '', originRegion: '', imageUrl: '', stockQty: '', maxPerOrder: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
+  priceTl: '', discountedTl: '', originRegion: '', imageUrl: '', description: '', stockQty: '', maxPerOrder: '', isActive: true, isFeatured: false, isFreshDaily: false, isLocal: false,
   substitutes: '', // virgüllü slug listesi (max 5) — stok bitince önerilecek ikameler
 };
 
@@ -86,7 +86,7 @@ export default function KatalogPage() {
       id: p.id, slug: p.slug, name: p.name, categoryId: p.category?.id ?? '', saleType: p.saleType,
       unitLabel: p.unitLabel ?? '', priceTl: p.basePrice != null ? (p.basePrice / 100).toFixed(2) : '',
       discountedTl: p.discountedPrice != null ? (p.discountedPrice / 100).toFixed(2) : '',
-      originRegion: p.originRegion ?? '', imageUrl: p.imageUrl ?? '', stockQty: p.stockQty != null ? String(p.stockQty) : '',
+      originRegion: p.originRegion ?? '', imageUrl: p.imageUrl ?? '', description: p.description ?? '', stockQty: p.stockQty != null ? String(p.stockQty) : '',
       maxPerOrder: p.maxPerOrder != null ? String(p.maxPerOrder) : '',
       isActive: p.isActive, isFeatured: p.isFeatured,
       isFreshDaily: p.isFreshDaily, isLocal: p.isLocal,
@@ -111,6 +111,7 @@ export default function KatalogPage() {
         name: form.name, saleType: form.saleType,
         unitLabel: strOrNull(form.unitLabel), categoryId: strOrNull(form.categoryId),
         basePrice: kurusOrNull(form.priceTl), originRegion: strOrNull(form.originRegion), imageUrl: strOrNull(form.imageUrl),
+        description: strOrNull(form.description),
         stockQty: numOrNull(form.stockQty),
         maxPerOrder: numOrNull(form.maxPerOrder),
         discountedPrice: kurusOrNull(form.discountedTl),
@@ -168,7 +169,7 @@ export default function KatalogPage() {
     }
   }
 
-  const setF = (k: keyof typeof empty) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const setF = (k: keyof typeof empty) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((s) => ({ ...s, [k]: e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value }));
 
   return (
@@ -239,6 +240,10 @@ export default function KatalogPage() {
               </div>
               <input value={form.imageUrl.startsWith('data:') ? '' : form.imageUrl} onChange={setF('imageUrl')} placeholder="…ya da https://… .jpg" style={{ minWidth: 200, marginTop: 6 }} />
             </div>
+          </div>
+          <div className="field" style={{ marginTop: 10 }}>
+            <label>Açıklama (ürün detay sayfasında görünür)</label>
+            <textarea value={form.description} onChange={setF('description')} rows={3} maxLength={2000} placeholder="Ürünün kökeni, içeriği, kullanımı… (ör. Hatay zeytinliklerinden soğuk sıkım…)" style={{ width: '100%', fontFamily: 'inherit', resize: 'vertical' }} />
           </div>
           {editing && (
             <div className="field" style={{ marginTop: 10 }}>
