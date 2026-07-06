@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { COST_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Overhead {
   id: string; name: string; category: string; kind: 'FIXED' | 'RATE';
@@ -52,7 +53,7 @@ export default function FinansPage() {
     setBusy(true); setError(null); setOk(null);
     try {
       const body: Record<string, unknown> = { name: name.trim(), category, kind, period };
-      if (kind === 'FIXED') body.amount = Math.round(parseFloat(amountTl.replace(',', '.')) * 100);
+      if (kind === 'FIXED') body.amount = (tlToKurus(amountTl) ?? 0);
       else body.rate = parseFloat(ratePct.replace(',', '.')) / 100;
       await apiSend('POST', '/intel/finance/overheads', body);
       setOk('✓ Gider eklendi.');

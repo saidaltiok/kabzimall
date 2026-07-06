@@ -5,6 +5,7 @@ import { apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface CostInputs { halAvg: number; fireRate: number; labor: number; packaging: number; fuel: number; coldStorage?: number; amortization?: number; commissionRate: number }
 interface Side { directCost: number; netMargin: number; suggestedPrice: number; inputs: CostInputs }
@@ -15,7 +16,6 @@ interface ScenarioResult {
 }
 
 const kurusToTl = (k: number) => (k / 100).toFixed(2);
-const tlToKurus = (v: string) => Math.round(parseFloat(v.replace(',', '.')) * 100);
 
 export default function SenaryoPage() {
   const [productId, setProductId] = useState('domates');

@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { SETTINGS_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Coupon {
   id: string; code: string; type: 'PERCENT' | 'FIXED'; value: number;
@@ -35,11 +36,12 @@ export default function KuponlarPage() {
     try {
       const v = parseFloat(value.replace(',', '.'));
       if (!Number.isFinite(v) || v <= 0) throw new Error('Geçerli bir değer girin.');
+      const fixedKurus = tlToKurus(value); // FIXED ₺ → kuruş (binlik ayraç toleranslı)
       await apiSend('POST', '/admin/coupons', {
         code: code.trim(),
         type,
-        value: type === 'PERCENT' ? Math.round(v) : Math.round(v * 100), // FIXED ₺ → kuruş
-        minSubtotal: minTl.trim() ? Math.round(parseFloat(minTl.replace(',', '.')) * 100) : 0,
+        value: type === 'PERCENT' ? Math.round(v) : (fixedKurus ?? 0),
+        minSubtotal: tlToKurus(minTl) ?? 0,
         maxUses: maxUses.trim() ? parseInt(maxUses, 10) : undefined,
         expiresAt: expires ? new Date(expires + 'T23:59:59').toISOString() : undefined,
       });

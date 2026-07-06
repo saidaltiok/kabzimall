@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Row {
   slug: string; name: string; unitLabel: string | null; category: string | null;
@@ -63,7 +64,7 @@ export default function MatrisPage() {
 
   async function publish(allowBelowFloor = false) {
     const items = [...sel]
-      .map((slug) => ({ slug, price: Math.round(parseFloat((prices[slug] ?? '').replace(',', '.')) * 100) }))
+      .map((slug) => ({ slug, price: (tlToKurus(prices[slug]) ?? 0) }))
       .filter((it) => Number.isFinite(it.price) && it.price > 0);
     if (items.length === 0) { setError('Yayınlanacak geçerli fiyat yok.'); return; }
     setBusy(true); setError(null); setOk(null);
@@ -130,7 +131,7 @@ export default function MatrisPage() {
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const entered = Math.round(parseFloat((prices[r.slug] ?? '').replace(',', '.')) * 100);
+                  const entered = tlToKurus(prices[r.slug]) ?? NaN;
                   const below = Number.isFinite(entered) && r.floorPrice != null && entered < r.floorPrice;
                   return (
                     <tr key={r.slug} style={sel.has(r.slug) ? { background: 'var(--cream)' } : undefined}>

@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { COST_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface CostResult {
   source: string;
@@ -26,7 +27,7 @@ const CHIPS = [
 
 // kuruş → TL string, TL string → kuruş
 const k2tl = (k: number) => (k / 100).toFixed(2);
-const tl2k = (s: string) => Math.round(parseFloat(s.replace(',', '.')) * 100);
+const tl2k = (s: string) => tlToKurus(s) ?? 0;
 const p2r = (s: string) => Number(s.replace(',', '.')) / 100; // yüzde → oran
 
 export default function MaliyetPage() {

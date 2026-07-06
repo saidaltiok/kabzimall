@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { MARKET_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Competitor { id: string; name: string; group: { id: string; name: string } }
 interface Group { id: string; name: string }
@@ -76,7 +77,7 @@ export default function RakipPage() {
     setBusy(true);
     setError(null);
     try {
-      const kurus = Math.round(parseFloat(raw.replace(',', '.')) * 100);
+      const kurus = tlToKurus(raw) ?? NaN;
       if (!Number.isFinite(kurus) || kurus < 0) throw new Error('Geçerli fiyat girin (₺).');
       await apiSend('POST', '/intel/competitor-prices/entries', { productId, competitorId, price: kurus });
       setInputs((s) => ({ ...s, [competitorId]: '' }));

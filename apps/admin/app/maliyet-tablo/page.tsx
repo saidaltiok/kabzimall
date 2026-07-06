@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { COST_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Row {
   slug: string; name: string; unitLabel: string | null; category: string | null;
@@ -60,7 +61,7 @@ export default function MaliyetTabloPage() {
 
   async function saveChanged() {
     setBusy(true); setError(null); setOk(null);
-    const tl2k = (v: string) => Math.round(parseFloat(v.replace(',', '.')) * 100);
+    const tl2k = (v: string) => tlToKurus(v) ?? 0;
     let saved = 0;
     try {
       for (const slug of changed) {

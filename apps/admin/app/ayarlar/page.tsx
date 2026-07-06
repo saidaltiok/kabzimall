@@ -5,12 +5,13 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { SETTINGS_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Tier { minSubtotal: number; fee: number }
 interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; deliveryWindows: string[]; depotLat: number | null; depotLng: number | null; contactPhone: string | null; contactWhatsapp: string | null; contactEmail: string | null; contactAddress: string | null; contactInstagram: string | null }
 
 const toTl = (k: number) => (k ? (k / 100).toFixed(2) : '');
-const toKurus = (v: string) => (v.trim() === '' ? 0 : Math.round(parseFloat(v.replace(',', '.')) * 100));
+const toKurus = (v: string) => tlToKurus(v) ?? 0;
 
 interface TierRow { minTl: string; feeTl: string }
 

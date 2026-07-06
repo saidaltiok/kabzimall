@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRODUCTS_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Product { id: string; slug: string; name: string; kind: string }
 interface Component { slug: string; name: string; unitLabel: string | null; qty: number }
@@ -54,8 +55,8 @@ export default function SepetlerPage() {
       if (!priceTl) { setError('Sepet fiyatı gerekli.'); return; }
       await apiSend('POST', '/catalog/baskets', {
         slug, name,
-        basePrice: Math.round(parseFloat(priceTl.replace(',', '.')) * 100),
-        discountedPrice: discTl === '' ? undefined : Math.round(parseFloat(discTl.replace(',', '.')) * 100),
+        basePrice: (tlToKurus(priceTl) ?? 0),
+        discountedPrice: tlToKurus(discTl) ?? undefined,
         components: staged.map((s) => ({ productSlug: s.productSlug, qty: Number(s.qty.replace(',', '.')) })),
       });
       setOk(`✓ ${name} oluşturuldu.`);

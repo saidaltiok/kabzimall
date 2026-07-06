@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRODUCTS_TABS } from '@/components/SectionTabs';
+import { tlToKurus } from '@/lib/money';
 
 interface Category { id: string; name: string; slug: string }
 interface Product {
@@ -106,7 +107,7 @@ export default function KatalogPage() {
       // Boş bırakılan opsiyonel alan → null gönder (panelden "sınırsız/yok"a geri dönülebilsin).
       const strOrNull = (v: string) => (v.trim() === '' ? null : v.trim());
       const numOrNull = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
-      const kurusOrNull = (v: string) => (v.trim() === '' ? null : Math.round(parseFloat(v.replace(',', '.')) * 100));
+      const kurusOrNull = (v: string) => tlToKurus(v);
       const payload: Record<string, unknown> = {
         name: form.name, saleType: form.saleType,
         unitLabel: strOrNull(form.unitLabel), categoryId: strOrNull(form.categoryId),

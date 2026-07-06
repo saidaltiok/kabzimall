@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
+import { tlToKurus } from '@/lib/money';
 import Topbar from '@/components/Topbar';
 
 interface Session {
@@ -38,7 +39,7 @@ export default function KasaPage() {
   }, []);
   useEffect(() => { load(); const t = setInterval(load, 20000); return () => clearInterval(t); }, [load]);
 
-  const toK = (v: string) => Math.round(parseFloat(v.replace(',', '.')) * 100);
+  const toK = (v: string) => tlToKurus(v) ?? 0;
 
   async function openRegister() {
     setBusy(true); setError(null); setOk(null);
