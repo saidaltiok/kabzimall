@@ -11,6 +11,7 @@ export const MARKET_TABS: SectionTab[] = [
   { href: '/rakip', label: 'Rakip fiyatları', icon: '🏷️' },
 ];
 export const PRICING_TABS: SectionTab[] = [
+  { href: '/matris', label: 'Fiyat matrisi', icon: '🧮' },
   { href: '/oner', label: 'Tek ürün fiyatla', icon: '🎯' },
   { href: '/yayinla', label: 'Toplu yayına al', icon: '🚀' },
   { href: '/urunler', label: 'Marj tablosu', icon: '📦' },

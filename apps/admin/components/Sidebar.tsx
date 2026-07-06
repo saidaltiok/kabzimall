@@ -14,7 +14,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
     links: [
       { href: '/', icon: '☀️', label: 'Bugün' },
       { href: '/hal', icon: '🧺', label: 'Piyasa Verisi', also: ['/rakip'] },
-      { href: '/oner', icon: '🎯', label: 'Fiyatlandırma', also: ['/yayinla', '/urunler', '/senaryo'] },
+      { href: '/oner', icon: '🎯', label: 'Fiyatlandırma', also: ['/matris', '/yayinla', '/urunler', '/senaryo'] },
       { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
       { href: '/rota', icon: '🚚', label: 'Dağıtım Rotası' },
     ],
