@@ -25,6 +25,7 @@ export const PRODUCTS_TABS: SectionTab[] = [
 export const COST_TABS: SectionTab[] = [
   { href: '/maliyet', label: 'Maliyet & Fire', icon: '💸' },
   { href: '/kurallar', label: 'Fiyat kuralları', icon: '📐' },
+  { href: '/finans', label: 'Finans (gider & K/Z)', icon: '📒' },
 ];
 export const CUSTOMERS_TABS: SectionTab[] = [
   { href: '/musteriler', label: 'Müşteriler', icon: '👥' },

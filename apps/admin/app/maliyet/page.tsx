@@ -146,6 +146,10 @@ export default function MaliyetPage() {
             <Row label="Soğuk zincir (₺)" value={form.cold} onChange={set('cold')} />
             <Row label="Amortisman (₺)" value={form.amort} onChange={set('amort')} />
             <Row label="Kart komisyonu (%)" value={form.comm} onChange={set('comm')} />
+            <p className="note2" style={{ margin: '2px 0 0', fontSize: 11 }}>
+              💡 Kart komisyonu artık <b>Finans → Genel Giderler</b>&apos;de (ciroya oranlı) tutulur; nakit müşteriyi
+              fazla fiyatlamamak için burada <b>0</b> bırakman önerilir.
+            </p>
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
               <button className="btn ghost" onClick={compute} disabled={busy}>Hesapla</button>
               <button className="btn" onClick={save} disabled={busy}>Kaydet</button>

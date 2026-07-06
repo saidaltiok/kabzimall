@@ -30,6 +30,8 @@ import { AiBriefService } from './ai/ai-brief.service';
 import { AiBriefController } from './ai/ai-brief.controller';
 import { PricingMatrixService } from './pricing-matrix/pricing-matrix.service';
 import { PricingMatrixController } from './pricing-matrix/pricing-matrix.controller';
+import { FinanceService } from './finance/finance.service';
+import { FinanceController } from './finance/finance.controller';
 
 /**
  * Intelligence (fiyat zekâsı) modülü — Teknik doküman Bölüm 5.5.
@@ -67,6 +69,7 @@ import { PricingMatrixController } from './pricing-matrix/pricing-matrix.control
     AnalyticsController,
     AiBriefController,
     PricingMatrixController,
+    FinanceController,
   ],
   providers: [
     PriceService,
@@ -84,6 +87,7 @@ import { PricingMatrixController } from './pricing-matrix/pricing-matrix.control
     AnalyticsService,
     AiBriefService,
     PricingMatrixService,
+    FinanceService,
   ],
 })
 export class IntelModule {}

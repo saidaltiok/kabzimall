@@ -54,6 +54,7 @@ export async function resetDb(app: INestApplication): Promise<void> {
   await prisma.competitor.deleteMany();
   await prisma.competitorGroup.deleteMany();
   await prisma.pricingRule.deleteMany();
+  await prisma.overheadCost.deleteMany();
   await prisma.costComponent.deleteMany();
   await prisma.halPurchase.deleteMany();
   await prisma.costPool.deleteMany();

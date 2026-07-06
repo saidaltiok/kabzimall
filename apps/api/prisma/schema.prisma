@@ -486,6 +486,26 @@ model CostComponent {
   @@map("cost_components")
 }
 
+/// Üründen bağımsız genel gider (kira, ambalaj toplu alım, işçilik, kart komisyonu…).
+/// Birim maliyete GİRMEZ; kâr/zarar raporunda döneme yansır.
+/// kind=FIXED → amount (kuruş, period'a göre prorata); kind=RATE → rate (ciro oranı).
+model OverheadCost {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  name       String
+  category   String    @default("OTHER") // RENT | PACKAGING | LABOR | FUEL | COMMISSION | OTHER
+  kind       String    @default("FIXED") // FIXED (tutar) | RATE (ciro yüzdesi)
+  amount     Int       @default(0) // FIXED: kuruş
+  rate       Float     @default(0) // RATE: oran (0.03 = %3)
+  period     String    @default("MONTHLY") // MONTHLY | ONE_TIME (FIXED için)
+  incurredAt DateTime? @map("incurred_at") @db.Timestamptz(6) // ONE_TIME tarihi
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, isActive])
+  @@map("overhead_costs")
+}
+
 /// Kalıcı fiyat kuralı (Teknik §3.3 pricing_rules). En-spesifik alan kazanır:
 /// PRODUCT(slug) > CATEGORY(slug) > GLOBAL(''). Öneri/çözümde varsayılan
 /// strateji + hedef/taban marjı sağlar (ör. sebzede taban %25, yöreselde %40).
