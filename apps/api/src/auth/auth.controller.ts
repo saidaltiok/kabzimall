@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Ip, Param, Patch, Post } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -15,8 +15,8 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   @ApiBody({ schema: { example: { email: 'admin@kabzimall.local', password: 'kabzimall123' } } })
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.email, dto.password);
+  login(@Body() dto: LoginDto, @Ip() ip: string) {
+    return this.auth.login(dto.email, dto.password, ip ?? 'unknown');
   }
 
   /** GET /api/v1/auth/me — token'daki kullanıcı. */

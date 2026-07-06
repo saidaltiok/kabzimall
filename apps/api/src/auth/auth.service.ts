@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
@@ -6,9 +6,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
 import { JWT_SECRET, ROLES, type JwtUser, type Role } from './auth.constants';
 
+/** Login kaba-kuvvet koruması: IP başına kayan pencere. */
+const LOGIN_WINDOW_MS = 5 * 60_000;
+const LOGIN_MAX_FAILS = 10;
+
 @Injectable()
 export class AuthService implements OnModuleInit {
   private readonly logger = new Logger('Auth');
+  /** IP → başarısız deneme zaman damgaları (bellek içi; basit koruma). */
+  private loginFails = new Map<string, number[]>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -33,11 +39,21 @@ export class AuthService implements OnModuleInit {
     this.logger.warn(`Varsayılan admin oluşturuldu → ${email} / ${password} (üretimde değiştirin)`);
   }
 
-  async login(email: string, password: string): Promise<{ accessToken: string; user: Omit<JwtUser, 'sub'> & { name: string | null } }> {
+  async login(email: string, password: string, ip = 'unknown'): Promise<{ accessToken: string; user: Omit<JwtUser, 'sub'> & { name: string | null } }> {
+    // Kaba-kuvvet: IP başına 5 dk'da 10 başarısız denemeden sonra 429.
+    const now = Date.now();
+    const fails = (this.loginFails.get(ip) ?? []).filter((t) => now - t < LOGIN_WINDOW_MS);
+    if (fails.length >= LOGIN_MAX_FAILS) {
+      throw new HttpException('Çok fazla başarısız giriş denemesi. Birkaç dakika sonra tekrar deneyin.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     const user = await this.prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      fails.push(now);
+      this.loginFails.set(ip, fails);
       throw new UnauthorizedException('E-posta veya parola hatalı');
     }
+    this.loginFails.delete(ip); // başarılı giriş → sayacı temizle
     const payload: JwtUser = {
       sub: user.id,
       email: user.email,

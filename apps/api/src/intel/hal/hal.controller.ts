@@ -63,6 +63,7 @@ export class HalController {
    * Tek günlük hal fiyatı ekler (append-only).
    */
   @Post('entries')
+  @Roles(...PRICE_WRITERS)
   @ApiBody({ schema: { example: { productId: 'domates', price: 1870, date: '2026-06-29', source: 'MANUAL' } } })
   create(@Body() dto: CreateHalEntryDto) {
     return this.service.create(dto);
@@ -73,6 +74,7 @@ export class HalController {
    * Saha Modu: birçok ürünün hal fiyatını tek seferde ekler.
    */
   @Post('bulk')
+  @Roles(...PRICE_WRITERS)
   @ApiBody({
     schema: {
       example: {

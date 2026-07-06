@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../auth/decorators';
+import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { HalPurchasesService } from './hal-purchases.service';
 import { CreateHalPurchaseDto } from './dto/create-hal-purchase.dto';
 
@@ -14,6 +16,7 @@ export class HalPurchasesController {
    * ve tartı hassasiyeti riskini packages/pricing ile hesaplar.
    */
   @Post()
+  @Roles(...PRICE_WRITERS)
   @ApiBody({ schema: { example: { productId: 'domates', recordedKg: 50, actualKg: 49.6, totalPaid: 100000 } } })
   create(@Body() dto: CreateHalPurchaseDto) {
     return this.service.create(dto);

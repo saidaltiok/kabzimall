@@ -95,6 +95,7 @@ export class CompetitorPricesController {
 
   /** POST /api/v1/intel/competitor-prices/entries */
   @Post('entries')
+  @Roles(...PRICE_WRITERS)
   @ApiBody({ schema: { example: { productId: 'domates', competitorId: '<rakip-uuid>', price: 4200, date: '2026-06-29' } } })
   create(@Body() dto: CreateCompetitorPriceDto) {
     return this.service.createPrice(dto);

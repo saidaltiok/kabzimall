@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../auth/decorators';
+import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { CostPoolService } from './cost-pool.service';
 import { CreateCostPoolDto } from './dto/create-cost-pool.dto';
 
@@ -15,6 +17,7 @@ export class CostPoolController {
    * packages/pricing.directCost ile tam birim maliyet önizlemesi döner.
    */
   @Post()
+  @Roles(...PRICE_WRITERS)
   @ApiBody({
     schema: {
       example: {

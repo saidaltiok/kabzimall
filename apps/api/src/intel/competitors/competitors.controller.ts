@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../auth/decorators';
+import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { CompetitorsService } from './competitors.service';
 import { CreateCompetitorDto } from './dto/create-competitor.dto';
 
@@ -10,6 +12,7 @@ export class CompetitorsController {
 
   /** POST /api/v1/intel/competitors */
   @Post()
+  @Roles(...PRICE_WRITERS)
   @ApiBody({ schema: { example: { name: 'Market A', groupId: '<grup-uuid>', type: 'zincir' } } })
   create(@Body() dto: CreateCompetitorDto) {
     return this.service.createCompetitor(dto);
