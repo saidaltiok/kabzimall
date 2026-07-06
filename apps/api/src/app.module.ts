@@ -5,10 +5,11 @@ import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { MarketModule } from './market/market.module';
 import { IntelModule } from './intel/intel.module';
+import { CashModule } from './cash/cash.module';
 import { HealthController } from './health.controller';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), PrismaModule, AuthModule, CatalogModule, MarketModule, IntelModule],
+  imports: [ScheduleModule.forRoot(), PrismaModule, AuthModule, CatalogModule, MarketModule, IntelModule, CashModule],
   controllers: [HealthController],
 })
 export class AppModule {}

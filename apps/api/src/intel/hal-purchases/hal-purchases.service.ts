@@ -6,6 +6,7 @@ import {
 } from '../../pricing-engine';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../../common/tenant';
+import { CashService } from '../../cash/cash.service';
 import { CreateHalPurchaseDto } from './dto/create-hal-purchase.dto';
 import type { HalPurchase as HalPurchaseRow } from '@prisma/client';
 
@@ -24,7 +25,10 @@ export interface HalPurchaseResponse {
 
 @Injectable()
 export class HalPurchasesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cash: CashService,
+  ) {}
 
   async create(dto: CreateHalPurchaseDto): Promise<HalPurchaseResponse> {
     const row = await this.prisma.halPurchase.create({
@@ -37,6 +41,8 @@ export class HalPurchasesService {
         precisionKg: dto.precisionKg ?? 0.5,
       },
     });
+    // Hal alımı → kasadan ÇIKIŞ (kasa açıksa; mükerrer düşmez).
+    await this.cash.recordHalPurchase(row.id, row.totalPaid, row.productSlug);
     return this.toResponse(row);
   }
 

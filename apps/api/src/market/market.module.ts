@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { JWT_SECRET } from '../auth/auth.constants';
+import { CashModule } from '../cash/cash.module';
 import { MarketService } from './market.service';
 import { MailService } from './mail.service';
 import { CustomerAuthService } from './customer-auth.service';
@@ -15,7 +16,7 @@ import { StorefrontController, AdminOrdersController, DeliveryZonesController, A
  * + admin sipariş yönetimi. Fiyat/teslimat hesapları packages/pricing'ten.
  */
 @Module({
-  imports: [JwtModule.register({ secret: JWT_SECRET })], // müşteri OTP token imzası (kind: customer)
+  imports: [JwtModule.register({ secret: JWT_SECRET }), CashModule], // OTP imzası + kasa hook'u (teslimat tahsilatı)
   controllers: [StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController, AdminCouponsController, AdminBannersController, AdminSupportController, AdminCustomersController],
   providers: [MarketService, MailService, CustomerAuthService, CouponService, BannerService, SupportService, CustomersService],
 })

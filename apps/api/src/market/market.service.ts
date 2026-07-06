@@ -8,6 +8,7 @@ import { CreateOrderDto, DELIVERY_WINDOWS } from './dto/create-order.dto';
 import { optimize, haversineKm } from './route-optim';
 import { MailService } from './mail.service';
 import { CouponService } from './coupon.service';
+import { CashService } from '../cash/cash.service';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
@@ -76,6 +77,7 @@ export class MarketService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly coupons: CouponService,
+    private readonly cash: CashService,
   ) {}
 
   /* ----------------------------- Vitrin ------------------------------ */
@@ -650,6 +652,10 @@ export class MarketService {
         }
       }
     });
+    // Teslim edildi → kapıda-ödeme tahsilatı kasaya GİRİŞ (kasa açıksa; mükerrer düşmez).
+    if (status === 'DELIVERED' && order.status !== 'DELIVERED') {
+      await this.cash.recordSale(order.code, order.finalTotal ?? order.grandTotal);
+    }
     await this.emailCustomer(id, order.customerEmail, `Sipariş güncellemesi (${order.code})`, STATUS_MSG[status] ?? `Durum: ${status}`);
     return this.getOrder(id);
   }
