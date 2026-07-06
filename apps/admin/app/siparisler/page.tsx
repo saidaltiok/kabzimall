@@ -122,10 +122,7 @@ export default function SiparislerPage() {
         </div>
 
         {view === 'pano' ? (
-          <OrdersBoard onDetail={(id) => {
-            setFilter(''); setSearch(''); setView('liste'); setOpen(id);
-            setTimeout(() => document.getElementById(`order-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
-          }} />
+          <OrdersBoard />
         ) : (
           <>
         <div className="form-row" style={{ marginBottom: 16 }}>

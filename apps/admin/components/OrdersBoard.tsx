@@ -3,15 +3,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
+import Modal from './Modal';
+import OrderDetail, { type DetailOrder } from './OrderDetail';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; note: string | null }
+interface OrderItem {
+  id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; note: string | null;
+  lineTotal: number;
+  product?: { stockQty: number | null; substitutes: { substitute: { name: string; stockQty: number | null; isActive: boolean } }[] } | null;
+}
 interface Order {
-  id: string; code: string; customerName: string; customerPhone: string;
-  status: string; grandTotal: number; estimatedTotal: number; finalTotal: number | null; note: string | null;
+  id: string; code: string; customerName: string; customerPhone: string; customerEmail: string | null;
+  addressText: string | null; lat: number | null; lng: number | null;
+  status: string; subtotal: number; deliveryFee: number; discountTotal: number; couponCode: string | null;
+  grandTotal: number; estimatedTotal: number; finalTotal: number | null; note: string | null;
   substitutionPref: string;
   deliveryDate: string | null; deliveryWindow: string | null;
   slotChangeStatus: string | null; slotChangeDate: string | null; slotChangeWindow: string | null;
   createdAt: string; items: OrderItem[];
+  notifications: { id: string; message: string; createdAt: string }[];
+  statusHistory: { id: string; fromStatus: string | null; toStatus: string; changedBy: string | null; note: string | null; createdAt: string }[];
 }
 
 /** Müşterinin "ürün eksik çıkarsa" tercihi — paketlerken uyulacak kural. */
@@ -35,12 +45,14 @@ const FLOW: [string, string, string][] = [
  * Eskiden ayrı "Operasyon Panosu" ekranıydı; aynı işi iki yerde yapmamak için
  * Siparişler'in bir görünümü haline getirildi.
  */
-export default function OrdersBoard({ onDetail }: { onDetail?: (id: string) => void }) {
+export default function OrdersBoard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [packOpen, setPackOpen] = useState<string | null>(null);
   const [picks, setPicks] = useState<Record<string, string>>({});
+  const [detailId, setDetailId] = useState<string | null>(null); // pano detay pop-up'ı
+  const [slotBusy, setSlotBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -109,7 +121,20 @@ export default function OrdersBoard({ onDetail }: { onDetail?: (id: string) => v
     }
   }
 
+  async function decideSlot(id: string, approve: boolean) {
+    setSlotBusy(true);
+    try {
+      await apiSend('POST', `/admin/orders/${id}/slot-change`, { approve });
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSlotBusy(false);
+    }
+  }
+
   const cancelled = orders.filter((o) => o.status === 'CANCELLED');
+  const detailOrder = orders.find((o) => o.id === detailId) ?? null;
 
   return (
     <>
@@ -136,7 +161,7 @@ export default function OrdersBoard({ onDetail }: { onDetail?: (id: string) => v
                         <button
                           type="button"
                           className="oc-code"
-                          onClick={() => onDetail?.(o.id)}
+                          onClick={() => setDetailId(o.id)}
                           title="Sipariş detayını aç"
                         >
                           {o.code} <span className="oc-detail">detay ›</span>
@@ -221,9 +246,15 @@ export default function OrdersBoard({ onDetail }: { onDetail?: (id: string) => v
 
       <p className="note2" style={{ marginTop: 14 }}>
         <b>Hazırlanıyor</b> kolonunda <b>⚖️ Paketle</b> ile tartılan gramajları girip tutarı kesinleştir
-        (sipariş <b>Hazır</b>&apos;a geçer). Aramak/geçmişe bakmak için üstten <b>Liste</b> görünümüne geç.
-        Pano 15 sn&apos;de bir kendini tazeler.
+        (sipariş <b>Hazır</b>&apos;a geçer). Karttaki <b>koda tıkla</b> → detay pop-up&apos;ı. Aramak/geçmişe
+        bakmak için üstten <b>Liste</b> görünümüne geç. Pano 15 sn&apos;de bir kendini tazeler.
       </p>
+
+      <Modal open={!!detailOrder} onClose={() => setDetailId(null)} title={detailOrder ? `Sipariş ${detailOrder.code}` : ''} sub={detailOrder ? `${detailOrder.items.length} kalem · ${tl(detailOrder.finalTotal ?? detailOrder.grandTotal)}` : undefined}>
+        {detailOrder && (
+          <OrderDetail order={detailOrder as DetailOrder} busy={slotBusy} onSlotDecide={(approve) => decideSlot(detailOrder.id, approve)} />
+        )}
+      </Modal>
     </>
   );
 }

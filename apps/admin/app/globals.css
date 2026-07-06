@@ -167,6 +167,16 @@ td .savecell, .savecell { font-weight: 700; color: var(--forest); }
 .ocard .oc-code .oc-detail { font-size: 10.5px; font-weight: 600; color: var(--persimmon-d); opacity: 0; transition: opacity .12s; }
 .ocard:hover .oc-code .oc-detail { opacity: 1; }
 .ocard .oc-slot { margin-left: 6px; background: #fff7ed; color: var(--honey-d, #b8860b); border: 1px solid var(--honey, #E6B450); border-radius: 20px; padding: 1px 7px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+
+/* Modal */
+.admodal-ov { position: fixed; inset: 0; background: rgba(15,25,20,.5); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 900; overflow-y: auto; animation: adm-fade .14s ease; }
+.admodal { background: #fff; border-radius: 16px; width: 100%; box-shadow: 0 40px 90px -30px rgba(0,0,0,.5); animation: adm-pop .16s ease; }
+.admodal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 16px 18px 10px; border-bottom: 1px solid var(--line); }
+.admodal-head h3 { margin: 0; font-family: 'Fraunces', serif; font-size: 18px; }
+.admodal-x { border: none; background: none; cursor: pointer; font-size: 15px; color: var(--muted); padding: 4px 6px; }
+.admodal-body { padding: 14px 18px 18px; }
+@keyframes adm-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes adm-pop { from { transform: translateY(8px); opacity: .6 } to { transform: none; opacity: 1 } }
 .ocard .oc-items { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; max-height: 44px; overflow: hidden; }
 .ocard .oc-act { display: flex; gap: 6px; margin-top: 10px; }
 .ocard .oc-act .btn { flex: 1; font-size: 12px; padding: 7px 10px; }
