@@ -38,6 +38,13 @@ export class CostComponentsController {
     const data = await this.service.list();
     return { data, meta: { total: data.length } };
   }
+
+  /** GET /api/v1/intel/cost-components/table — toplu tablo: ürün × etkin girdiler + birim maliyet. */
+  @Get('table')
+  async table() {
+    const data = await this.service.table();
+    return { data, meta: { total: data.length } };
+  }
 }
 
 @ApiTags('intel: maliyet')

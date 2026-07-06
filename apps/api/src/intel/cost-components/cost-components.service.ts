@@ -183,6 +183,60 @@ export class CostComponentsService {
     return { productId, source: product ? 'PRODUCT' : 'GLOBAL', halAvg: total, components, directCost: Math.round(directCost(breakdown)), breakdown };
   }
 
+  /**
+   * Toplu maliyet tablosu: her satır bir ürün — etkin girdiler (PRODUCT
+   * kaydı varsa o, yoksa GLOBAL), hal ortalaması ve birim maliyet. Tüm hal
+   * ortalamaları tek taramada hesaplanır (ürün başına sorgu yok).
+   */
+  async table() {
+    const [products, rows, halRows] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { tenantId: DEV_TENANT_ID, kind: 'SIMPLE', OR: [{ isActive: true }, { basePrice: { not: null } }] },
+        orderBy: [{ categoryId: 'asc' }, { name: 'asc' }],
+        select: { slug: true, name: true, unitLabel: true, category: { select: { name: true } } },
+      }),
+      this.prisma.costComponent.findMany({ where: { tenantId: DEV_TENANT_ID } }),
+      this.prisma.halPriceEntry.findMany({
+        where: { tenantId: DEV_TENANT_ID },
+        select: { productSlug: true, price: true, date: true },
+      }),
+    ]);
+    const global = rows.find((r) => r.scope === 'GLOBAL') ?? null;
+    const byProduct = new Map(rows.filter((r) => r.scope === 'PRODUCT').map((r) => [r.refId, r]));
+
+    // Ürün başına EN GÜNCEL günün fiyatları.
+    const halLatest = new Map<string, { date: number; prices: number[] }>();
+    for (const h of halRows) {
+      const t = h.date.getTime();
+      const cur = halLatest.get(h.productSlug);
+      if (!cur || t > cur.date) halLatest.set(h.productSlug, { date: t, prices: [h.price] });
+      else if (t === cur.date) cur.prices.push(h.price);
+    }
+
+    return products.map((p) => {
+      const eff = byProduct.get(p.slug) ?? global;
+      const hal = halLatest.get(p.slug);
+      const halAvg = hal ? Math.round(avg(hal.prices)) : null;
+      let dc: number | null = null;
+      if (eff && halAvg != null) {
+        dc = Math.round(directCost({
+          halAvg, fireRate: eff.fireRate, labor: eff.labor, packaging: eff.packaging,
+          fuel: eff.fuel, coldStorage: eff.coldStorage, amortization: eff.amortization,
+          commissionRate: eff.commissionRate,
+        }));
+      }
+      return {
+        slug: p.slug, name: p.name, unitLabel: p.unitLabel, category: p.category?.name ?? null,
+        source: byProduct.has(p.slug) ? 'PRODUCT' : global ? 'GLOBAL' : null,
+        halAvg, directCost: dc,
+        components: eff ? {
+          fireRate: eff.fireRate, labor: eff.labor, packaging: eff.packaging, fuel: eff.fuel,
+          coldStorage: eff.coldStorage, amortization: eff.amortization,
+        } : null,
+      };
+    });
+  }
+
   /** Ürünün en güncel güne ait hal fiyatlarının ortalaması (kuruş) ya da null. */
   private async latestHalAvg(productSlug: string): Promise<number | null> {
     const latest = await this.prisma.halPriceEntry.findFirst({

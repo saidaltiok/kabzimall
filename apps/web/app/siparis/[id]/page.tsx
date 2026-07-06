@@ -45,6 +45,7 @@ export default function OrderPage() {
   const [slotKey, setSlotKey] = useState('');
   const [slotBusy, setSlotBusy] = useState(false);
   const [slotErr, setSlotErr] = useState<string | null>(null);
+  const [whatsapp, setWhatsapp] = useState<string | null>(null); // canlı yardım (Ayarlar'dan)
 
   useEffect(() => {
     let active = true;
@@ -64,6 +65,10 @@ export default function OrderPage() {
     load();
     // Aktif siparişte 30 sn'de bir kendini tazele — "Yolda"ya geçtiğini müşteri görsün.
     timer = setInterval(load, 30_000);
+    // Canlı yardım: mağazanın WhatsApp'ı (yoksa buton görünmez).
+    apiGet<{ contactWhatsapp: string | null }>('/storefront/settings')
+      .then((s) => { if (active) setWhatsapp(s.contactWhatsapp); })
+      .catch(() => {});
     return () => { active = false; if (timer) clearInterval(timer); };
   }, [params.id]);
 
@@ -270,6 +275,27 @@ export default function OrderPage() {
           ))}
         </div>
       )}
+
+      {/* Canlı yardım — sipariş koduyla önceden yazılmış WhatsApp mesajı; yoksa destek formu */}
+      <div className="success-card" style={{ marginTop: 16, textAlign: 'center' }}>
+        <h3 className="serif" style={{ margin: '0 0 6px', fontSize: 16 }}>Bir sorun mu var?</h3>
+        <p className="muted" style={{ fontSize: 12.5, margin: '0 0 12px' }}>Siparişinle ilgili anında yardım için bize yaz — sipariş kodun mesaja otomatik eklenir.</p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {whatsapp && (
+            <a
+              className="cta"
+              style={{ marginTop: 0, width: 'auto', padding: '10px 18px', background: '#25D366', textDecoration: 'none' }}
+              target="_blank" rel="noreferrer"
+              href={`https://wa.me/${whatsapp.replace(/\D/g, '').replace(/^0/, '90')}?text=${encodeURIComponent(`Merhaba, ${order.code} numaralı siparişim hakkında yardım almak istiyorum.`)}`}
+            >
+              💬 WhatsApp canlı yardım
+            </a>
+          )}
+          <Link className="cta" style={{ marginTop: 0, width: 'auto', padding: '10px 18px', textDecoration: 'none' }} href={`/iletisim?siparis=${order.code}`}>
+            ✉️ Destek talebi oluştur
+          </Link>
+        </div>
+      </div>
 
       <p style={{ textAlign: 'center', marginTop: 22 }}>
         <Link href="/siparislerim" className="back">Siparişlerim</Link>　·

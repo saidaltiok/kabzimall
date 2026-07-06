@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiPost } from '@/lib/api';
 
 /** İletişim sayfası destek formu — talepler panelde kuyruğa düşer. */
@@ -13,6 +13,12 @@ export default function SupportForm() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Sipariş sayfasından "Destek talebi oluştur" ile gelindiyse kodu önden doldur.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('siparis');
+    if (code) setOrderCode(code.toUpperCase());
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

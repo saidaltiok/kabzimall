@@ -16,6 +16,7 @@ export const PRICING_TABS: SectionTab[] = [
   { href: '/yayinla', label: 'Toplu yayına al', icon: '🚀' },
   { href: '/urunler', label: 'Marj tablosu', icon: '📦' },
   { href: '/senaryo', label: 'Senaryo', icon: '🔮' },
+  { href: '/otomatik-indirim', label: 'Oto. indirim', icon: '🏷️' },
 ];
 export const PRODUCTS_TABS: SectionTab[] = [
   { href: '/katalog', label: 'Katalog', icon: '🗂️' },
@@ -24,6 +25,7 @@ export const PRODUCTS_TABS: SectionTab[] = [
 ];
 export const COST_TABS: SectionTab[] = [
   { href: '/maliyet', label: 'Maliyet & Fire', icon: '💸' },
+  { href: '/maliyet-tablo', label: 'Maliyet tablosu', icon: '🧾' },
   { href: '/kurallar', label: 'Fiyat kuralları', icon: '📐' },
   { href: '/finans', label: 'Finans (gider & K/Z)', icon: '📒' },
 ];
