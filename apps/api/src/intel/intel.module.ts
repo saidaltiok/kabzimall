@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CashModule } from '../cash/cash.module';
 import { PriceController } from './price/price.controller';
 import { PriceService } from './price/price.service';
 import { HalPurchasesController } from './hal-purchases/hal-purchases.controller';
@@ -31,6 +32,8 @@ import { AiBriefController } from './ai/ai-brief.controller';
 import { PricingMatrixService } from './pricing-matrix/pricing-matrix.service';
 import { PricingMatrixController } from './pricing-matrix/pricing-matrix.controller';
 import { FinanceService } from './finance/finance.service';
+import { MarkdownService } from './markdown/markdown.service';
+import { MarkdownController } from './markdown/markdown.controller';
 import { FinanceController } from './finance/finance.controller';
 
 /**
@@ -53,6 +56,7 @@ import { FinanceController } from './finance/finance.controller';
  *        /intel/cost-pool       — havuz/dağıtımlı maliyet → birim (kg) tahsis
  */
 @Module({
+  imports: [CashModule], // hal alımı → kasa çıkışı hook'u
   controllers: [
     PriceController,
     HalController,
@@ -70,6 +74,7 @@ import { FinanceController } from './finance/finance.controller';
     AiBriefController,
     PricingMatrixController,
     FinanceController,
+    MarkdownController,
   ],
   providers: [
     PriceService,
@@ -88,6 +93,7 @@ import { FinanceController } from './finance/finance.controller';
     AiBriefService,
     PricingMatrixService,
     FinanceService,
+    MarkdownService,
   ],
 })
 export class IntelModule {}

@@ -80,6 +80,9 @@ model Product {
   /// İndirimli fiyat (kuruş). Taban fiyatın altındaysa vitrinde geçerli olur.
   discountedPrice Int?  @map("discounted_price")
   originRegion String?  @map("origin_region")
+  /// Son otomatik indirim (markdown) uygulanma anı. null = indirim elle/hiç.
+  /// Restokta işaretli indirim otomatik temizlenir; günde bir kez uygulanır.
+  markdownAt   DateTime? @map("markdown_at") @db.Timestamptz(6)
   isActive     Boolean  @default(true) @map("is_active")
   isFeatured   Boolean  @default(false) @map("is_featured")
   isFreshDaily Boolean  @default(false) @map("is_fresh_daily")
@@ -484,6 +487,66 @@ model CostComponent {
 
   @@unique([tenantId, scope, refId])
   @@map("cost_components")
+}
+
+/// Otomatik indirim (clearance) kuralı: yeni alım yapılmayan ama stoğu süren
+/// ürünlerin fiyatı her gün kurala göre düşer, Fırsatlar'a düşer.
+/// En-spesifik kazanır (PRODUCT > CATEGORY); mode=EXCLUDE ürünü kapsamdan çıkarır.
+model MarkdownRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  scope          String // CATEGORY | PRODUCT
+  refId          String   @map("ref_id") // kategori/ürün slug
+  mode           String   @default("PRICE_DECAY") // PRICE_DECAY (fiyatın %X'i/gün) | MARGIN_DECAY (karın %X'i/gün) | EXCLUDE
+  pct            Float    @default(0.05) // günlük indirim oranı (0-1)
+  staleDays      Int      @default(2) @map("stale_days") // kaç gün alım/stok girişi yoksa "eriyor"
+  allowBelowCost Boolean  @default(false) @map("allow_below_cost") // zararına satışa izin
+  maxTotalOffPct Float    @default(0.5) @map("max_total_off_pct") // toplam indirim tavanı (taban fiyata göre)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, scope, refId])
+  @@map("markdown_rules")
+}
+
+/// Kasa oturumu: açılış bakiyesiyle açılır, gün sonunda sayımla kapanır.
+/// Beklenen = açılış + girişler − çıkışlar; fark = sayılan − beklenen.
+model RegisterSession {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  openingFloat  Int       @map("opening_float") // kuruş
+  openedBy      String?   @map("opened_by")
+  openedAt      DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt      DateTime? @map("closed_at") @db.Timestamptz(6)
+  closedBy      String?   @map("closed_by")
+  countedClose  Int?      @map("counted_close") // kapanışta sayılan (kuruş)
+  expectedClose Int?      @map("expected_close") // kapanışta hesaplanan (kuruş)
+  note          String?
+
+  movements CashMovement[]
+
+  @@index([tenantId, openedAt])
+  @@map("register_sessions")
+}
+
+/// Kasa hareketi: giriş (teslim edilen kapıda-ödeme siparişi, elle tahsilat)
+/// ya da çıkış (hal alımı, masraf). Sipariş/alım otomatik düşer (kasa açıksa).
+model CashMovement {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  type      String // IN | OUT
+  category  String   @default("OTHER") // SALE | HAL_PURCHASE | EXPENSE | DEPOSIT | WITHDRAWAL | OTHER
+  amount    Int // kuruş, pozitif
+  note      String?
+  refCode   String?  @map("ref_code") // sipariş kodu vb. (mükerrer kaydı önler)
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session RegisterSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, sessionId])
+  @@map("cash_movements")
 }
 
 /// Üründen bağımsız genel gider (kira, ambalaj toplu alım, işçilik, kart komisyonu…).
