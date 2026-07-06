@@ -69,7 +69,7 @@ export default function MaliyetPage() {
       fireRate: fireOverride != null ? fireOverride / 100 : p2r(form.fire),
       labor: tl2k(form.labor), packaging: tl2k(form.pack), fuel: tl2k(form.fuel),
       coldStorage: tl2k(form.cold), amortization: tl2k(form.amort),
-      commissionRate: p2r(form.comm),
+      commissionRate: 0, // komisyon artık genel gider (Finans) — birim maliyete girmez
     };
   }
 
@@ -100,7 +100,7 @@ export default function MaliyetPage() {
         scope: 'PRODUCT', refId: productId,
         fireRate: p2r(form.fire), labor: tl2k(form.labor), packaging: tl2k(form.pack),
         fuel: tl2k(form.fuel), coldStorage: tl2k(form.cold), amortization: tl2k(form.amort),
-        commissionRate: p2r(form.comm),
+        commissionRate: 0, // komisyon Finans → Genel Giderler'de; birim maliyette tutulmaz
       });
       setSaved(`✓ ${productId} maliyet bileşenleri kaydedildi (PRODUCT kapsamı).`);
       await load(productId);
@@ -145,10 +145,9 @@ export default function MaliyetPage() {
             <Row label="Yakıt / dağıtım (₺)" value={form.fuel} onChange={set('fuel')} />
             <Row label="Soğuk zincir (₺)" value={form.cold} onChange={set('cold')} />
             <Row label="Amortisman (₺)" value={form.amort} onChange={set('amort')} />
-            <Row label="Kart komisyonu (%)" value={form.comm} onChange={set('comm')} />
             <p className="note2" style={{ margin: '2px 0 0', fontSize: 11 }}>
-              💡 Kart komisyonu artık <b>Finans → Genel Giderler</b>&apos;de (ciroya oranlı) tutulur; nakit müşteriyi
-              fazla fiyatlamamak için burada <b>0</b> bırakman önerilir.
+              💡 Kart komisyonu birim maliyete girmez — <b>Finans → Genel Giderler</b>&apos;de (ciroya oranlı) tutulur;
+              böylece nakit müşteri komisyonla fazla fiyatlanmaz.
             </p>
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
               <button className="btn ghost" onClick={compute} disabled={busy}>Hesapla</button>
@@ -168,12 +167,9 @@ export default function MaliyetPage() {
 
             {floorPrice != null && (
               <div className="result" style={{ marginTop: 12 }}>
-                <div className="l">Taban satış fiyatı (taban marj + %{form.comm} komisyon dahil)</div>
+                <div className="l">Taban satış fiyatı (taban marj ile)</div>
                 <div className="big">{tl(floorPrice)}</div>
-                <div className="note2">
-                  Komisyon birim maliyete girmez; <b>satış fiyatını</b> etkiler. Kart komisyonunu değiştirip
-                  <b> Hesapla</b>&apos;ya basınca bu değer değişir (maliyet sabit kalır).
-                </div>
+                <div className="note2">Bu fiyatın altına motor inmez; komisyon burada değil, Finans&apos;taki genel giderdedir.</div>
               </div>
             )}
 

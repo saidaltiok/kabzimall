@@ -10,11 +10,11 @@ export const MARKET_TABS: SectionTab[] = [
   { href: '/hal', label: 'Hal fiyatları', icon: '🥬' },
   { href: '/rakip', label: 'Rakip fiyatları', icon: '🏷️' },
 ];
+// Fiyat matrisi toplu yayın + marj görünümünü kapsadığı için "Toplu yayına al"
+// ve "Marj tablosu" sekmeden kaldırıldı (rotalar erişilebilir kalır; menü sadeleşir).
 export const PRICING_TABS: SectionTab[] = [
   { href: '/matris', label: 'Fiyat matrisi', icon: '🧮' },
   { href: '/oner', label: 'Tek ürün fiyatla', icon: '🎯' },
-  { href: '/yayinla', label: 'Toplu yayına al', icon: '🚀' },
-  { href: '/urunler', label: 'Marj tablosu', icon: '📦' },
   { href: '/senaryo', label: 'Senaryo', icon: '🔮' },
   { href: '/otomatik-indirim', label: 'Oto. indirim', icon: '🏷️' },
 ];
