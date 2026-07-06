@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import type { Strategy } from '../../../pricing-engine';
 import { STRATEGIES } from './resolve-price.dto';
 
@@ -30,4 +30,12 @@ export class ApplyPriceDto {
   /** Değişikliği yapan kullanıcı (henüz auth yok — gelince token'dan gelecek). */
   @IsOptional() @IsString()
   changedBy?: string;
+
+  /**
+   * Taban marjın ALTINA bilinçli yayın (fırsat/zararına satış). Varsayılan false:
+   * taban altı fiyat 400 ile reddedilir (maliyet güvenlik ağı). Kazara/typo fiyat
+   * sessizce yayınlanamaz.
+   */
+  @IsOptional() @IsBoolean()
+  allowBelowFloor?: boolean;
 }

@@ -332,6 +332,9 @@ model OrderItem {
   orderedQty  Float   @map("ordered_qty")
   /// Paketlemede tartılan gerçek miktar (girilene dek null).
   pickedQty   Float?  @map("picked_qty")
+  /// Satış anındaki birim maliyet (kuruş) — K/Z COGS tarihsel maliyetle hesaplansın
+  /// (bugünkü hal fiyatı geçmiş siparişi çarpmasın). Maliyet tanımsızsa null.
+  unitCostSnapshot Int? @map("unit_cost_snapshot")
   /// Müşteri ürün notu (ör. "çok olgun olmasın") — paketleyene iletilir.
   note        String?
   lineTotal   Int     @map("line_total")

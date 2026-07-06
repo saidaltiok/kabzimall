@@ -28,11 +28,11 @@ describe('Intel /dashboard', () => {
       .post('/api/v1/intel/price/apply')
       .send({ productId: 'domates', price: 3590, strategy: 'MARGIN', netMargin: 0.29 });
 
-    // patates: ZARARINA — hal var, base maliyetin altında
+    // patates: ZARARINA — hal var, base maliyetin altında (bilinçli zararına → allowBelowFloor)
     await http.post('/api/v1/intel/hal/entries').send({ productId: 'patates', price: 2000, date: DATE });
     await http
       .post('/api/v1/intel/price/apply')
-      .send({ productId: 'patates', price: 100, strategy: 'MANUAL' });
+      .send({ productId: 'patates', price: 100, strategy: 'MANUAL', allowBelowFloor: true });
 
     // kavun: HAL_VERISI_YOK — fiyat uygulandı ama hiç hal girişi yok
     await http

@@ -9,6 +9,7 @@ import { optimize, haversineKm } from './route-optim';
 import { MailService } from './mail.service';
 import { CouponService } from './coupon.service';
 import { CashService } from '../cash/cash.service';
+import { CostComponentsService } from '../intel/cost-components/cost-components.service';
 
 const DAY_TR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
@@ -62,6 +63,25 @@ export const ORDER_STATUSES = [
   'CANCELLED',
 ] as const;
 
+/** Operasyon akışı sırası (iptal hariç). */
+const STATUS_FLOW = ['CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'] as const;
+
+/**
+ * Durum geçişi geçerli mi? İleri atlama serbest (kanban tek adım ilerletir ama
+ * liste dropdown'ı atlayabilir), bir kademe geri (teslim öncesi düzeltme) ve her
+ * aşamada iptal serbest; DELIVERED yalnız iptale (kasa tersine döner); CANCELLED
+ * terminaldir. Kritik olan para güvenliği (iade/kupon/mükerrer) ayrıca korunur.
+ */
+function canTransition(from: string, to: string): boolean {
+  if (from === 'CANCELLED') return false;
+  if (to === 'CANCELLED') return true;
+  if (from === 'DELIVERED') return false; // teslim edildikten sonra yalnız iptal
+  const fi = STATUS_FLOW.indexOf(from as (typeof STATUS_FLOW)[number]);
+  const ti = STATUS_FLOW.indexOf(to as (typeof STATUS_FLOW)[number]);
+  if (fi < 0 || ti < 0) return false;
+  return ti > fi || ti === fi - 1; // ileri atlama ya da bir kademe geri
+}
+
 /** Aksiyon bekleyen (aktif) sipariş durumları. */
 const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'] as const;
 
@@ -78,6 +98,7 @@ export class MarketService {
     private readonly mail: MailService,
     private readonly coupons: CouponService,
     private readonly cash: CashService,
+    private readonly costs: CostComponentsService,
   ) {}
 
   /* ----------------------------- Vitrin ------------------------------ */
@@ -314,6 +335,11 @@ export class MarketService {
     });
     const bySlug = new Map(products.map((p) => [p.slug, p]));
 
+    // Satış anı birim maliyeti (K/Z COGS tarihsel maliyetle hesaplansın).
+    const costBySlug = new Map<string, number | null>(
+      await Promise.all(slugs.map(async (s) => [s, (await this.costs.costForProduct(s).catch(() => null))?.directCost ?? null] as [string, number | null])),
+    );
+
     const items = dto.items.map((i) => {
       const p = bySlug.get(i.slug);
       if (!p) throw new BadRequestException(`Ürün bulunamadı veya yayında değil: ${i.slug}`);
@@ -341,6 +367,7 @@ export class MarketService {
         orderedQty: i.qty,
         note: i.note?.trim() || null,
         lineTotal: lineTotal(unitPrice, i.qty),
+        unitCostSnapshot: costBySlug.get(i.slug) ?? null,
       };
     });
 
@@ -634,13 +661,20 @@ export class MarketService {
       throw new BadRequestException(`Geçersiz durum: ${status}`);
     }
     const order = await this.getOrder(id);
-    const restoreStock = status === 'CANCELLED' && order.status !== 'CANCELLED';
+    if (status === order.status) return order; // idempotent no-op
+    if (!canTransition(order.status, status)) {
+      throw new BadRequestException(`Geçersiz durum geçişi: ${order.status} → ${status}`);
+    }
+
+    const cancelling = status === 'CANCELLED'; // order.status !== CANCELLED garanti (yukarıda no-op)
+    const wasDelivered = order.status === 'DELIVERED';
 
     await this.prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id }, data: { status } });
       await tx.orderStatusHistory.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: status, changedBy: actor ?? null } });
       await tx.notification.create({ data: { tenantId: DEV_TENANT_ID, orderId: id, message: STATUS_MSG[status] ?? `Durum: ${status}` } });
-      if (restoreStock) {
+      if (cancelling) {
+        // Stok iadesi (sipariş anındaki miktarla — düşümle simetrik).
         const prods = await tx.product.findMany({
           where: { id: { in: order.items.map((i) => i.productId) } },
           include: { components: { include: { component: { select: { id: true, stockQty: true } } } } },
@@ -650,11 +684,15 @@ export class MarketService {
           const p = byId.get(it.productId);
           if (p) await this.adjustStock(tx, p, it.orderedQty, 1, order.code);
         }
+        // Kupon kullanım hakkı iadesi (tekrar kullanılabilsin).
+        await this.coupons.releaseUsage(tx, order.couponCode);
       }
     });
-    // Teslim edildi → kapıda-ödeme tahsilatı kasaya GİRİŞ (kasa açıksa; mükerrer düşmez).
-    if (status === 'DELIVERED' && order.status !== 'DELIVERED') {
+    // Teslim → kasaya GİRİŞ; teslim SONRASI iptal → kasadan ÇIKIŞ (tahsilat iadesi).
+    if (status === 'DELIVERED') {
       await this.cash.recordSale(order.code, order.finalTotal ?? order.grandTotal);
+    } else if (cancelling && wasDelivered) {
+      await this.cash.recordSaleReversal(order.code, order.finalTotal ?? order.grandTotal);
     }
     await this.emailCustomer(id, order.customerEmail, `Sipariş güncellemesi (${order.code})`, STATUS_MSG[status] ?? `Durum: ${status}`);
     return this.getOrder(id);

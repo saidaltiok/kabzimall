@@ -99,25 +99,29 @@ export class FinanceService {
 
     const orders = await this.prisma.order.findMany({
       where: { tenantId: DEV_TENANT_ID, status: 'DELIVERED', createdAt: { gte: from, lt: end } },
-      select: { grandTotal: true, finalTotal: true, items: { select: { orderedQty: true, pickedQty: true, product: { select: { slug: true } } } } },
+      select: { grandTotal: true, finalTotal: true, items: { select: { orderedQty: true, pickedQty: true, unitCostSnapshot: true, product: { select: { slug: true } } } } },
     });
 
     const revenue = orders.reduce((s, o) => s + (o.finalTotal ?? o.grandTotal), 0);
     const orderCount = orders.length;
 
-    // COGS: ürün başına birim maliyet (tek kez) × satılan miktar
-    const soldQty = new Map<string, number>();
+    // COGS: TARİHSEL maliyet — satış anındaki birim maliyet (unitCostSnapshot).
+    // Snapshot yoksa (eski kayıt) bugünkü maliyete düşülür; tanımsızsa uyarılır.
+    let cogs = 0;
+    const missingSlugs = new Set<string>();
+    const todayCost = new Map<string, number | null>();
     for (const o of orders) for (const it of o.items) {
       const slug = it.product?.slug; if (!slug) continue;
-      soldQty.set(slug, (soldQty.get(slug) ?? 0) + (it.pickedQty ?? it.orderedQty));
+      const qty = it.pickedQty ?? it.orderedQty;
+      let unit = it.unitCostSnapshot;
+      if (unit == null) {
+        if (!todayCost.has(slug)) todayCost.set(slug, (await this.costs.costForProduct(slug).catch(() => null))?.directCost ?? null);
+        unit = todayCost.get(slug) ?? null;
+      }
+      if (unit == null) { missingSlugs.add(slug); continue; }
+      cogs += Math.round(unit * qty);
     }
-    let cogs = 0;
-    const missingCost: string[] = [];
-    for (const [slug, qty] of soldQty) {
-      const c = await this.costs.costForProduct(slug).catch(() => null);
-      if (c?.directCost == null) { missingCost.push(slug); continue; }
-      cogs += Math.round(c.directCost * qty);
-    }
+    const missingCost = [...missingSlugs];
 
     // Genel giderler
     const overheads = await this.prisma.overheadCost.findMany({ where: { tenantId: DEV_TENANT_ID, isActive: true } });

@@ -28,4 +28,16 @@ export interface JwtUser {
   tenantId: string;
 }
 
-export const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-me-in-prod';
+// Üretimde JWT_SECRET ZORUNLU — env yoksa boot'ta fail-fast (sessizce zayıf
+// gizle çalışmaz). Dev/test'te sabit dev gizli kullanılır.
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET production ortamında zorunludur (apps/api/src/auth/auth.constants.ts).');
+}
+export const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-only-secret-not-for-prod';
+
+/**
+ * Müşteri OTP token'ı için AYRI gizli anahtar (defense-in-depth): personel
+ * gizli sızsa bile müşteri token'ı üretilemesin ve tersi. Set edilmezse
+ * personel gizlisinden türetilir — yine de personel gizlisinden FARKLIDIR.
+ */
+export const CUSTOMER_JWT_SECRET = process.env.CUSTOMER_JWT_SECRET ?? `${JWT_SECRET}::customer`;

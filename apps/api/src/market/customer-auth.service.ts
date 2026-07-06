@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash, randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEV_TENANT_ID } from '../common/tenant';
-import { JWT_SECRET } from '../auth/auth.constants';
+import { CUSTOMER_JWT_SECRET } from '../auth/auth.constants';
 import { MailService } from './mail.service';
 
 const OTP_TTL_MS = 5 * 60_000; // kod 5 dk geçerli
@@ -84,7 +84,7 @@ export class CustomerAuthService {
       throw new BadRequestException('Kod hatalı. Tekrar deneyin.');
     }
     await this.prisma.customerOtp.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
-    const token = this.jwt.sign({ kind: 'customer', email }, { secret: JWT_SECRET, expiresIn: CUSTOMER_TOKEN_TTL });
+    const token = this.jwt.sign({ kind: 'customer', email }, { secret: CUSTOMER_JWT_SECRET, expiresIn: CUSTOMER_TOKEN_TTL });
     return { token, email };
   }
 
@@ -93,7 +93,7 @@ export class CustomerAuthService {
     const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) throw new UnauthorizedException('Giriş gerekli.');
     try {
-      const payload = this.jwt.verify<{ kind?: string; email?: string }>(token, { secret: JWT_SECRET });
+      const payload = this.jwt.verify<{ kind?: string; email?: string }>(token, { secret: CUSTOMER_JWT_SECRET });
       if (payload.kind !== 'customer' || !payload.email) throw new Error('kind');
       return payload.email;
     } catch {

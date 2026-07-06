@@ -67,7 +67,7 @@ export class PricingMatrixService {
       const floorMargin = rule?.floorMargin ?? DEFAULT_FLOOR_MARGIN;
       const floor = cost?.breakdown ? Math.round(priceForMargin(cost.breakdown, floorMargin)) : null;
       if (!allowBelowFloor && floor != null && it.price < floor) { blocked.push({ slug: it.slug, price: it.price, floor }); continue; }
-      await this.price.apply({ productId: it.slug, price: it.price, strategy: 'MANUAL', reason: 'Fiyat matrisi (toplu)', changedBy: actor });
+      await this.price.apply({ productId: it.slug, price: it.price, strategy: 'MANUAL', reason: 'Fiyat matrisi (toplu)', changedBy: actor, allowBelowFloor });
       await this.prisma.product.updateMany({ where: { tenantId: DEV_TENANT_ID, slug: it.slug }, data: { isActive: true } });
       published.push(it.slug);
     }

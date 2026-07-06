@@ -7,6 +7,7 @@ import {
   priceForMargin,
   psych,
   DEFAULT_CHAIN,
+  DEFAULT_FLOOR_MARGIN,
   type CostInput,
   type Competitor,
   type SuggestParams,
@@ -106,7 +107,22 @@ export class PriceService {
    * price_history'e append-only kayıt düşer (Teknik doküman Bölüm 6.3).
    * Client `productId`'yi ürün slug'ı olarak gönderir (katalog henüz yok).
    */
-  apply(dto: ApplyPriceDto) {
+  async apply(dto: ApplyPriceDto) {
+    // Maliyet güvenlik ağı: taban marjın ALTINA yazmak bilinçli onay ister
+    // (allowBelowFloor). Katalog PATCH ve fiyat matrisiyle aynı kural.
+    if (!dto.allowBelowFloor) {
+      const cost = await this.costs.costForProduct(dto.productId).catch(() => null);
+      if (cost?.breakdown) {
+        const rule = await this.rules.resolveEffective(dto.productId).catch(() => null);
+        const floor = Math.round(priceForMargin(cost.breakdown, rule?.floorMargin ?? DEFAULT_FLOOR_MARGIN));
+        if (dto.price < floor) {
+          throw new BadRequestException(
+            `Fiyat taban marjın altında (₺${(dto.price / 100).toFixed(2)} < taban ₺${(floor / 100).toFixed(2)}). ` +
+            `Bilinçli fırsat/zararına satış için allowBelowFloor gönderin.`,
+          );
+        }
+      }
+    }
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.product.findUnique({
         where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug: dto.productId } },
@@ -129,8 +145,9 @@ export class PriceService {
             select: productSelect,
           })
         : await tx.product.create({
-            // Katalogda yoksa yer tutucu oluştur (ad = slug; katalogdan düzenlenebilir).
-            data: { tenantId: DEV_TENANT_ID, slug: dto.productId, name: dto.productId, basePrice: dto.price },
+            // Katalogda yoksa yer tutucu oluştur — PASİF (vitrine düşmez; typo'lu
+            // slug ile "adı slug olan 1 kuruşluk ürün" kazara satışa çıkamaz).
+            data: { tenantId: DEV_TENANT_ID, slug: dto.productId, name: dto.productId, basePrice: dto.price, isActive: false },
             select: productSelect,
           });
 

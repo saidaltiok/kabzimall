@@ -10,7 +10,7 @@ export interface MovementInput {
   refCode?: string;
 }
 
-const CATEGORIES = ['SALE', 'HAL_PURCHASE', 'EXPENSE', 'DEPOSIT', 'WITHDRAWAL', 'OTHER'];
+const CATEGORIES = ['SALE', 'SALE_REVERSAL', 'HAL_PURCHASE', 'EXPENSE', 'DEPOSIT', 'WITHDRAWAL', 'OTHER'];
 
 /**
  * Kasa (till): açılış bakiyesiyle oturum açılır; teslim edilen kapıda-ödeme
@@ -116,13 +116,15 @@ export class CashService {
 
   /* --------------------- Otomatik beslemeler (hook'lar) --------------------- */
 
-  /** Teslim edilen kapıda-ödeme siparişi → GİRİŞ (kasa açıksa; mükerrer düşmez). */
+  /** Teslim edilen kapıda-ödeme siparişi → GİRİŞ (kasa açıksa; sipariş başına bir kez). */
   async recordSale(orderCode: string, amount: number) {
     try {
       const session = await this.openSession();
       if (!session || amount <= 0) return;
+      // Mükerrer koruması TENANT genelinde: oturum kapanıp açılsa bile aynı
+      // sipariş ikinci kez GİRİŞ yazılmaz (DELIVERED→...→DELIVERED tekrarı).
       const dup = await this.prisma.cashMovement.findFirst({
-        where: { tenantId: DEV_TENANT_ID, sessionId: session.id, category: 'SALE', refCode: orderCode },
+        where: { tenantId: DEV_TENANT_ID, category: 'SALE', refCode: orderCode },
       });
       if (dup) return;
       await this.prisma.cashMovement.create({
@@ -130,6 +132,23 @@ export class CashService {
       });
     } catch (e) {
       this.logger.warn(`Kasa satış kaydı düşülemedi (${orderCode}): ${(e as Error).message}`);
+    }
+  }
+
+  /** Teslim edilmiş sipariş sonradan iptal edilirse → tahsilatı geri çıkar (ÇIKIŞ). */
+  async recordSaleReversal(orderCode: string, amount: number) {
+    try {
+      const session = await this.openSession();
+      if (!session || amount <= 0) return;
+      const dup = await this.prisma.cashMovement.findFirst({
+        where: { tenantId: DEV_TENANT_ID, category: 'SALE_REVERSAL', refCode: orderCode },
+      });
+      if (dup) return;
+      await this.prisma.cashMovement.create({
+        data: { tenantId: DEV_TENANT_ID, sessionId: session.id, type: 'OUT', category: 'SALE_REVERSAL', amount, refCode: orderCode, note: 'Teslim sonrası iptal — tahsilat iadesi (otomatik)' },
+      });
+    } catch (e) {
+      this.logger.warn(`Kasa iade kaydı düşülemedi (${orderCode}): ${(e as Error).message}`);
     }
   }
 

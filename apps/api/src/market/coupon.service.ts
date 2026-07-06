@@ -64,6 +64,19 @@ export class CouponService {
     return { code, discount: CouponService.discountFor(c, subtotal) };
   }
 
+  /**
+   * Sipariş iptalinde kupon kullanım hakkını iade et (usedCount −1, 0'ın altına
+   * inmez). tx içinde çağrılır ki iptal ile atomik olsun.
+   */
+  async releaseUsage(tx: Prisma.TransactionClient, codeRaw: string | null) {
+    if (!codeRaw) return;
+    const code = normalize(codeRaw);
+    await tx.coupon.updateMany({
+      where: { tenantId: DEV_TENANT_ID, code, usedCount: { gt: 0 } },
+      data: { usedCount: { decrement: 1 } },
+    });
+  }
+
   /** Paketlemede gerçek gramaj sonrası indirimi yeniden hesapla (PERCENT ölçeklenir, FIXED sabit). */
   async recompute(codeRaw: string | null, fallbackDiscount: number, finalSubtotal: number): Promise<number> {
     if (!codeRaw) return Math.min(fallbackDiscount, finalSubtotal);

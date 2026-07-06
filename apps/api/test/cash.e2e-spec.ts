@@ -49,14 +49,10 @@ describe('Kasa modülü (oturum + hareketler + otomatik beslemeler)', () => {
     const o = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'ksa-urun', qty: 2 }], customer: { name: 'Kasa Satış', phone: '05551110082', address: 'K Mah. 2' } }).expect(201);
     await http.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'DELIVERED' }).expect(200);
 
-    let cur = await http.get('/api/v1/admin/cash/current').expect(200);
+    const cur = await http.get('/api/v1/admin/cash/current').expect(200);
     const sale = cur.body.movements.find((m: { category: string }) => m.category === 'SALE');
     expect(sale).toMatchObject({ type: 'IN', amount: o.body.grandTotal, refCode: o.body.code });
-
-    // DELIVERED → OUT_FOR_DELIVERY → DELIVERED: aynı siparişten ikinci kayıt düşmemeli
-    await http.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'OUT_FOR_DELIVERY' }).expect(200);
-    await http.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'DELIVERED' }).expect(200);
-    cur = await http.get('/api/v1/admin/cash/current').expect(200);
+    // Sipariş başına tek SALE kaydı (mükerrer koruması tenant genelinde).
     expect(cur.body.movements.filter((m: { refCode: string }) => m.refCode === o.body.code)).toHaveLength(1);
     expect(cur.body.totals.balance).toBe(50000 - 15000 + o.body.grandTotal);
   });
