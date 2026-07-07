@@ -16,6 +16,7 @@ const SECTIONS: { label: string; links: { href: string; icon: string; label: str
       { href: '/hal', icon: '🧺', label: 'Piyasa Verisi', also: ['/rakip'] },
       { href: '/oner', icon: '🎯', label: 'Fiyatlandırma', also: ['/matris', '/yayinla', '/urunler', '/senaryo', '/otomatik-indirim'] },
       { href: '/siparisler', icon: '🧾', label: 'Siparişler' },
+      { href: '/tezgah', icon: '🛒', label: 'Tezgâh Satışı' },
       { href: '/kasa', icon: '💰', label: 'Kasa' },
       { href: '/rota', icon: '🚚', label: 'Dağıtım Rotası' },
     ],

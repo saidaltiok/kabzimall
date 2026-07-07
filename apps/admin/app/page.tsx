@@ -11,6 +11,7 @@ import Topbar from '@/components/Topbar';
 interface OpsSummary {
   ordersToday: number;
   revenueToday: number;
+  posToday?: { count: number; revenue: number };
   activeCount: number;
   statusCounts: Record<string, number>;
   lowStock: { slug: string; name: string; stockQty: number | null; unitLabel: string | null }[];
@@ -302,8 +303,8 @@ function Ops({ ops }: { ops: OpsSummary }) {
         <Link href="/siparisler" style={{ fontSize: 12, color: 'var(--persimmon)', fontWeight: 600 }}>Siparişlere git →</Link>
       </div>
       <div className="kpis">
-        <Kpi l="Bugünkü sipariş" v={String(ops.ordersToday)} d="00:00'dan beri" />
-        <Kpi l="Bugünkü ciro" v={tl(ops.revenueToday)} d="iptaller hariç" />
+        <Kpi l="Bugünkü sipariş" v={String(ops.ordersToday)} d="web · 00:00'dan beri" />
+        <Kpi l="Bugünkü ciro" v={tl(ops.revenueToday)} d={(ops.posToday?.count ?? 0) > 0 ? `🛒 ${ops.posToday!.count} tezgâh fişi (${tl(ops.posToday!.revenue)}) dahil` : 'web + tezgâh · iptaller hariç'} />
         <Kpi l="Aktif sipariş" v={String(ops.activeCount)} d="işlem bekliyor" alert={ops.activeCount > 0} />
         <Kpi l="Düşük stok" v={String(ops.lowStock.length)} d="≤ 5 birim" alert={ops.lowStock.length > 0} />
       </div>
