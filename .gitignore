@@ -7,9 +7,10 @@ build/
 *.log
 npm-debug.log*
 
-# Ortam & editör
+# Ortam & editör (örnek dosyalar İSTİSNA — yeni kurulumun şablonu)
 .env
 .env.*
+!.env.example
 .DS_Store
 .idea/
 .vscode/
