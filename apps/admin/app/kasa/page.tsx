@@ -32,6 +32,11 @@ export default function KasaPage() {
   const [mTl, setMTl] = useState('');
   const [mNote, setMNote] = useState('');
   const [countTl, setCountTl] = useState('');
+  // Z-raporu pratikleri: kör sayım (beklenen gizli) + kupür yardımcısı
+  const [blind, setBlind] = useState(false);
+  const [denoms, setDenoms] = useState<Record<number, string>>({});
+  const [coinsTl, setCoinsTl] = useState('');
+  const DENOMS = [200, 100, 50, 20, 10, 5];
 
   const load = useCallback(() => {
     apiGet<Current>('/admin/cash/current').then(setCur).catch((e) => setError((e as Error).message));
@@ -53,14 +58,32 @@ export default function KasaPage() {
       setMTl(''); setMNote(''); load();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
+  /** Kupür adetleri + bozuk para → toplam kuruş; "Sayılan" alanını otomatik doldurur. */
+  function syncCount(nextDenoms: Record<number, string>, nextCoins: string) {
+    setDenoms(nextDenoms); setCoinsTl(nextCoins);
+    const hasAny = DENOMS.some((d) => (nextDenoms[d] ?? '').trim() !== '') || nextCoins.trim() !== '';
+    if (!hasAny) return;
+    const notes = DENOMS.reduce((sum, d) => sum + (parseInt(nextDenoms[d] ?? '0', 10) || 0) * d * 100, 0);
+    const total = notes + (tlToKurus(nextCoins) ?? 0);
+    setCountTl((total / 100).toFixed(2).replace('.', ','));
+  }
+
   async function closeRegister() {
     if (!window.confirm('Kasa kapatılsın mı? Kapanış sonrası bu oturuma hareket eklenemez.')) return;
     setBusy(true); setError(null); setOk(null);
     try {
+      // Z-özeti için kırılımı kapanıştan ÖNCE hesapla (kapanınca movements sıfırlanır)
+      const brk = (cur?.movements ?? []).reduce<Record<string, number>>((acc, m) => {
+        acc[m.category] = (acc[m.category] ?? 0) + (m.type === 'IN' ? m.amount : -m.amount);
+        return acc;
+      }, {});
+      const brkText = Object.entries(brk)
+        .map(([c, v]) => `${catLabel(c)} ${v < 0 ? '−' : '+'}${tl(Math.abs(v))}`)
+        .join(' · ');
       const r = await apiSend<Session>('POST', '/admin/cash/close', { counted: toK(countTl) });
       const variance = (r.countedClose ?? 0) - (r.expectedClose ?? 0);
-      setOk(`✓ Kasa kapandı. Beklenen ${tl(r.expectedClose ?? 0)}, sayılan ${tl(r.countedClose ?? 0)}, fark ${tl(variance)}.`);
-      setCountTl(''); load();
+      setOk(`✓ Kasa kapandı (Z-özeti). Beklenen ${tl(r.expectedClose ?? 0)}, sayılan ${tl(r.countedClose ?? 0)}, fark ${tl(variance)}.${brkText ? ` Kırılım: ${brkText}.` : ''}`);
+      setCountTl(''); setBlind(false); setDenoms({}); setCoinsTl(''); load();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -87,9 +110,9 @@ export default function KasaPage() {
         ) : (
           <>
             <div className="kpis">
-              <div className="kpi"><div className="l">Anlık kasa</div><div className="v">{tl(cur.totals!.balance)}</div><div className="d">açılış {tl(s.openingFloat)} · {dt(s.openedAt)}</div></div>
-              <div className="kpi"><div className="l">Girişler</div><div className="v" style={{ color: 'var(--forest)' }}>+{tl(cur.totals!.inSum)}</div><div className="d">satış + elle giriş</div></div>
-              <div className="kpi"><div className="l">Çıkışlar</div><div className="v" style={{ color: 'var(--berry)' }}>−{tl(cur.totals!.outSum)}</div><div className="d">hal alımı + masraf</div></div>
+              <div className="kpi"><div className="l">Anlık kasa</div><div className="v">{blind ? '•••' : tl(cur.totals!.balance)}</div><div className="d">açılış {tl(s.openingFloat)} · {dt(s.openedAt)}</div></div>
+              <div className="kpi"><div className="l">Girişler</div><div className="v" style={{ color: 'var(--forest)' }}>{blind ? '•••' : `+${tl(cur.totals!.inSum)}`}</div><div className="d">satış + elle giriş</div></div>
+              <div className="kpi"><div className="l">Çıkışlar</div><div className="v" style={{ color: 'var(--berry)' }}>{blind ? '•••' : `−${tl(cur.totals!.outSum)}`}</div><div className="d">hal alımı + masraf</div></div>
             </div>
 
             <div className="grid2" style={{ marginTop: 14 }}>
@@ -115,9 +138,25 @@ export default function KasaPage() {
 
               <div className="card">
                 <div className="ct">Kapanış / sayım</div>
-                <p className="muted" style={{ fontSize: 12.5 }}>Kasadaki nakdi say, gir — beklenenle fark otomatik hesaplanır.</p>
+                <p className="muted" style={{ fontSize: 12.5 }}>Kupür adetlerini gir → toplam kendiliğinden dolar; beklenenle fark otomatik hesaplanır.</p>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={blind} onChange={(e) => setBlind(e.target.checked)} />
+                  Kör sayım — beklenen tutarı gizle (önce say, sonra karşılaştır)
+                </label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {DENOMS.map((d) => (
+                    <div className="field" key={d} style={{ width: 56 }}>
+                      <label>{d} ₺</label>
+                      <input inputMode="numeric" value={denoms[d] ?? ''} onChange={(e) => syncCount({ ...denoms, [d]: e.target.value }, coinsTl)} placeholder="0" />
+                    </div>
+                  ))}
+                  <div className="field" style={{ width: 80 }}>
+                    <label>Bozuk (₺)</label>
+                    <input value={coinsTl} onChange={(e) => syncCount(denoms, e.target.value)} placeholder="0,00" />
+                  </div>
+                </div>
                 <div className="form-row" style={{ alignItems: 'flex-end' }}>
-                  <div className="field"><label>Sayılan (₺)</label><input value={countTl} onChange={(e) => setCountTl(e.target.value)} placeholder={(cur.totals!.balance / 100).toFixed(2)} style={{ width: 120 }} /></div>
+                  <div className="field"><label>Sayılan (₺)</label><input value={countTl} onChange={(e) => setCountTl(e.target.value)} placeholder={blind ? '???' : (cur.totals!.balance / 100).toFixed(2)} style={{ width: 120 }} /></div>
                   <button className="btn" style={{ background: 'var(--berry)' }} onClick={closeRegister} disabled={busy || !countTl.trim()}>Kasayı kapat</button>
                 </div>
               </div>
@@ -163,6 +202,16 @@ export default function KasaPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr style={{ borderTop: '2px solid var(--line)' }}>
+                  <td colSpan={7} className="muted" style={{ textAlign: 'right', fontSize: 12 }}>
+                    Toplam fark ({past.filter((p) => p.variance != null).length} oturum) — sürekli eksiyse kaçak/tartı hatası araştır
+                  </td>
+                  <td className="num" style={{ fontWeight: 700, color: past.reduce((a, p) => a + (p.variance ?? 0), 0) < 0 ? 'var(--berry)' : 'var(--forest)' }}>
+                    {tl(past.reduce((a, p) => a + (p.variance ?? 0), 0))}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

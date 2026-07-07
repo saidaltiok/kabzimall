@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { clearSession, getUser, type SessionUser } from '@/lib/auth';
+import InboxBell from './InboxBell';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Yönetici',
@@ -29,6 +30,7 @@ export default function Topbar({ title, sub }: { title: string; sub?: string }) 
         {sub && <div className="sub">{sub}</div>}
       </div>
       <div className="who">
+        <InboxBell />
         <div className="meta">
           <div style={{ fontWeight: 600 }}>{name}</div>
           <div className="role">{user ? (ROLE_LABELS[user.role] ?? user.role) : '—'}</div>

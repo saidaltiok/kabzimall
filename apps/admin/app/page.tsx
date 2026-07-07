@@ -58,6 +58,10 @@ interface Overview {
   series: { date: string; orders: number; revenue: number; discount: number }[];
   summary: { totalOrders: number; totalRevenue: number; totalDiscount: number; avgOrderValue: number };
 }
+interface MarkdownUpcoming {
+  today: { slug: string; name: string; daysStale: number }[];
+  soon: { slug: string; name: string; inDays: number }[];
+}
 
 const FLAG_META: Record<string, { label: string; cls: string }> = {
   ZARARINA: { label: 'Zararına satılıyor', cls: 'zararina' },
@@ -75,6 +79,7 @@ export default function BugunPage() {
   const [ops, setOps] = useState<OpsSummary | null>(null);
   const [trend, setTrend] = useState<Overview | null>(null);
   const [brief, setBrief] = useState<{ source: string; text: string } | null>(null);
+  const [melt, setMelt] = useState<MarkdownUpcoming | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // productId | '__all__'
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -85,6 +90,7 @@ export default function BugunPage() {
     apiGet<OpsSummary>('/admin/orders/summary').then(setOps).catch(() => {});
     apiGet<Overview>('/intel/analytics/overview?days=7').then(setTrend).catch(() => {});
     apiGet<{ source: string; text: string }>('/intel/ai/daily-brief').then(setBrief).catch(() => {});
+    apiGet<MarkdownUpcoming>('/intel/markdown/upcoming').then(setMelt).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -162,6 +168,26 @@ export default function BugunPage() {
             <span className="k">{brief.source === 'llm' ? '🤖 AI Sabah Brifingi' : '📋 Sabah Brifingi'}</span>
             {brief.text}
             {brief.source === 'rules' && <span className="muted" style={{ fontSize: 11 }}> (kural bazlı — ANTHROPIC_API_KEY takılınca AI yazar)</span>}
+          </div>
+        )}
+
+        {/* 1.7 — Oto-indirim: eriyecek ürünler (yalnız varsa görünür) */}
+        {melt && (melt.today.length > 0 || melt.soon.length > 0) && (
+          <div className="card" style={{ marginBottom: 16, borderLeft: '3px solid var(--honey)' }}>
+            <div className="ct">🏷️ Oto-indirim radarı
+              <span>{melt.today.length > 0 ? `bugün ${melt.today.length} ürün inecek` : ''}{melt.today.length > 0 && melt.soon.length > 0 ? ' · ' : ''}{melt.soon.length > 0 ? `${melt.soon.length} aday yaklaşıyor` : ''}</span>
+            </div>
+            <div className="miniinfo" style={{ flexWrap: 'wrap' }}>
+              {melt.today.map((p) => (
+                <span key={p.slug}><b>{p.name}</b> <span className="tagp risk">bugün iner · {p.daysStale} gündür alım yok</span></span>
+              ))}
+              {melt.soon.map((p) => (
+                <span key={p.slug}>{p.name} <span className="tagp info">{p.inDays} gün içinde</span></span>
+              ))}
+            </div>
+            <p className="note2" style={{ marginTop: 8 }}>
+              Taze alım girilirse üründeki sayaç sıfırlanır; kuralları <Link href="/otomatik-indirim" style={{ color: 'var(--forest)', fontWeight: 600 }}>Otomatik İndirim</Link> ekranından yönet.
+            </p>
           </div>
         )}
 

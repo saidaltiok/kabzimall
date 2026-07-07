@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { tl, dt } from '@/lib/format';
 
 export interface DetailItem {
@@ -16,6 +17,7 @@ export interface DetailOrder {
   deliveryDate: string | null; deliveryWindow: string | null;
   slotChangeStatus: string | null; slotChangeDate: string | null; slotChangeWindow: string | null;
   note: string | null; items: DetailItem[];
+  rating?: number | null; ratingComment?: string | null;
   notifications?: { id: string; message: string; createdAt: string }[];
   statusHistory?: { id: string; fromStatus: string | null; toStatus: string; changedBy: string | null; note: string | null; createdAt: string }[];
 }
@@ -29,11 +31,14 @@ const SUB_LABEL: Record<string, string> = {
 };
 
 /** Sipariş detayının okunur görünümü (pano pop-up'ı + gerektiğinde başka yerler). */
-export default function OrderDetail({ order: o, onSlotDecide, busy }: {
+export default function OrderDetail({ order: o, onSlotDecide, onAddNote, busy }: {
   order: DetailOrder;
   onSlotDecide?: (approve: boolean) => void;
+  /** Dahili personel notu ekleme (📌 — zaman çizelgesine düşer, müşteri görmez). */
+  onAddNote?: (note: string) => void;
   busy?: boolean;
 }) {
+  const [noteText, setNoteText] = useState('');
   return (
     <div style={{ fontSize: 13.5 }}>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
@@ -41,7 +46,15 @@ export default function OrderDetail({ order: o, onSlotDecide, busy }: {
         <b>{o.customerName}</b>
         <a href={`tel:${o.customerPhone}`} className="muted" style={{ color: 'inherit' }}>{o.customerPhone}</a>
         {o.customerEmail && <span className="muted">· {o.customerEmail}</span>}
+        {o.rating != null && (
+          <span className={`tagp ${o.rating <= 2 ? 'zararina' : 'info'}`} title={o.ratingComment ?? undefined}>
+            {'★'.repeat(o.rating)}{'☆'.repeat(5 - o.rating)} {o.rating}/5{o.ratingComment ? ' 💬' : ''}
+          </span>
+        )}
       </div>
+      {o.rating != null && o.ratingComment && (
+        <div className="muted" style={{ marginBottom: 8, fontSize: 12, fontStyle: 'italic' }}>💬 “{o.ratingComment}”</div>
+      )}
 
       <div style={{ marginBottom: 8 }}>
         <b>Adres:</b> {o.addressText ?? '—'}
@@ -114,12 +127,30 @@ export default function OrderDetail({ order: o, onSlotDecide, busy }: {
       )}
       {(o.statusHistory?.length ?? 0) > 0 && (
         <div style={{ marginTop: 10 }}>
-          <b style={{ fontSize: 12 }}>Durum geçmişi</b>
+          <b style={{ fontSize: 12 }}>Zaman çizelgesi</b>
           <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
             {o.statusHistory!.map((s) => (
-              <li key={s.id}>{s.fromStatus ? `${STATUS_TR[s.fromStatus] ?? s.fromStatus} → ` : ''}<b>{STATUS_TR[s.toStatus] ?? s.toStatus}</b>{s.changedBy ? ` · ${s.changedBy}` : ''} · {dt(s.createdAt)}{s.note ? ` · ${s.note}` : ''}</li>
+              <li key={s.id} style={s.note?.startsWith('📌') ? { color: 'var(--persimmon-d)' } : undefined}>
+                {s.note?.startsWith('📌')
+                  ? <>{s.note} <span style={{ opacity: 0.7 }}>· {s.changedBy ?? ''} · {dt(s.createdAt)}</span></>
+                  : <>{s.fromStatus && s.fromStatus !== s.toStatus ? `${STATUS_TR[s.fromStatus] ?? s.fromStatus} → ` : ''}<b>{STATUS_TR[s.toStatus] ?? s.toStatus}</b>{s.changedBy ? ` · ${s.changedBy}` : ''} · {dt(s.createdAt)}{s.note ? ` · ${s.note}` : ''}</>}
+              </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {onAddNote && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+          <input
+            className="cell" style={{ flex: 1, textAlign: 'left' }} maxLength={300}
+            placeholder="📌 Dahili not (müşteri görmez) — ör. kapıda bozuk para istiyor"
+            value={noteText} onChange={(e) => setNoteText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && noteText.trim()) { onAddNote(noteText.trim()); setNoteText(''); } }}
+          />
+          <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px' }} disabled={busy || !noteText.trim()} onClick={() => { onAddNote(noteText.trim()); setNoteText(''); }}>
+            Not ekle
+          </button>
         </div>
       )}
     </div>

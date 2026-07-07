@@ -252,7 +252,12 @@ export default function OrdersBoard() {
 
       <Modal open={!!detailOrder} onClose={() => setDetailId(null)} title={detailOrder ? `Sipariş ${detailOrder.code}` : ''} sub={detailOrder ? `${detailOrder.items.length} kalem · ${tl(detailOrder.finalTotal ?? detailOrder.grandTotal)}` : undefined}>
         {detailOrder && (
-          <OrderDetail order={detailOrder as DetailOrder} busy={slotBusy} onSlotDecide={(approve) => decideSlot(detailOrder.id, approve)} />
+          <OrderDetail
+            order={detailOrder as DetailOrder}
+            busy={slotBusy}
+            onSlotDecide={(approve) => decideSlot(detailOrder.id, approve)}
+            onAddNote={async (note) => { try { await apiSend('POST', `/admin/orders/${detailOrder.id}/note`, { note }); await load(); } catch (e) { setError((e as Error).message); } }}
+          />
         )}
       </Modal>
     </>
