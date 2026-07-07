@@ -742,7 +742,7 @@ export class MarketService {
       where: { tenantId: DEV_TENANT_ID, customerEmail: email },
       orderBy: { createdAt: 'desc' },
       take: 50,
-      include: { items: true },
+      include: { items: { include: { product: { select: { slug: true } } } } }, // slug: "sık aldıkların" rafı için
     });
   }
 
@@ -772,6 +772,17 @@ export class MarketService {
       counts: { newOrders: newOrders.length, slotRequests: slotRequests.length, openTickets: openTickets.length, total: newOrders.length + slotRequests.length + openTickets.length },
       newOrders, slotRequests, openTickets,
     };
+  }
+
+  /** Dahili personel notu — durum geçmişine düşer (📌 önekli), müşteri bildirimine GİRMEZ. */
+  async addInternalNote(id: string, note: string, actor?: string) {
+    const trimmed = note?.trim();
+    if (!trimmed) throw new BadRequestException('Not boş olamaz.');
+    const order = await this.getOrder(id);
+    await this.prisma.orderStatusHistory.create({
+      data: { tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: order.status, changedBy: actor ?? null, note: `📌 ${trimmed.slice(0, 300)}` },
+    });
+    return this.getOrder(id);
   }
 
   /* --------------------- Puanlama & sorun bildirimi --------------------- */

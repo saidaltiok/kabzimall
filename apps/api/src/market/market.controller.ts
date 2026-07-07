@@ -190,6 +190,14 @@ export class AdminOrdersController {
     return this.service.adminInbox();
   }
 
+  /** POST /admin/orders/:id/note { note } — dahili personel notu (zaman çizelgesine düşer, müşteri görmez). */
+  @Post(':id/note')
+  @Roles(...ORDER_WRITERS)
+  @ApiBody({ schema: { example: { note: 'Müşteri aradı, kapıda bozuk para istiyor' } } })
+  addNote(@Param('id') id: string, @Body('note') note: string, @CurrentUser() user: JwtUser) {
+    return this.service.addInternalNote(id, note, user?.email);
+  }
+
   /** GET /admin/orders/summary — günün operasyon özeti (dashboard). */
   @Get('summary')
   summary() {
