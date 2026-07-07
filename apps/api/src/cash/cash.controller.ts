@@ -9,8 +9,9 @@ import { CashService, type MovementInput } from './cash.service';
 export class CashController {
   constructor(private readonly service: CashService) {}
 
-  /** GET /admin/cash/current — açık oturum + hareketler + anlık bakiye. */
+  /** GET /admin/cash/current — açık oturum + hareketler + anlık bakiye (para verisi: dar erişim). */
   @Get('current')
+  @Roles('ADMIN', 'OPERATION')
   current() {
     return this.service.current();
   }
@@ -39,8 +40,9 @@ export class CashController {
     return this.service.close(dto.counted, user?.email, dto.note);
   }
 
-  /** GET /admin/cash/sessions?limit=30 — oturum geçmişi + özetler. */
+  /** GET /admin/cash/sessions?limit=30 — oturum geçmişi + özetler (para verisi: dar erişim). */
   @Get('sessions')
+  @Roles('ADMIN', 'OPERATION')
   @ApiQuery({ name: 'limit', required: false })
   async sessions(@Query('limit') limit?: string) {
     const data = await this.service.sessions(limit ? Number(limit) : 30);

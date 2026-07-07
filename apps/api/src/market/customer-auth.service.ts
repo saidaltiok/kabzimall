@@ -29,9 +29,10 @@ export class CustomerAuthService {
     private readonly mail: MailService,
   ) {}
 
-  /** Basit IP başına kayan-pencere limiti (OTP isteği + telefonla sipariş arama). */
+  /** Basit IP başına kayan-pencere limiti (OTP, sipariş oluşturma/arama, kupon kontrolü). */
   private readonly ipHits = new Map<string, number[]>();
   assertIpLimit(key: string, max = 10, windowMs = 15 * 60_000) {
+    if (process.env.NODE_ENV === 'test') return; // e2e'ler tek IP'den yüzlerce istek atar
     const now = Date.now();
     const hits = (this.ipHits.get(key) ?? []).filter((t) => now - t < windowMs);
     if (hits.length >= max) {
@@ -43,6 +44,11 @@ export class CustomerAuthService {
 
   /** 6 haneli kod üret, hash'le sakla, e-postala. Log modunda devCode döner (yalnız dev). */
   async requestOtp(emailRaw: string, ip: string) {
+    // Prod + SMTP yok = kod e-postayla GİDEMEZ; devCode döndürmek herkese
+    // başkasının hesabını açar. Giriş bilinçli olarak kapatılır (guest akışı sürer).
+    if (process.env.NODE_ENV === 'production' && this.mail.isLogMode) {
+      throw new BadRequestException('E-posta ile giriş şu an kullanılamıyor — sipariş vermek için giriş gerekmez.');
+    }
     const email = emailRaw.trim().toLocaleLowerCase('tr');
     this.assertIpLimit(`otp:${ip}`, 10);
 
@@ -65,7 +71,9 @@ export class CustomerAuthService {
       },
     });
     await this.mail.send(email, 'KabzıMall giriş kodunuz', `Giriş kodunuz: ${code} (5 dakika geçerlidir). Siz istemediyseniz bu e-postayı yok sayın.`);
-    return { sent: true, ...(this.mail.isLogMode ? { devCode: code } : {}) };
+    // devCode YALNIZ prod-dışı ortamda döner (yukarıdaki prod korumasıyla çift kilit).
+    const exposeDev = this.mail.isLogMode && process.env.NODE_ENV !== 'production';
+    return { sent: true, ...(exposeDev ? { devCode: code } : {}) };
   }
 
   /** Kodu doğrula → müşteri token'ı (30 gün). Yanlış kod deneme hakkını düşürür. */

@@ -1,13 +1,24 @@
 import 'dotenv/config';
 import 'reflect-metadata';
+import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true });
+  // CORS: prod'da yalnız CORS_ORIGINS'teki adresler (virgülle ayrık);
+  // geliştirmede serbest. Prod'da liste boşsa panel/vitrin çalışmaz — bilinçli.
+  const origins = (process.env.CORS_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    cors: isProd ? { origin: origins } : true,
+  });
+
+  // Güvenlik başlıkları (HSTS/X-Frame-Options/CSP…) — prod'da; dev'de Swagger UI'ı kısıtlamasın.
+  if (isProd) app.use(helmet());
 
   // Ürün görseli data URL olarak gelebilir → body limitini yükselt (varsayılan 100kb).
   app.useBodyParser('json', { limit: '8mb' });
@@ -26,22 +37,25 @@ async function bootstrap() {
   );
 
   // Tarayıcıdan tıklanabilir API konsolu: http://localhost:<port>/api/docs
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('KabzıMall Intelligence API')
-    .setDescription(
-      'Fiyat zekâsı backend. Tüm para alanları **kuruş** (3490 = 34,90 ₺). ' +
-        'Taban yol /api/v1. Uçları "Try it out" ile deneyebilirsiniz.',
-    )
-    .setVersion('0.1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  // Prod'da KAPALI — iç uç haritası ve şemalar dışarı sızmasın.
+  if (!isProd) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('KabzıMall Intelligence API')
+      .setDescription(
+        'Fiyat zekâsı backend. Tüm para alanları **kuruş** (3490 = 34,90 ₺). ' +
+          'Taban yol /api/v1. Uçları "Try it out" ile deneyebilirsiniz.',
+      )
+      .setVersion('0.1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   Logger.log(`KabzıMall Intelligence API: http://localhost:${port}/api/v1`, 'Bootstrap');
-  Logger.log(`API konsolu (Swagger): http://localhost:${port}/api/docs`, 'Bootstrap');
+  if (!isProd) Logger.log(`API konsolu (Swagger): http://localhost:${port}/api/docs`, 'Bootstrap');
 }
 
 bootstrap();

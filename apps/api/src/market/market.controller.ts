@@ -38,8 +38,8 @@ export class StorefrontController {
   /** POST /storefront/orders/:id/rating { rating: 1-5, comment? } — teslim sonrası puan (tek sefer). */
   @Post('orders/:id/rating')
   @ApiBody({ schema: { example: { rating: 5, comment: 'Ürünler çok tazeydi' } } })
-  rate(@Param('id') id: string, @Body() dto: { rating: number; comment?: string }) {
-    return this.service.rateOrder(id, dto.rating, dto.comment);
+  async rate(@Param('id') id: string, @Body() dto: { rating: number; comment?: string }) {
+    return this.service.sanitizeForCustomer(await this.service.rateOrder(id, dto.rating, dto.comment));
   }
 
   /** POST /storefront/orders/:id/issue { itemIds, reason, message? } — teslim sonrası sorun bildirimi (24 saat). */
@@ -74,7 +74,7 @@ export class StorefrontController {
   @Get('my-orders')
   async myOrders(@Headers('authorization') auth?: string) {
     const email = this.customerAuth.emailFromAuthHeader(auth);
-    const data = await this.service.myOrders(email);
+    const data = (await this.service.myOrders(email)).map((o) => this.service.sanitizeForCustomer(o));
     return { email, data, meta: { total: data.length } };
   }
 
@@ -108,7 +108,9 @@ export class StorefrontController {
   @Get('coupons/check')
   @ApiQuery({ name: 'code', required: true })
   @ApiQuery({ name: 'subtotal', required: true })
-  couponCheck(@Query('code') code: string, @Query('subtotal') subtotal: string) {
+  couponCheck(@Query('code') code: string, @Query('subtotal') subtotal: string, @Ip() ip: string) {
+    // Kupon kodu kaba kuvvetle taranamasın (TELAFI-/IADE- kodları 4 haneli).
+    this.customerAuth.assertIpLimit(`coupon:${ip ?? 'unknown'}`, 30);
     const st = Number(subtotal);
     if (!Number.isFinite(st) || st < 0) throw new BadRequestException('subtotal (kuruş) gerekli');
     return this.coupons.check(code ?? '', Math.round(st));
@@ -145,29 +147,31 @@ export class StorefrontController {
       },
     },
   })
-  createOrder(@Body() dto: CreateOrderDto) {
-    return this.service.createOrder(dto);
+  async createOrder(@Body() dto: CreateOrderDto, @Ip() ip: string) {
+    // Sipariş flood'u stok+DB mutasyonu demek — IP başına saatlik üst sınır.
+    this.customerAuth.assertIpLimit(`order:${ip ?? 'unknown'}`, 10, 60 * 60_000);
+    return this.service.sanitizeForCustomer(await this.service.createOrder(dto));
   }
 
   /** GET /storefront/orders/lookup?code=&phone= — misafir sipariş sorgulama (IP başına limitli). */
   @Get('orders/lookup')
   @ApiQuery({ name: 'code', required: true })
   @ApiQuery({ name: 'phone', required: true })
-  lookup(@Query('code') code: string, @Query('phone') phone: string, @Ip() ip: string) {
+  async lookup(@Query('code') code: string, @Query('phone') phone: string, @Ip() ip: string) {
     // Kod+telefon kaba kuvvetle taranamasın.
     this.customerAuth.assertIpLimit(`lookup:${ip ?? 'unknown'}`, 15);
-    return this.service.lookupOrder(code, phone);
+    return this.service.sanitizeForCustomer(await this.service.lookupOrder(code, phone));
   }
 
   @Get('orders/:id')
-  order(@Param('id') id: string) {
-    return this.service.getOrder(id);
+  async order(@Param('id') id: string) {
+    return this.service.sanitizeForCustomer(await this.service.getOrder(id));
   }
 
   /** POST /storefront/orders/:id/cancel — müşteri kendi siparişini iptal eder (erken aşama). */
   @Post('orders/:id/cancel')
-  cancel(@Param('id') id: string) {
-    return this.service.cancelByCustomer(id);
+  async cancel(@Param('id') id: string) {
+    return this.service.sanitizeForCustomer(await this.service.cancelByCustomer(id));
   }
 
   /**
@@ -176,8 +180,8 @@ export class StorefrontController {
    */
   @Post('orders/:id/slot-change')
   @ApiBody({ schema: { example: { date: '2026-07-06', window: '13:00-16:00' } } })
-  requestSlotChange(@Param('id') id: string, @Body() dto: SlotChangeRequestDto) {
-    return this.service.requestSlotChange(id, dto.date, dto.window);
+  async requestSlotChange(@Param('id') id: string, @Body() dto: SlotChangeRequestDto) {
+    return this.service.sanitizeForCustomer(await this.service.requestSlotChange(id, dto.date, dto.window));
   }
 }
 

@@ -103,17 +103,23 @@ describe('Market (vitrin + sipariş)', () => {
     await admin.patch(`/api/v1/admin/orders/${orderId}/status`).send({ status: 'YOK' }).expect(400);
   });
 
-  it('durum geçmişi: her geçiş kim/ne zaman ile kaydedilir', async () => {
-    const res = await request(server).get(`/api/v1/storefront/orders/${orderId}`).expect(200);
-    const h = res.body.statusHistory as { fromStatus: string | null; toStatus: string; changedBy: string | null }[];
-    // ilk kayıt: sipariş alındı (müşteri), from null → CONFIRMED
+  it('durum geçmişi: her geçiş kim/ne zaman ile kaydedilir (kim bilgisi yalnız adminde)', async () => {
+    // Denetim izi (changedBy) ADMİN yanıtında — personel e-postası müşteriye sızmaz.
+    const adminRes = await admin.get('/api/v1/admin/orders').expect(200);
+    const ao = adminRes.body.data.find((o: { id: string }) => o.id === orderId);
+    const h = ao.statusHistory as { fromStatus: string | null; toStatus: string; changedBy: string | null }[];
     expect(h[0].fromStatus).toBeNull();
     expect(h[0].toStatus).toBe('CONFIRMED');
     expect(h[0].changedBy).toBe('müşteri');
-    // sonraki: CONFIRMED → PREPARING (admin tarafından, changedBy dolu)
     const prep = h.find((x) => x.toStatus === 'PREPARING');
     expect(prep?.fromStatus).toBe('CONFIRMED');
     expect(prep?.changedBy).toBeTruthy();
+
+    // Müşteri yanıtında geçişler görünür ama changedBy alanı YOKTUR (sanitize).
+    const pub = await request(server).get(`/api/v1/storefront/orders/${orderId}`).expect(200);
+    const ph = pub.body.statusHistory as Record<string, unknown>[];
+    expect(ph.some((x) => x.toStatus === 'PREPARING')).toBe(true);
+    for (const x of ph) expect(x).not.toHaveProperty('changedBy');
   });
 
   it('teslimat slotları listelenir (public) + sipariş slota bağlanır', async () => {

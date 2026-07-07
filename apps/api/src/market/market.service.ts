@@ -543,6 +543,31 @@ export class MarketService {
     }
   }
 
+  /**
+   * Müşteriye dönen sipariş yanıtından İÇ alanları temizler: kalem maliyet
+   * anlık görüntüsü (unitCostSnapshot), personel e-postaları (changedBy/createdBy)
+   * ve 📌 dahili notlar. Admin uçları temizlenmemiş halini kullanır.
+   */
+  sanitizeForCustomer<T extends object>(order: T): T {
+    const o = order as T & {
+      items?: Record<string, unknown>[];
+      statusHistory?: { note?: string | null; changedBy?: unknown }[];
+      refunds?: { createdBy?: unknown }[];
+    };
+    return {
+      ...o,
+      ...(o.items ? { items: o.items.map(({ unitCostSnapshot: _c, ...it }) => it) } : {}),
+      ...(o.statusHistory
+        ? {
+            statusHistory: o.statusHistory
+              .filter((h) => !h.note?.startsWith('📌'))
+              .map(({ changedBy: _b, ...h }) => h),
+          }
+        : {}),
+      ...(o.refunds ? { refunds: o.refunds.map(({ createdBy: _b, ...r }) => r) } : {}),
+    };
+  }
+
   async getOrder(id: string) {
     const order = await this.prisma.order
       .findFirst({
@@ -625,6 +650,7 @@ export class MarketService {
           : {}),
       },
       orderBy: { createdAt: 'desc' },
+      take: 300, // panel son 300 siparişi gösterir — eskilere arama/filtreyle inilir (bellek koruması)
       include: {
         items: {
           include: {

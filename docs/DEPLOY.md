@@ -21,20 +21,27 @@ Node 22. Fiyat mantığı tek kaynak: `packages/pricing`.
 
 ### apps/api/.env (asla commit edilmez — `.gitignore`'da)
 ```
+NODE_ENV=production                               # ŞART: Swagger kapanır, CORS kısıtlanır,
+                                                  # JWT_SECRET zorunlu olur, OTP devCode sızmaz
 DATABASE_URL="postgresql://KULLANICI:PAROLA@HOST:5432/kabzimall?schema=public"
 PORT=3001
 JWT_SECRET="<64+ karakter rastgele üret>"        # ÜRETİMDE MUTLAKA DEĞİŞTİR
+CUSTOMER_JWT_SECRET="<ayrı rastgele değer>"       # müşteri oturumları (boşsa türetilir)
 AUTH_SEED_EMAIL="admin@ALANADIN.com"
 AUTH_SEED_PASSWORD="<güçlü parola>"               # ilk admin; sonra panelden değiştir
 
+# CORS — panel + vitrin adresleri (virgülle). Prod'da BOŞSA tarayıcıdan erişim ÇALIŞMAZ.
+CORS_ORIGINS="https://ALANADIN.com,https://panel.ALANADIN.com"
+
 # E-posta (sipariş bildirimleri + müşteri OTP girişi). BOŞ bırakılırsa LOG MODU:
-# gönderim yapılmaz ama akış çalışır — canlıda MUTLAKA doldurun.
+# bildirimler gönderilmez, e-posta ile giriş prod'da OTOMATİK KAPANIR (guest akışı sürer).
 SMTP_HOST="smtp.SAGLAYICI.com"
 SMTP_PORT=587
 SMTP_USER="..."
 SMTP_PASS="..."
 MAIL_FROM="KabzıMall <no-reply@ALANADIN.com>"
 ```
+- [ ] `NODE_ENV=production` set edildi (PM2/systemd/container env'inde de).
 - [ ] `JWT_SECRET` güçlü ve benzersiz (ör. `openssl rand -base64 48`). Varsayılan `dev-secret-*` **kalmasın**.
 - [ ] `AUTH_SEED_PASSWORD` güçlü. İlk açılışta admin kullanıcı bu değerlerle **otomatik oluşturulur** (`auth.service.ts onModuleInit`).
 - [ ] `DATABASE_URL` yönetilen/prod veritabanını gösteriyor; parola güçlü.
@@ -60,14 +67,23 @@ NEXT_PUBLIC_SITE_URL="https://ALANADIN.com"
 
 ---
 
-## 3. Güvenlik
-- [ ] **CORS**: `apps/api/src/main.ts` şu an `cors: true` (tüm origin'lere açık). Prod'da yalnız
-      vitrin + panel origin'lerine kısıtla: `cors: { origin: ['https://ALANADIN.com','https://panel.ALANADIN.com'], credentials: false }`.
+## 3. Güvenlik (koda yerleşik — NODE_ENV=production ile aktifleşir)
+- [x] **CORS**: prod'da yalnız `CORS_ORIGINS` env'indeki adresler (main.ts). Dev'de serbest.
+- [x] **Swagger** `/api/docs` prod'da kapalı; **helmet** güvenlik başlıkları prod'da açık.
+- [x] **OTP koruması**: SMTP yapılandırılmadan prod'da e-posta girişi kapalı (devCode sızmaz).
+- [x] **Vitrin yanıtı temiz**: müşteri uçları iç alanları döndürmez (maliyet snapshot'ı,
+      personel e-postaları, 📌 dahili notlar — `sanitizeForCustomer`).
+- [x] **IP oran sınırı** (bellek içi): OTP 10/15dk · sipariş sorgulama 15/15dk ·
+      kupon kontrolü 30/15dk · sipariş oluşturma 10/saat. Kalıcı/Redis versiyonu lansman sonrası.
+- [x] **Kasa uçları** yalnız ADMIN/OPERATION okur (para verisi).
+- [x] **Health** `/api/v1/health` DB'ye dokunur — kopukta 503 (izleme buna bakmalı).
 - [ ] Firestore/AdMob **bu projeye ait değil** (o `world-cup-app`); karıştırma.
 - [ ] Panel yalnız güçlü parolalı personel; roller: ADMIN/PRICE_MANAGER/OPERATION/PACKER/COURIER/SUPPORT/VIEWER.
+      Not: panel OKUMA uçları tüm personel rollerine açıktır (VIEWER'ın varlık amacı); kasa istisna.
 - [ ] HTTPS zorunlu (reverse proxy / platform TLS). API ve frontendler TLS arkasında.
 - [ ] Body limit 8mb ayarlı (data URL görseller için) — `main.ts`. Aşırı büyük görsel yüklenmesin.
-- [ ] Rate-limit/oran sınırı (Redis) **ertelendi** — lansman sonrası; şimdilik reverse proxy seviyesinde temel koruma.
+- Bilinçli kabuller: sipariş takip linki UUID iledir (kargo-takip deseni — linki paylaşan
+  sipariş özetini paylaşmış olur); slot doluluk sayısı vitrine açıktır (aciliyet rozeti).
 
 ---
 
@@ -76,11 +92,11 @@ NEXT_PUBLIC_SITE_URL="https://ALANADIN.com"
 # 1) Bağımlılıklar (repo kökünde workspace ise kökte, değilse her app'te)
 npm install
 
-# 2) API
+# 2) API (NODE_ENV=production env'de set olmalı!)
 cd apps/api
 npx prisma migrate deploy
 npm run build
-node dist/apps/api/src/main.js        # PM2/systemd/container ile servis et
+NODE_ENV=production node dist/apps/api/src/main.js   # PM2/systemd/container ile servis et
 
 # 3) Panel
 cd apps/admin && npm run build && npm run start   # :3000
