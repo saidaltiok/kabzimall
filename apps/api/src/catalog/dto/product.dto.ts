@@ -73,6 +73,17 @@ export class UpdateProductDto {
   @IsOptional() @IsBoolean() isLocal?: boolean;
 }
 
+/** Excel (CSV) içe alma gövdesi. */
+export class ImportCsvDto {
+  @IsString()
+  @MaxLength(2_000_000) // ~2MB metin — binlerce ürün satırına yeter
+  csv!: string;
+
+  /** false/boş: yalnız önizleme; true: hatasız satırları uygula. */
+  @IsOptional() @IsBoolean()
+  apply?: boolean;
+}
+
 export class CreateCategoryDto {
   @IsString() @Matches(SLUG, { message: 'slug yalnızca küçük harf, rakam ve tire içerebilir' })
   slug!: string;

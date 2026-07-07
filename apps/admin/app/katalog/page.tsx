@@ -1,11 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { apiGet, apiSend } from '@/lib/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiGet, apiSend, API_BASE } from '@/lib/api';
+import { getToken } from '@/lib/auth';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import Modal from '@/components/Modal';
 import SectionTabs, { PRODUCTS_TABS } from '@/components/SectionTabs';
 import { tlToKurus } from '@/lib/money';
+
+interface XlRow { slug: string; name: string; changes: { alan: string; eski: string; yeni: string }[]; errors: string[]; warnings: string[] }
+interface XlResult { applied: boolean; summary: { satir: number; degisen: number; hatali: number; degismeyen: number }; rows: XlRow[]; rowsTruncated?: boolean }
 
 interface Category { id: string; name: string; slug: string }
 interface Product {
@@ -65,6 +70,11 @@ export default function KatalogPage() {
   const [busy, setBusy] = useState(false);
   const [catSlug, setCatSlug] = useState('');
   const [catName, setCatName] = useState('');
+  // Excel toplu düzenleme
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [xlBusy, setXlBusy] = useState(false);
+  const [xlCsv, setXlCsv] = useState<string | null>(null); // önizlenen dosya (uygula bununla gider)
+  const [xlPreview, setXlPreview] = useState<XlResult | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -100,6 +110,44 @@ export default function KatalogPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function reset() { setEditing(false); setForm({ ...empty }); setError(null); setOk(null); }
+
+  /* --------------------- Excel toplu düzenleme --------------------- */
+
+  async function xlExport() {
+    setXlBusy(true); setError(null); setOk(null);
+    try {
+      const res = await fetch(`${API_BASE}/catalog/products/export-csv`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      if (!res.ok) throw new Error('Dışa aktarma başarısız.');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'kabzimall-urunler.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setOk('✓ kabzimall-urunler.csv indirildi — Excel\'de düzenleyip "İçeri al" ile geri yükle.');
+    } catch (e) { setError((e as Error).message); } finally { setXlBusy(false); }
+  }
+
+  async function xlPreviewFile(file: File) {
+    setXlBusy(true); setError(null); setOk(null);
+    try {
+      const csv = await file.text();
+      const r = await apiSend<XlResult>('POST', '/catalog/products/import-csv', { csv, apply: false });
+      setXlCsv(csv);
+      setXlPreview(r);
+    } catch (e) { setError((e as Error).message); } finally { setXlBusy(false); }
+  }
+
+  async function xlApply() {
+    if (!xlCsv || !xlPreview) return;
+    setXlBusy(true); setError(null);
+    try {
+      const r = await apiSend<XlResult>('POST', '/catalog/products/import-csv', { csv: xlCsv, apply: true });
+      setXlPreview(null); setXlCsv(null);
+      setOk(`✓ Excel içe alındı: ${r.summary.degisen} ürün güncellendi${r.summary.hatali ? `, ${r.summary.hatali} satır hatalı (atlandı)` : ''}.`);
+      await load();
+    } catch (e) { setError((e as Error).message); } finally { setXlBusy(false); }
+  }
 
   async function save() {
     setBusy(true); setError(null); setOk(null);
@@ -180,6 +228,56 @@ export default function KatalogPage() {
         <SectionTabs tabs={PRODUCTS_TABS} />
         {error && <div className="error">{error}</div>}
         {ok && <div className="ok-box">{ok}</div>}
+
+        <div className="miniinfo" style={{ marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span>📊 <b>Excel ile toplu düzenleme:</b> fiyat/indirim/stok/aktifliği dosyada değiştir, önizleyip uygula.</span>
+          <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px' }} disabled={xlBusy} onClick={xlExport}>⬇ Excel'e aktar</button>
+          <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px' }} disabled={xlBusy} onClick={() => fileRef.current?.click()}>⬆ İçeri al</button>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) xlPreviewFile(f); e.target.value = ''; }} />
+          <span className="muted" style={{ fontSize: 11 }}>
+            slug sütununa dokunma (anahtar) · taban altı fiyat reddedilir · Excel'de kaydederken
+            <b> CSV UTF-8</b> biçimini seç (Farklı Kaydet)
+          </span>
+        </div>
+
+        <Modal
+          open={!!xlPreview}
+          onClose={() => { setXlPreview(null); setXlCsv(null); }}
+          title="Excel önizleme — henüz hiçbir şey uygulanmadı"
+          sub={xlPreview ? `${xlPreview.summary.satir} satır · ${xlPreview.summary.degisen} değişecek · ${xlPreview.summary.hatali} hatalı · ${xlPreview.summary.degismeyen} aynı` : undefined}
+        >
+          {xlPreview && (
+            <div style={{ fontSize: 13 }}>
+              {xlPreview.rows.length === 0 ? (
+                <p className="muted">Dosyada değişiklik yok — mağaza zaten bu değerlerle güncel.</p>
+              ) : (
+                <div style={{ maxHeight: 380, overflowY: 'auto', display: 'grid', gap: 6 }}>
+                  {xlPreview.rows.map((r) => (
+                    <div key={r.slug} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '8px 10px', background: r.errors.length ? '#fff1f0' : '#fff' }}>
+                      <b>{r.name || r.slug}</b> <span className="muted" style={{ fontSize: 11 }}>{r.slug}</span>
+                      {r.changes.map((c, i) => (
+                        <div key={i} style={{ fontSize: 12.5 }}>{c.alan}: <s className="muted">{c.eski}</s> → <b>{c.yeni}</b></div>
+                      ))}
+                      {r.errors.map((e, i) => <div key={i} style={{ color: 'var(--berry)', fontSize: 12.5 }}>✕ {e} — satır uygulanmaz</div>)}
+                      {r.warnings.map((w, i) => <div key={i} style={{ color: '#7c4a03', fontSize: 12.5 }}>⚠ {w}</div>)}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {xlPreview.rowsTruncated && (
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>… ilk 200 satır gösteriliyor (özet sayılar tam dosyayı kapsar).</p>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+                <button className="btn" disabled={xlBusy || xlPreview.summary.degisen === 0} onClick={xlApply}>
+                  ✓ {xlPreview.summary.degisen} ürünü güncelle
+                </button>
+                <button className="btn ghost" onClick={() => { setXlPreview(null); setXlCsv(null); }}>Vazgeç</button>
+                {xlPreview.summary.hatali > 0 && <span className="muted" style={{ fontSize: 12 }}>Hatalı satırlar atlanır — dosyada düzeltip yeniden yükleyebilirsin.</span>}
+              </div>
+            </div>
+          )}
+        </Modal>
 
         <div className="card">
           <div className="ct">{editing ? `Düzenle — ${form.slug}` : 'Yeni ürün'}</div>

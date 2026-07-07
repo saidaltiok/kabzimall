@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
-import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { CATALOG_WRITERS, type JwtUser } from '../auth/auth.constants';
 import { CatalogService } from './catalog.service';
-import { CreateCategoryDto, CreateProductDto, UpdateProductDto } from './dto/product.dto';
+import { CreateCategoryDto, CreateProductDto, UpdateProductDto, ImportCsvDto } from './dto/product.dto';
 import { CreateBasketDto } from './dto/basket.dto';
 
 @ApiTags('katalog')
@@ -41,6 +41,25 @@ export class ProductsController {
   ) {
     const data = await this.service.listProducts({ search, categoryId, active });
     return { data, meta: { total: data.length } };
+  }
+
+  /** GET /catalog/products/export-csv — Excel toplu düzenleme dosyası (":id"den ÖNCE tanımlı olmalı). */
+  @Get('export-csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="kabzimall-urunler.csv"')
+  exportCsv() {
+    return this.service.exportCsv();
+  }
+
+  /**
+   * POST /catalog/products/import-csv { csv, apply } — Excel dosyasını içeri al.
+   * apply=false: yalnız önizleme (hiçbir şey yazılmaz); apply=true: hatasız satırlar uygulanır.
+   */
+  @Post('import-csv')
+  @Roles(...CATALOG_WRITERS)
+  @ApiBody({ schema: { example: { csv: 'slug;ad;kategori;birim;fiyat;indirimli;stok;aktif\ndomates;Domates;Sebze;kg;74,90;;46;EVET', apply: false } } })
+  importCsv(@Body() dto: ImportCsvDto, @CurrentUser() user: JwtUser) {
+    return this.service.importCsv(dto.csv, !!dto.apply, user?.email);
   }
 
   /** GET /catalog/products/stock-movements?product=&days=30 — stok hareket defteri (":id"den ÖNCE tanımlı olmalı). */
