@@ -91,6 +91,16 @@ const CUSTOMER_CANCELLABLE = ['CONFIRMED', 'PREPARING'] as const;
 /** Bu ve altı stok "düşük" sayılır (dashboard uyarısı). */
 const LOW_STOCK_THRESHOLD = 5;
 
+/**
+ * Çakışmaya dayanıklı sipariş kodu: zaman (4) + rastgele (3) base36 — aynı
+ * milisaniyede iki satış UNIQUE ihlaline düşmesin (kod, transaction dışında üretilir).
+ */
+const orderCode = (prefix: string) =>
+  prefix + (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 5)).toUpperCase();
+
+/** OrderItem/Order tutar alanları Int32 — üstü sessiz taşma yerine 400. */
+const MAX_TOTAL_KURUS = 2_000_000_000;
+
 @Injectable()
 export class MarketService {
   constructor(
@@ -438,7 +448,8 @@ export class MarketService {
     }
 
     const fee = deliveryFee(subtotal, settings.deliveryTiers); // eşik indirim ÖNCESİ ara toplama göre (müşteri lehine)
-    const code = 'KM' + Date.now().toString(36).toUpperCase().slice(-6);
+    if (subtotal > MAX_TOTAL_KURUS) throw new BadRequestException('Sipariş tutarı çok büyük.');
+    const code = orderCode('KM');
 
     // Sipariş oluşturma + stok düşme atomik (ürün + sepet içeriği).
     const created = await this.prisma.$transaction(async (tx) => {
@@ -515,8 +526,9 @@ export class MarketService {
     qty: number,
     dir: 1 | -1,
     refCode?: string,
+    reasonOverride?: string,
   ) {
-    const reason = dir === -1 ? 'ORDER' : 'CANCEL';
+    const reason = reasonOverride ?? (dir === -1 ? 'ORDER' : 'CANCEL');
     if (product.stockQty != null) {
       await tx.product.update({ where: { id: product.id }, data: { stockQty: { increment: dir * qty } } });
       await tx.stockMovement.create({ data: { tenantId: DEV_TENANT_ID, productId: product.id, delta: dir * qty, reason, refCode: refCode ?? null } });
@@ -599,6 +611,7 @@ export class MarketService {
     return this.prisma.order.findMany({
       where: {
         tenantId: DEV_TENANT_ID,
+        channel: { not: 'POS' }, // tezgâh fişleri kendi ekranında (Tezgâh Satışı)
         ...(status ? { status } : {}),
         ...(term
           ? {
@@ -637,7 +650,7 @@ export class MarketService {
     const [todays, active, lowStock] = await Promise.all([
       this.prisma.order.findMany({
         where: { tenantId: DEV_TENANT_ID, createdAt: { gte: start } },
-        select: { status: true, grandTotal: true, finalTotal: true },
+        select: { status: true, grandTotal: true, finalTotal: true, channel: true },
       }),
       this.prisma.order.groupBy({
         by: ['status'],
@@ -652,13 +665,15 @@ export class MarketService {
       }),
     ]);
 
-    const ordersToday = todays.length;
-    const revenueToday = todays.filter((o) => o.status !== 'CANCELLED').reduce((s, o) => s + (o.finalTotal ?? o.grandTotal), 0);
+    const ordersToday = todays.filter((o) => o.channel !== 'POS').length; // web siparişi sayısı
+    const revenueToday = todays.filter((o) => o.status !== 'CANCELLED').reduce((s, o) => s + (o.finalTotal ?? o.grandTotal), 0); // tezgâh dahil
+    const posLive = todays.filter((o) => o.channel === 'POS' && o.status !== 'CANCELLED');
+    const posToday = { count: posLive.length, revenue: posLive.reduce((s, o) => s + (o.finalTotal ?? o.grandTotal), 0) };
     const statusCounts = Object.fromEntries(ACTIVE_STATUSES.map((s) => [s, 0])) as Record<string, number>;
     for (const a of active) statusCounts[a.status] = a._count._all;
     const activeCount = Object.values(statusCounts).reduce((s, n) => s + n, 0);
 
-    return { ordersToday, revenueToday, activeCount, statusCounts, lowStock };
+    return { ordersToday, revenueToday, posToday, activeCount, statusCounts, lowStock };
   }
 
   /**
@@ -753,12 +768,12 @@ export class MarketService {
   async adminInbox() {
     const [newOrders, slotRequests, openTickets] = await Promise.all([
       this.prisma.order.findMany({
-        where: { tenantId: DEV_TENANT_ID, status: 'CONFIRMED' },
+        where: { tenantId: DEV_TENANT_ID, status: 'CONFIRMED', channel: { not: 'POS' } },
         orderBy: { createdAt: 'desc' }, take: 8,
         select: { id: true, code: true, customerName: true, grandTotal: true, createdAt: true },
       }),
       this.prisma.order.findMany({
-        where: { tenantId: DEV_TENANT_ID, slotChangeStatus: 'PENDING' },
+        where: { tenantId: DEV_TENANT_ID, slotChangeStatus: 'PENDING', channel: { not: 'POS' } },
         orderBy: { createdAt: 'desc' }, take: 8,
         select: { id: true, code: true, customerName: true, slotChangeDate: true, slotChangeWindow: true },
       }),
@@ -772,6 +787,98 @@ export class MarketService {
       counts: { newOrders: newOrders.length, slotRequests: slotRequests.length, openTickets: openTickets.length, total: newOrders.length + slotRequests.length + openTickets.length },
       newOrders, slotRequests, openTickets,
     };
+  }
+
+  /* ------------------------ Tezgâh satışı (POS) ----------------------- */
+
+  /**
+   * Tezgâh satışı: dükkânda tartılıp nakit tahsil edilen satış. Order olarak
+   * (channel=POS, doğuştan DELIVERED) kaydedilir ki stok, kasa, ciro ve K/Z
+   * tek para yolundan aksın. Stok fiziksel gerçeğe uyar: kayıt yetersizse satış
+   * ENGELLENMEZ — eksiye düşer ve uyarı döner (kayıt hatası görünür olsun).
+   * İade = mevcut iptal yolu (stok geri + SALE_REVERSAL).
+   */
+  async posSale(dto: { items: { slug: string; qty: number; unitPrice?: number }[]; note?: string }, actor?: string) {
+    if (!dto?.items?.length) throw new BadRequestException('En az bir kalem gerekli.');
+    const slugs = [...new Set(dto.items.map((i) => i.slug))];
+    const products = await this.prisma.product.findMany({
+      where: { tenantId: DEV_TENANT_ID, slug: { in: slugs }, isActive: true },
+      include: { components: { include: { component: { select: { id: true, name: true, stockQty: true, unitLabel: true } } } } },
+    });
+    const bySlug = new Map(products.map((p) => [p.slug, p]));
+    // Satış anı birim maliyeti (K/Z COGS web siparişiyle aynı biçimde).
+    const costBySlug = new Map<string, number | null>(
+      await Promise.all(slugs.map(async (s) => [s, (await this.costs.costForProduct(s).catch(() => null))?.directCost ?? null] as [string, number | null])),
+    );
+
+    // Aynı ürün birden çok satırda olabilir (farklı fiyatla pazarlık) — stok/uyarı ürün başına TOPLAM üzerinden.
+    const qtyBySlug = new Map<string, number>();
+    for (const i of dto.items) qtyBySlug.set(i.slug, (qtyBySlug.get(i.slug) ?? 0) + i.qty);
+
+    const items = dto.items.map((i) => {
+      const p = bySlug.get(i.slug);
+      if (!p) throw new BadRequestException(`Ürün bulunamadı veya yayında değil: ${i.slug}`);
+      const unitPrice = i.unitPrice ?? (p.basePrice != null ? effectivePrice(p.basePrice, p.discountedPrice) : null);
+      if (unitPrice == null) throw new BadRequestException(`Ürün fiyatlandırılmamış — satır fiyatı girerek sat: ${p.name}`);
+      return {
+        productId: p.id, productName: p.name, unitLabel: p.unitLabel,
+        unitPrice, orderedQty: i.qty, pickedQty: i.qty,
+        lineTotal: lineTotal(unitPrice, i.qty),
+        unitCostSnapshot: costBySlug.get(i.slug) ?? null,
+      };
+    });
+    const warnings: string[] = [];
+    for (const [slug, qty] of qtyBySlug) {
+      const p = bySlug.get(slug)!;
+      if (p.stockQty != null && qty > p.stockQty) {
+        warnings.push(`${p.name}: stok kaydı ${p.stockQty} ${p.unitLabel ?? ''} iken ${qty} satıldı — stok eksiye düştü, kaydı düzelt.`);
+      }
+    }
+    const subtotal = items.reduce((s, it) => s + it.lineTotal, 0);
+    if (subtotal <= 0) throw new BadRequestException('Satış tutarı 0 olamaz.');
+    if (subtotal > MAX_TOTAL_KURUS) throw new BadRequestException('Satış tutarı çok büyük.');
+    const code = orderCode('TZG');
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      for (const [slug, qty] of qtyBySlug) {
+        await this.adjustStock(tx, bySlug.get(slug)!, qty, -1, code, 'POS');
+      }
+      const order = await tx.order.create({
+        data: {
+          tenantId: DEV_TENANT_ID, code, channel: 'POS',
+          customerName: 'Tezgâh satışı', customerPhone: '', addressText: '—',
+          status: 'DELIVERED', paymentMethod: 'CASH',
+          note: dto.note?.trim() || null,
+          subtotal, discountTotal: 0, deliveryFee: 0,
+          grandTotal: subtotal, estimatedTotal: subtotal, finalTotal: subtotal,
+          items: { create: items },
+        },
+        include: { items: true },
+      });
+      await tx.orderStatusHistory.create({
+        data: { tenantId: DEV_TENANT_ID, orderId: order.id, fromStatus: null, toStatus: 'DELIVERED', changedBy: actor ?? 'tezgâh', note: `🧾 Tezgâh satışı — nakit ${fmtTL(subtotal)}` },
+      });
+      return order;
+    });
+    // Nakit tahsilat — kasa açıksa oturuma, kapalıysa askıya düşer (open() sahiplenir).
+    await this.cash.recordSale(created.code, subtotal);
+    return { ...created, warnings };
+  }
+
+  /** Bugünün tezgâh fişleri + toplamı (iptal edilenler listede kalır, toplama girmez). */
+  async posToday() {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const sales = await this.prisma.order.findMany({
+      where: { tenantId: DEV_TENANT_ID, channel: 'POS', createdAt: { gte: start } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, code: true, status: true, finalTotal: true, grandTotal: true, createdAt: true, note: true,
+        items: { select: { productName: true, orderedQty: true, unitLabel: true, lineTotal: true } },
+      },
+    });
+    const live = sales.filter((s) => s.status !== 'CANCELLED');
+    return { total: live.reduce((a, s) => a + (s.finalTotal ?? s.grandTotal), 0), count: live.length, sales };
   }
 
   /** Dahili personel notu — durum geçmişine düşer (📌 önekli), müşteri bildirimine GİRMEZ. */

@@ -13,6 +13,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { PackOrderDto } from './dto/pack-order.dto';
 import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
 import { SlotChangeRequestDto, SlotChangeDecisionDto } from './dto/slot-change.dto';
+import { PosSaleDto } from './dto/pos-sale.dto';
 import { RequestOtpDto, VerifyOtpDto } from './dto/customer-auth.dto';
 
 @ApiTags('market: vitrin (public)')
@@ -242,6 +243,26 @@ export class AdminOrdersController {
   @ApiBody({ schema: { example: { approve: true } } })
   decideSlotChange(@Param('id') id: string, @Body() dto: SlotChangeDecisionDto, @CurrentUser() user: JwtUser) {
     return this.service.decideSlotChange(id, dto.approve, user.email);
+  }
+}
+
+@ApiTags('market: tezgâh satışı (admin)')
+@Controller('admin/pos')
+export class AdminPosController {
+  constructor(private readonly service: MarketService) {}
+
+  /** POST /admin/pos/sales — tezgâhta nakit satış: stok düşer, kasaya SALE girişi, ciroya dahil. */
+  @Post('sales')
+  @Roles(...ORDER_WRITERS)
+  @ApiBody({ schema: { example: { items: [{ slug: 'domates', qty: 1.5 }, { slug: 'cilek', qty: 1, unitPrice: 12000 }], note: 'pazarlıklı' } } })
+  sale(@Body() dto: PosSaleDto, @CurrentUser() user: JwtUser) {
+    return this.service.posSale(dto, user?.email);
+  }
+
+  /** GET /admin/pos/today — bugünün fişleri + toplam. */
+  @Get('today')
+  today() {
+    return this.service.posToday();
   }
 }
 

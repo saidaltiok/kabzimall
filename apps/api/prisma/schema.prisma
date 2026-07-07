@@ -156,6 +156,9 @@ model Order {
   ratingComment   String?    @map("rating_comment")
   note           String?
   status         String   @default("CONFIRMED")
+  /// Satış kanalı: WEB (site siparişi) | POS (tezgâh satışı — doğuştan DELIVERED,
+  /// stok/kasa/ciro aynı yoldan işler; sipariş listesi/pano/müşteri kartlarına girmez).
+  channel        String   @default("WEB")
   paymentMethod  String   @default("COD") @map("payment_method")
   /// Ertesi gün teslimat slotu (Faz 1: SCHEDULED).
   deliveryDate   DateTime? @map("delivery_date") @db.Date
@@ -177,6 +180,7 @@ model Order {
   statusHistory OrderStatusHistory[]
 
   @@index([tenantId, status])
+  @@index([tenantId, channel, createdAt])
   @@map("orders")
 }
 

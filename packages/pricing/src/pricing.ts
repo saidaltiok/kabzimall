@@ -262,7 +262,9 @@ export function weightPrecisionRiskPct(recordedKg: number, precisionKg = 0.5): n
 
 /** Satır toplamı: birim fiyat × miktar (tartılı üründe miktar ondalık kg). */
 export function lineTotal(unitPrice: Kurus, qty: number): Kurus {
-  return Math.round(unitPrice * qty);
+  // toPrecision(12) IEEE754 kaybını törpüler: 3500×0.567 → 1984.4999…98 değil
+  // 1984.5 (yarım kuruş her zaman yukarı yuvarlanır).
+  return Math.round(Number((unitPrice * qty).toPrecision(12)));
 }
 
 /** Geçerli satış fiyatı: indirimli fiyat (varsa ve taban fiyatın altındaysa), yoksa taban. */

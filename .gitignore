@@ -14,3 +14,4 @@ npm-debug.log*
 .idea/
 .vscode/
 *.tsbuildinfo
+coverage

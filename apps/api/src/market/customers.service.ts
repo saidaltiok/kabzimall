@@ -13,7 +13,7 @@ export class CustomersService {
 
   async list(search?: string) {
     const orders = await this.prisma.order.findMany({
-      where: { tenantId: DEV_TENANT_ID },
+      where: { tenantId: DEV_TENANT_ID, channel: { not: 'POS' } }, // tezgâh fişinde müşteri yok
       select: {
         customerName: true, customerPhone: true, customerEmail: true,
         status: true, grandTotal: true, finalTotal: true, createdAt: true,
