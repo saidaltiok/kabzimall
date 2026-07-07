@@ -7,9 +7,16 @@ import { apiGet, savedCoupon, saveCoupon, clearCoupon } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal, nextTier } from '@/lib/delivery';
+import { emojiFor } from '@/lib/format';
+
+interface SuggestProduct {
+  slug: string; name: string; unitLabel: string | null; imageUrl: string | null;
+  basePrice: number; discountedPrice: number | null; stockQty: number | null; maxPerOrder: number | null;
+  category: { slug: string } | null;
+}
 
 export default function CartPage() {
-  const { items, setQty, setNote, remove, clear, subtotal, keyOf } = useCart();
+  const { items, setQty, setNote, remove, clear, subtotal, keyOf, add } = useCart();
   const router = useRouter();
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   // Kupon — doğrulama ve indirim SUNUCUDA (storefront/coupons/check).
@@ -17,9 +24,17 @@ export default function CartPage() {
   const [coupon, setCoupon] = useState<{ code: string; discount: number; message: string } | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  const [suggest, setSuggest] = useState<SuggestProduct[]>([]);
 
   useEffect(() => {
     apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
+    // "Sepetini tamamla": indirimli + düşük fiyatlı tamamlayıcılar (maydanoz/limon sınıfı).
+    apiGet<{ data: SuggestProduct[] }>('/storefront/products').then((r) => {
+      const pool = r.data.filter((p) => !(p.stockQty != null && p.stockQty <= 0));
+      const discounted = pool.filter((p) => p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice);
+      const cheap = pool.filter((p) => p.basePrice <= 8000 && !discounted.includes(p)); // ≤80₺
+      setSuggest([...discounted, ...cheap]);
+    }).catch(() => {});
   }, []);
 
   // Kayıtlı kupon varsa güncel ara toplamla yeniden doğrula (sepet değişmiş olabilir).
@@ -115,6 +130,57 @@ export default function CartPage() {
               </div>
             );
           })}
+
+          {/* Eşik ilerleme çubuğu — bir sonraki teslimat kademesine kalan */}
+          {next && (
+            <div style={{ background: '#fff', borderRadius: 16, padding: '12px 16px', marginTop: 4, boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                <span>{next.fee === 0 ? '🚚 Ücretsiz teslimata' : `🚚 ${tl(next.fee)} teslimata`} <b style={{ color: 'var(--persimmon-d)' }}>{tl(next.minSubtotal - subtotal)}</b> kaldı</span>
+                <span className="muted">{tl(next.minSubtotal)}</span>
+              </div>
+              <div style={{ background: 'var(--cream-d)', borderRadius: 20, height: 8, overflow: 'hidden' }}>
+                <div style={{ background: 'linear-gradient(90deg, var(--moss), var(--forest))', height: '100%', borderRadius: 20, width: `${Math.min(100, Math.round((subtotal / next.minSubtotal) * 100))}%`, transition: 'width .3s' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Sepetini tamamla — indirimli/küçük tamamlayıcılar */}
+          {(() => {
+            const inCart = new Set(items.map((i) => i.slug));
+            const strip = suggest.filter((p) => !inCart.has(p.slug)).slice(0, 6);
+            if (strip.length === 0) return null;
+            return (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Sepetini tamamla</div>
+                <div className="rail" style={{ paddingBottom: 8 }}>
+                  {strip.map((p) => {
+                    const eff = p.discountedPrice != null && p.discountedPrice > 0 && p.discountedPrice < p.basePrice ? p.discountedPrice : p.basePrice;
+                    return (
+                      <div key={p.slug} style={{ flex: '0 0 130px', background: '#fff', borderRadius: 14, padding: 10, boxShadow: 'var(--shadow-sm)', textAlign: 'center' }}>
+                        <div style={{ height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>
+                          {p.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.imageUrl} alt={p.name} style={{ width: 54, height: 54, objectFit: 'cover', borderRadius: 10 }} />
+                          ) : emojiFor(p.slug, p.category?.slug)}
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, margin: '6px 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                        <div style={{ fontSize: 12.5, color: 'var(--forest)', fontWeight: 700 }}>
+                          {tl(eff)}{eff < p.basePrice && <s className="muted" style={{ fontWeight: 400, marginLeft: 4, fontSize: 10.5 }}>{tl(p.basePrice)}</s>}
+                        </div>
+                        <button
+                          className="btnmini"
+                          style={{ marginTop: 6, width: '100%', border: '1.5px solid var(--forest)', background: 'none', color: 'var(--forest)', borderRadius: 10, padding: '5px 0', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                          onClick={() => add({ slug: p.slug, name: p.name, unitPrice: eff, unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug), maxPerOrder: p.maxPerOrder ?? undefined })}
+                        >
+                          + Ekle
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div className="summary">

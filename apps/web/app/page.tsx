@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { apiGet } from '@/lib/api';
+import { apiGet, customerSession } from '@/lib/api';
 import { tl } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import { useFavs } from '@/lib/favs';
+import { getOrderHistory } from '@/lib/orders';
 import ProductCard, { CardProduct } from '@/components/ProductCard';
 
 interface Product extends CardProduct {
@@ -40,6 +41,7 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [baskets, setBaskets] = useState<Basket[]>([]);
   const [banner, setBanner] = useState<Banner | null>(null);
+  const [frequentSlugs, setFrequentSlugs] = useState<string[]>([]);
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +67,28 @@ export default function HomePage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
     apiGet<{ data: Banner[] }>('/storefront/banners').then((r) => setBanner(r.data[0] ?? null)).catch(() => {});
+
+    // "Sık Aldıkların": son 5 siparişte 2+ kez geçen ürünler (girişliyse sunucudan, değilse bu cihazdan).
+    (async () => {
+      try {
+        interface OrderLite { items: { product: { slug: string } | null }[] }
+        let orders: OrderLite[] = [];
+        const s = customerSession();
+        if (s) {
+          const r = await apiGet<{ data: OrderLite[] }>('/storefront/my-orders', { Authorization: `Bearer ${s.token}` });
+          orders = r.data.slice(0, 5);
+        } else {
+          const refs = getOrderHistory().slice(0, 5);
+          orders = (await Promise.all(refs.map((ref) => apiGet<OrderLite>(`/storefront/orders/${ref.id}`).catch(() => null)))).filter(Boolean) as OrderLite[];
+        }
+        const count = new Map<string, number>();
+        for (const o of orders) for (const it of o.items ?? []) {
+          const slug = it.product?.slug;
+          if (slug) count.set(slug, (count.get(slug) ?? 0) + 1);
+        }
+        setFrequentSlugs([...count.entries()].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).map(([slug]) => slug).slice(0, 10));
+      } catch { /* raf isteğe bağlı — sessiz geç */ }
+    })();
   }, []);
 
   async function copyCoupon(code: string) {
@@ -85,6 +109,10 @@ export default function HomePage() {
     [products],
   );
   const featured = useMemo(() => products.filter((p) => p.isFeatured && inStock(p)).slice(0, 12), [products]);
+  const frequent = useMemo(
+    () => frequentSlugs.map((s) => products.find((p) => p.slug === s)).filter((p): p is Product => !!p && inStock(p)),
+    [frequentSlugs, products],
+  );
   const newArrivals = useMemo(() => {
     const cutoff = Date.now() - NEW_WINDOW_DAYS * 86_400_000;
     return products
@@ -165,6 +193,7 @@ export default function HomePage() {
 
       {showcase ? (
         <>
+          <Rail title="Sık Aldıkların" icon="🔁" list={frequent} />
           <Rail title="Bu haftanın fırsatları" icon="🔥" list={deals} />
           <Rail title="Öne çıkanlar" icon="⭐" list={featured} />
           <Rail title="Yeni gelenler" icon="🆕" list={newArrivals} />

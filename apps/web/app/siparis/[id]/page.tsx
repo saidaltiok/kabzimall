@@ -7,8 +7,9 @@ import { apiGet, apiPost } from '@/lib/api';
 import { tl, emojiFor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import OrderTimeline from '@/components/OrderTimeline';
+import Modal from '@/components/Modal';
 
-interface OrderItem { id: string; productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number; note: string | null; product: { slug: string } | null }
+interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; lineTotal: number; note: string | null; product: { slug: string } | null }
 interface StoreProduct {
   slug: string; name: string; unitLabel: string | null; stockQty: number | null; maxPerOrder: number | null;
   basePrice: number; discountedPrice: number | null; category: { slug: string } | null;
@@ -17,7 +18,8 @@ interface Order {
   id: string; code: string; status: string; customerName: string; addressText: string;
   deliveryDate: string | null; deliveryWindow: string | null;
   slotChangeDate: string | null; slotChangeWindow: string | null; slotChangeStatus: string | null;
-  subtotal: number; couponCode: string | null; discountTotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null; items: OrderItem[];
+  subtotal: number; couponCode: string | null; discountTotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null;
+  rating: number | null; items: OrderItem[];
   notifications: { id: string; message: string; createdAt: string }[];
   statusHistory: { id: string; fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }[];
 }
@@ -46,6 +48,18 @@ export default function OrderPage() {
   const [slotBusy, setSlotBusy] = useState(false);
   const [slotErr, setSlotErr] = useState<string | null>(null);
   const [whatsapp, setWhatsapp] = useState<string | null>(null); // canlı yardım (Ayarlar'dan)
+  // Teslim sonrası: puanlama + sorun bildirimi (E1/E2)
+  const [stars, setStars] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingBusy, setRatingBusy] = useState(false);
+  const [ratingDone, setRatingDone] = useState<number | null>(null);
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [issueItems, setIssueItems] = useState<Set<string>>(new Set());
+  const [issueReason, setIssueReason] = useState('EZIK_CURUK');
+  const [issueMsg, setIssueMsg] = useState('');
+  const [issueBusy, setIssueBusy] = useState(false);
+  const [issueResult, setIssueResult] = useState<string | null>(null);
+  const [issueErr, setIssueErr] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -148,6 +162,35 @@ export default function OrderPage() {
     router.push('/sepet');
   }
 
+  async function sendRating() {
+    if (!order || stars < 1) return;
+    setRatingBusy(true);
+    try {
+      await apiPost(`/storefront/orders/${order.id}/rating`, { rating: stars, comment: ratingComment.trim() || undefined });
+      setRatingDone(stars);
+    } catch (e) {
+      setIssueErr((e as Error).message);
+    } finally {
+      setRatingBusy(false);
+    }
+  }
+
+  async function sendIssue() {
+    if (!order || issueItems.size === 0) return;
+    setIssueBusy(true); setIssueErr(null);
+    try {
+      const r = await apiPost<{ resolved: boolean; message: string }>(`/storefront/orders/${order.id}/issue`, {
+        itemIds: [...issueItems], reason: issueReason, message: issueMsg.trim() || undefined,
+      });
+      setIssueResult(r.message);
+      setIssueOpen(false);
+    } catch (e) {
+      setIssueErr((e as Error).message);
+    } finally {
+      setIssueBusy(false);
+    }
+  }
+
   if (error) return <div className="error" style={{ marginTop: 24 }}>Sipariş bulunamadı: {error}</div>;
   if (!order) return <div className="loading">Yükleniyor…</div>;
 
@@ -163,7 +206,12 @@ export default function OrderPage() {
         {order.items.map((it) => (
           <div className="ln" key={it.id} style={{ alignItems: 'flex-start' }}>
             <span>
-              {it.productName} <span className="muted">· {it.orderedQty} {it.unitLabel ?? ''}</span>
+              {it.productName}{' '}
+              {it.pickedQty != null && it.pickedQty !== it.orderedQty ? (
+                <span className="muted">· <s>{it.orderedQty}</s> <b style={{ color: 'var(--forest)' }}>⚖️ {it.pickedQty} {it.unitLabel ?? ''}</b> tartıldı</span>
+              ) : (
+                <span className="muted">· {it.orderedQty} {it.unitLabel ?? ''}{it.pickedQty != null ? ' ⚖️' : ''}</span>
+              )}
               {it.note && <span className="muted" style={{ display: 'block', fontSize: 12, fontStyle: 'italic' }}>📝 {it.note}</span>}
             </span>
             <b>{tl(it.lineTotal)}</b>
@@ -180,8 +228,8 @@ export default function OrderPage() {
           <span>{order.finalTotal != null ? 'Tahmini toplam' : 'Toplam (kapıda ödeme)'}</span><span>{tl(order.grandTotal)}</span>
         </div>
         {order.finalTotal != null && (
-          <div className="ln serif" style={{ fontSize: 18, fontWeight: 600, color: 'var(--forest)' }}>
-            <span>Kesinleşen (tartı sonrası)</span><span>{tl(order.finalTotal)}</span>
+          <div className="ln serif" style={{ fontSize: 18, fontWeight: 700, color: 'var(--forest)' }}>
+            <span>💵 Kapıda ödenecek (tartı sonrası kesin)</span><span>{tl(order.finalTotal)}</span>
           </div>
         )}
         {order.deliveryWindow && (
@@ -263,6 +311,77 @@ export default function OrderPage() {
           </div>
         )}
       </div>
+
+      {/* Teslim sonrası: puanlama + sorun bildirimi */}
+      {order.status === 'DELIVERED' && (
+        <div className="success-card" style={{ marginTop: 16, textAlign: 'center' }}>
+          {issueResult && <div className="ok-note" style={{ background: '#eaf3ea', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 14 }}>✅ {issueResult}</div>}
+          {(ratingDone ?? order.rating) != null ? (
+            <div style={{ fontSize: 14 }}>
+              Değerlendirmen: <span style={{ color: 'var(--honey)', fontSize: 18 }}>{'★'.repeat(ratingDone ?? order.rating!)}{'☆'.repeat(5 - (ratingDone ?? order.rating!))}</span>
+              <span className="muted"> — teşekkürler!</span>
+            </div>
+          ) : (
+            <>
+              <h3 className="serif" style={{ margin: '0 0 4px', fontSize: 16 }}>Siparişin nasıldı?</h3>
+              <div style={{ fontSize: 30, letterSpacing: 4, cursor: 'pointer', userSelect: 'none' }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <span key={n} onClick={() => setStars(n)} style={{ color: n <= stars ? 'var(--honey)' : 'var(--line)' }}>★</span>
+                ))}
+              </div>
+              {stars > 0 && (
+                <div style={{ maxWidth: 380, margin: '8px auto 0' }}>
+                  <input className="search" style={{ width: '100%' }} placeholder="İstersen bir yorum bırak (opsiyonel)" value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} maxLength={500} />
+                  <button className="cta" style={{ marginTop: 8, width: 'auto', padding: '9px 20px' }} disabled={ratingBusy} onClick={sendRating}>
+                    {ratingBusy ? 'Gönderiliyor…' : 'Puanı gönder'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          {!issueResult && (
+            <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+              <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 13.5 }} onClick={() => setIssueOpen(true)}>
+                🛠 Üründe sorun mu vardı? Bildir, telafi edelim
+              </button>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>Teslimattan sonraki 24 saat içinde; küçük tutarlar anında kuponla telafi edilir.</div>
+            </div>
+          )}
+          {issueErr && <div className="error" style={{ marginTop: 10 }}>{issueErr}</div>}
+        </div>
+      )}
+
+      <Modal open={issueOpen} onClose={() => setIssueOpen(false)} title="Ürün sorunu bildir" footer={
+        <>
+          <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, padding: '8px 12px' }} onClick={() => setIssueOpen(false)}>Vazgeç</button>
+          <button className="cta" style={{ marginTop: 0, width: 'auto', padding: '10px 18px' }} disabled={issueBusy || issueItems.size === 0} onClick={sendIssue}>
+            {issueBusy ? 'Gönderiliyor…' : 'Bildir'}
+          </button>
+        </>
+      }>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div>
+            <b style={{ fontSize: 13.5 }}>Hangi ürün(ler)?</b>
+            {order.items.map((it) => (
+              <label key={it.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 0', cursor: 'pointer', fontSize: 14 }}>
+                <input type="checkbox" checked={issueItems.has(it.id)} onChange={() => setIssueItems((s) => { const n = new Set(s); n.has(it.id) ? n.delete(it.id) : n.add(it.id); return n; })} />
+                {it.productName} <span className="muted">({tl(it.lineTotal)})</span>
+              </label>
+            ))}
+          </div>
+          <div>
+            <b style={{ fontSize: 13.5 }}>Sorun ne?</b>
+            <select value={issueReason} onChange={(e) => setIssueReason(e.target.value)} style={{ width: '100%', marginTop: 4, padding: 8, borderRadius: 10, border: '1px solid var(--line)' }}>
+              <option value="EZIK_CURUK">Ezik / çürük ürün</option>
+              <option value="EKSIK">Eksik ürün</option>
+              <option value="YANLIS_URUN">Yanlış ürün</option>
+              <option value="DIGER">Diğer</option>
+            </select>
+          </div>
+          <textarea rows={3} placeholder="Kısaca anlat (opsiyonel)" value={issueMsg} onChange={(e) => setIssueMsg(e.target.value)} maxLength={500} style={{ width: '100%', padding: 8, borderRadius: 10, border: '1px solid var(--line)', fontFamily: 'inherit' }} />
+          {issueErr && <div className="error">{issueErr}</div>}
+        </div>
+      </Modal>
 
       {order.notifications.length > 0 && (
         <div className="success-card" style={{ marginTop: 16 }}>

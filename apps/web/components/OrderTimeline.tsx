@@ -1,7 +1,7 @@
 const STEPS: [string, string][] = [
   ['CONFIRMED', 'Onaylandı'],
   ['PREPARING', 'Hazırlanıyor'],
-  ['READY', 'Hazır'],
+  ['READY', 'Tartıldı & Paketlendi'],
   ['OUT_FOR_DELIVERY', 'Yolda'],
   ['DELIVERED', 'Teslim edildi'],
 ];

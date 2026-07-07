@@ -10,6 +10,8 @@ export interface CardProduct {
   basePrice: number; discountedPrice: number | null; stockQty: number | null;
   maxPerOrder: number | null; originRegion: string | null;
   isFreshDaily: boolean; isLocal: boolean;
+  /** Son 24 saatte hal alımı yapıldı — tazelik kanıtı rozeti. */
+  freshToday?: boolean;
   category: { slug: string; name: string } | null;
 }
 
@@ -41,6 +43,8 @@ export default function ProductCard({ product: p, onAdded }: { product: CardProd
         <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: '#eee', color: 'var(--muted)' }}>TÜKENDİ</span>
       ) : discounted ? (
         <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{discPct} İNDİRİM</span>
+      ) : p.freshToday ? (
+        <span className="pill fresh" title="Son 24 saatte halden alındı">🌿 BUGÜN HALDEN</span>
       ) : p.isFreshDaily ? (
         <span className="pill fresh">GÜNLÜK TAZE</span>
       ) : p.isLocal ? (

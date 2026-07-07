@@ -14,8 +14,12 @@ import { rememberOrder } from '@/lib/orders';
 import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal } from '@/lib/delivery';
 import { isName, isPhone, isEmail, sanitizePhone, formatPhone } from '@/lib/validate';
 import Modal from '@/components/Modal';
+import TrustBadges from '@/components/TrustBadges';
 
-interface Slot { date: string; window: string; label: string }
+interface Slot { date: string; window: string; label: string; remaining: number | null }
+
+/** Hazır teslimat notu çipleri — serbest metin yerine tek dokunuş. */
+const NOTE_CHIPS = ['Kapıya bırak', 'Zili çalma', 'Gelmeden ara', 'Poşetleri ayır'];
 
 type SubPref = 'CALL' | 'REMOVE' | 'SUBSTITUTE';
 const SUB_PREFS: { id: SubPref; icon: string; title: string; desc: string }[] = [
@@ -185,7 +189,27 @@ export default function CheckoutPage() {
               <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : <span className="muted">(kuryenin sizi kolay bulması için)</span>}</label>
               <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => setGeo({ lat, lng })} onGeolocate={(lat, lng) => setGeoSelf({ lat, lng })} />
             </div>
-            <div className="field"><label>Sipariş notu (opsiyonel)</label><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Zili çalmayın" /></div>
+            <div className="field">
+              <label>Sipariş notu (opsiyonel)</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '2px 0 8px' }}>
+                {NOTE_CHIPS.map((chip) => {
+                  const active = note.includes(chip);
+                  return (
+                    <button
+                      key={chip} type="button"
+                      onClick={() => setNote((n) => active ? n.split(/,\s*/).filter((x) => x !== chip).join(', ') : (n ? `${n}, ${chip}` : chip))}
+                      style={{
+                        border: `1.5px solid ${active ? 'var(--forest)' : 'var(--line)'}`, background: active ? 'var(--forest)' : '#fff',
+                        color: active ? '#fff' : 'inherit', borderRadius: 20, padding: '5px 12px', fontSize: 12, cursor: 'pointer',
+                      }}
+                    >
+                      {active ? '✓ ' : ''}{chip}
+                    </button>
+                  );
+                })}
+              </div>
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Zili çalmayın" />
+            </div>
           </div>
           <div className="block">
             <h3>Teslimat saati</h3>
@@ -201,7 +225,12 @@ export default function CheckoutPage() {
                     style={{ marginBottom: 8, cursor: 'pointer' }}
                     onClick={() => setSlotKey(key)}
                   >
-                    <span>{s.label}</span>
+                    <span>
+                      {s.label}
+                      {s.remaining != null && s.remaining <= 3 && (
+                        <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 700, color: 'var(--persimmon-d)', background: '#fbeee6', borderRadius: 20, padding: '2px 8px' }}>son {s.remaining} yer</span>
+                      )}
+                    </span>
                     <span>{slotKey === key ? '✓' : ''}</span>
                   </div>
                 );
@@ -251,6 +280,7 @@ export default function CheckoutPage() {
           </button>
           {belowMin && <p className="note" style={{ color: 'var(--honey)' }}>Asgari sipariş tutarı {tl(minOrderTotal)}. Sepete {tl(minOrderTotal - subtotal)} daha ekleyin.</p>}
           {!valid && !belowMin && <p className="note">Ad, telefon, adresi doldurun; teslimat saatini seçin ve sözleşmeyi onaylayın.</p>}
+          <TrustBadges compact />
         </div>
       </div>
 

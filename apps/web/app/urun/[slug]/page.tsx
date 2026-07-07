@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { tl, emojiFor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
+import TrustBadges from '@/components/TrustBadges';
 
 interface Substitute {
   slug: string; name: string; unitLabel: string | null; imageUrl: string | null;
@@ -140,6 +141,9 @@ export default function ProductDetailPage() {
               )}
             </>
           )}
+          <div style={{ borderTop: '1px solid var(--line)', marginTop: 18, paddingTop: 4 }}>
+            <TrustBadges />
+          </div>
         </div>
       </div>
     </div>
