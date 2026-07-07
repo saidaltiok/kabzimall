@@ -20,6 +20,7 @@ interface Order {
   slotChangeDate: string | null; slotChangeWindow: string | null; slotChangeStatus: string | null;
   subtotal: number; couponCode: string | null; discountTotal: number; deliveryFee: number; grandTotal: number; finalTotal: number | null;
   rating: number | null; items: OrderItem[];
+  refunds?: { id: string; amount: number; method: string; couponCode: string | null; createdAt: string }[];
   notifications: { id: string; message: string; createdAt: string }[];
   statusHistory: { id: string; fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }[];
 }
@@ -232,6 +233,12 @@ export default function OrderPage() {
             <span>💵 Kapıda ödenecek (tartı sonrası kesin)</span><span>{tl(order.finalTotal)}</span>
           </div>
         )}
+        {(order.refunds?.length ?? 0) > 0 && order.refunds!.map((r) => (
+          <div className="ln" key={r.id} style={{ color: 'var(--berry, #b23)' }}>
+            <span>↩ İade edildi ({r.method === 'CASH' ? 'nakit' : `kupon: ${r.couponCode} — sonraki siparişinde geçerli`})</span>
+            <b>−{tl(r.amount)}</b>
+          </div>
+        ))}
         {order.deliveryWindow && (
           <div className="ln" style={{ marginTop: 6 }}>
             <span className="muted">Teslimat saati</span>

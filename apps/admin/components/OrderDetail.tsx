@@ -18,6 +18,7 @@ export interface DetailOrder {
   slotChangeStatus: string | null; slotChangeDate: string | null; slotChangeWindow: string | null;
   note: string | null; items: DetailItem[];
   rating?: number | null; ratingComment?: string | null;
+  refunds?: { id: string; amount: number; method: string; couponCode: string | null; reason: string | null; restock: boolean; createdBy: string | null; createdAt: string }[];
   notifications?: { id: string; message: string; createdAt: string }[];
   statusHistory?: { id: string; fromStatus: string | null; toStatus: string; changedBy: string | null; note: string | null; createdAt: string }[];
 }
@@ -30,15 +31,55 @@ const SUB_LABEL: Record<string, string> = {
   CALL: '📞 Eksikte: müşteriyi ara', REMOVE: '➖ Eksikte: ürünü çıkar', SUBSTITUTE: '🔄 Eksikte: benzeriyle değiştir',
 };
 
+export interface RefundRequest {
+  items: { itemId: string; qty?: number }[];
+  method: 'CASH' | 'COUPON';
+  restock: boolean;
+  reason?: string;
+}
+
 /** Sipariş detayının okunur görünümü (pano pop-up'ı + gerektiğinde başka yerler). */
-export default function OrderDetail({ order: o, onSlotDecide, onAddNote, busy }: {
+export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefund, busy }: {
   order: DetailOrder;
   onSlotDecide?: (approve: boolean) => void;
   /** Dahili personel notu ekleme (📌 — zaman çizelgesine düşer, müşteri görmez). */
   onAddNote?: (note: string) => void;
+  /** Kalem bazlı kısmi iade (yalnız teslim edilmiş siparişte gösterilir). */
+  onRefund?: (dto: RefundRequest) => void;
   busy?: boolean;
 }) {
   const [noteText, setNoteText] = useState('');
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refSel, setRefSel] = useState<Record<string, string>>({}); // itemId → iade miktarı (metin)
+  const [refMethod, setRefMethod] = useState<'CASH' | 'COUPON'>('CASH');
+  const [refRestock, setRefRestock] = useState(false);
+  const [refReason, setRefReason] = useState('');
+
+  const paid = o.finalTotal ?? o.grandTotal;
+  const refundedTotal = (o.refunds ?? []).reduce((s, r) => s + r.amount, 0);
+  const fullQty = (it: DetailItem) => it.pickedQty ?? it.orderedQty;
+  /** Seçili kalemin oranlı iade tutarı (sunucuyla aynı mantık: lineTotal × qty/fullQty). */
+  const refAmount = (it: DetailItem) => {
+    const raw = refSel[it.id];
+    if (raw === undefined) return 0;
+    const q = parseFloat(raw.replace(',', '.'));
+    if (!(q > 0) || q > fullQty(it)) return NaN;
+    return Math.round(Number(((it.lineTotal * q) / fullQty(it)).toPrecision(12)));
+  };
+  const selItems = o.items.filter((it) => refSel[it.id] !== undefined);
+  const refTotal = selItems.reduce((s, it) => s + (refAmount(it) || 0), 0);
+  const refValid = selItems.length > 0 && selItems.every((it) => !Number.isNaN(refAmount(it)) && refAmount(it) > 0) && refundedTotal + refTotal <= paid;
+
+  function sendRefund() {
+    if (!onRefund || !refValid) return;
+    const yontem = refMethod === 'CASH' ? 'nakit (kasadan)' : 'tek kullanımlık kupon';
+    if (!window.confirm(`${tl(refTotal)} iade edilsin mi? Yöntem: ${yontem}${refRestock ? ' · ürünler stoğa geri alınacak' : ''}. Müşteri bilgilendirilir.`)) return;
+    onRefund({
+      items: selItems.map((it) => ({ itemId: it.id, qty: parseFloat(refSel[it.id].replace(',', '.')) })),
+      method: refMethod, restock: refRestock, reason: refReason.trim() || undefined,
+    });
+    setRefundOpen(false); setRefSel({}); setRefReason(''); setRefRestock(false);
+  }
   return (
     <div style={{ fontSize: 13.5 }}>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
@@ -115,7 +156,93 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, busy }:
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
           <span>{o.finalTotal != null ? 'Kesinleşen' : 'Tahmini'}</span><span>{tl(o.finalTotal ?? o.grandTotal)}</span>
         </div>
+        {refundedTotal > 0 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--berry)' }}>
+              <span>↩ İade edildi</span><span>−{tl(refundedTotal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+              <span>Kalan tahsilat</span><span>{tl(paid - refundedTotal)}</span>
+            </div>
+          </>
+        )}
       </div>
+
+      {(o.refunds?.length ?? 0) > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <b style={{ fontSize: 12 }}>İadeler</b>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
+            {o.refunds!.map((r) => (
+              <li key={r.id}>
+                ↩ <b>{tl(r.amount)}</b> · {r.method === 'CASH' ? 'nakit' : `kupon ${r.couponCode}`}
+                {r.restock ? ' · stoğa geri alındı' : ''}{r.reason ? ` · ${r.reason}` : ''}
+                {r.createdBy ? ` · ${r.createdBy}` : ''} · {dt(r.createdAt)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {onRefund && o.status === 'DELIVERED' && refundedTotal < paid && (
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+          {!refundOpen ? (
+            <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => setRefundOpen(true)}>↩ Kısmi iade</button>
+          ) : (
+            <div style={{ background: '#fff7ed', border: '1px solid var(--honey)', borderRadius: 10, padding: '10px 12px' }}>
+              <b style={{ fontSize: 12.5 }}>↩ Kısmi iade — kalemleri seç</b>
+              <div style={{ display: 'grid', gap: 4, margin: '8px 0', maxHeight: 240, overflowY: 'auto' }}>
+                {o.items.map((it) => {
+                  const sel = refSel[it.id] !== undefined;
+                  const amt = refAmount(it);
+                  return (
+                    <label key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox" checked={sel}
+                        onChange={(e) => setRefSel((s) => {
+                          const n = { ...s };
+                          if (e.target.checked) n[it.id] = String(fullQty(it)).replace('.', ',');
+                          else delete n[it.id];
+                          return n;
+                        })}
+                      />
+                      <span style={{ flex: 1 }}>{it.productName} <span className="muted">({fullQty(it)} {it.unitLabel ?? ''} · {tl(it.lineTotal)})</span></span>
+                      {sel && (
+                        <>
+                          <input className="cell" style={{ width: 60 }} placeholder={String(fullQty(it))} value={refSel[it.id]} onChange={(e) => setRefSel((s) => ({ ...s, [it.id]: e.target.value }))} />
+                          <span style={{ width: 76, textAlign: 'right', fontWeight: 600 }}>
+                            {Number.isNaN(amt)
+                              ? <span className="tagp risk" title={`Miktar 0'dan büyük ve en fazla ${fullQty(it)} ${it.unitLabel ?? ''} olmalı`}>geçersiz</span>
+                              : tl(amt)}
+                          </span>
+                        </>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <select value={refMethod} onChange={(e) => setRefMethod(e.target.value as 'CASH' | 'COUPON')} style={{ fontSize: 12 }}>
+                  <option value="CASH">💵 Nakit (kasadan düşer)</option>
+                  <option value="COUPON">🎟️ Tek kullanımlık kupon</option>
+                </select>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={refRestock} onChange={(e) => setRefRestock(e.target.checked)} />
+                  stoğa geri al (çürük/fireyse işaretleme)
+                </label>
+                <input className="cell" style={{ flex: 1, minWidth: 120, textAlign: 'left' }} placeholder="Sebep (ops.)" maxLength={300} value={refReason} onChange={(e) => setRefReason(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                <b>Toplam: {tl(refTotal)}</b>
+                {refundedTotal + refTotal > paid && <span className="tagp zararina">tahsilatı aşıyor</span>}
+                <button className="btn" style={{ marginLeft: 'auto', fontSize: 12, padding: '6px 14px', background: 'var(--berry)' }} disabled={busy || !refValid} onClick={sendRefund}>
+                  ↩ İade et
+                </button>
+                <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => { setRefundOpen(false); setRefSel({}); }}>Vazgeç</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {(o.notifications?.length ?? 0) > 0 && (
         <div style={{ marginTop: 12 }}>

@@ -13,7 +13,7 @@ interface Overhead {
 }
 interface Pnl {
   from: string; to: string; days: number; orderCount: number;
-  revenue: number; cogs: number; grossProfit: number;
+  revenue: number; refundTotal: number; netRevenue: number; cogs: number; grossProfit: number;
   overheadTotal: number; overheadBreakdown: { name: string; category: string; kind: string; amountInRange: number }[];
   net: number; missingCost: string[];
 }
@@ -108,6 +108,12 @@ export default function FinansPage() {
                 <table>
                   <tbody>
                     <tr><td>Ciro (teslim edilen {pnl.orderCount} sipariş)</td><td className="num savecell">{tl(pnl.revenue)}</td></tr>
+                    {pnl.refundTotal > 0 && (
+                      <>
+                        <tr><td>− İadeler (kısmi)</td><td className="num" style={{ color: 'var(--berry)' }}>−{tl(pnl.refundTotal)}</td></tr>
+                        <tr><td><b>Net ciro</b></td><td className="num"><b>{tl(pnl.netRevenue)}</b></td></tr>
+                      </>
+                    )}
                     <tr><td>− Ürün maliyeti (COGS)</td><td className="num">−{tl(pnl.cogs)}</td></tr>
                     <tr style={{ borderTop: '1px solid var(--line)' }}><td><b>Brüt kâr</b></td><td className="num"><b>{tl(pnl.grossProfit)}</b></td></tr>
                     {pnl.overheadBreakdown.map((b, i) => (

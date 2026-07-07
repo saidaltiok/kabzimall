@@ -257,6 +257,7 @@ export default function OrdersBoard() {
             busy={slotBusy}
             onSlotDecide={(approve) => decideSlot(detailOrder.id, approve)}
             onAddNote={async (note) => { try { await apiSend('POST', `/admin/orders/${detailOrder.id}/note`, { note }); await load(); } catch (e) { setError((e as Error).message); } }}
+            onRefund={async (dto) => { try { await apiSend('POST', `/admin/orders/${detailOrder.id}/refund`, dto); await load(); } catch (e) { setError((e as Error).message); } }}
           />
         )}
       </Modal>
