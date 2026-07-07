@@ -74,6 +74,8 @@ describe('Kritik düzeltmeler (denetim sonrası)', () => {
     });
 
     it('teslim SONRASI iptal: kasa tahsilatı geri çıkar + kupon hakkı iade edilir', async () => {
+      // Önceki testlerin (kasa kapalıyken teslim) askıda tahsilatları bu teste karışmasın.
+      await prisma.cashMovement.deleteMany({ where: { sessionId: null } });
       await http.post('/api/v1/admin/cash/open').send({ openingFloat: 0 }).expect(201);
       await http.post('/api/v1/admin/coupons').send({ code: 'KFTEK', type: 'FIXED', value: 500, maxUses: 1 }).expect(201);
 

@@ -33,6 +33,20 @@ export class StorefrontController {
     return { data: await this.banners.activeForStorefront() };
   }
 
+  /** POST /storefront/orders/:id/rating { rating: 1-5, comment? } — teslim sonrası puan (tek sefer). */
+  @Post('orders/:id/rating')
+  @ApiBody({ schema: { example: { rating: 5, comment: 'Ürünler çok tazeydi' } } })
+  rate(@Param('id') id: string, @Body() dto: { rating: number; comment?: string }) {
+    return this.service.rateOrder(id, dto.rating, dto.comment);
+  }
+
+  /** POST /storefront/orders/:id/issue { itemIds, reason, message? } — teslim sonrası sorun bildirimi (24 saat). */
+  @Post('orders/:id/issue')
+  @ApiBody({ schema: { example: { itemIds: ['<kalem-uuid>'], reason: 'EZIK_CURUK', message: 'Domatesler ezilmişti' } } })
+  issue(@Param('id') id: string, @Body() dto: { itemIds: string[]; reason: string; message?: string }) {
+    return this.service.reportIssue(id, dto);
+  }
+
   /** POST /storefront/support — destek/iletişim formu (IP başına günlük sınırlı). */
   @Post('support')
   @ApiBody({ schema: { example: { name: 'Ayşe', email: 'ayse@example.com', orderCode: 'KM123ABC', message: 'Siparişim hakkında...' } } })
@@ -169,6 +183,12 @@ export class StorefrontController {
 @Controller('admin/orders')
 export class AdminOrdersController {
   constructor(private readonly service: MarketService) {}
+
+  /** GET /admin/orders/inbox — bildirim merkezi: yeni sipariş + saat talebi + açık destek. */
+  @Get('inbox')
+  inbox() {
+    return this.service.adminInbox();
+  }
 
   /** GET /admin/orders/summary — günün operasyon özeti (dashboard). */
   @Get('summary')

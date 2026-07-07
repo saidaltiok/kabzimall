@@ -90,6 +90,52 @@ export class MarkdownService {
     return { deleted: true };
   }
 
+  /**
+   * Yaklaşan erimeler: bugün inecekler + 2 gün içinde eriyecekler. Bugün
+   * ekranında gösterilir ki hal alımı/stok girişi unutulduğunda otomatik
+   * indirim sürpriz olmasın ("yarın 12 ürün inmeye başlayacak" uyarısı).
+   */
+  async upcoming() {
+    const now = Date.now();
+    const [rules, products] = await Promise.all([
+      this.prisma.markdownRule.findMany({ where: { tenantId: DEV_TENANT_ID, isActive: true } }),
+      this.prisma.product.findMany({
+        where: { tenantId: DEV_TENANT_ID, kind: 'SIMPLE', isActive: true, basePrice: { gt: 0 }, stockQty: { gt: 0 } },
+        select: { id: true, slug: true, name: true, createdAt: true },
+      }),
+    ]);
+    if (rules.length === 0 || products.length === 0) return { today: [], soon: [] };
+    const byProduct = new Map(rules.filter((r) => r.scope === 'PRODUCT').map((r) => [r.refId, r]));
+    const byCategory = new Map(rules.filter((r) => r.scope === 'CATEGORY').map((r) => [r.refId, r]));
+    const cats = await this.prisma.product.findMany({
+      where: { id: { in: products.map((p) => p.id) } },
+      select: { id: true, category: { select: { slug: true } } },
+    });
+    const catOf = new Map(cats.map((c) => [c.id, c.category?.slug]));
+
+    const slugs = products.map((p) => p.slug);
+    const ids = products.map((p) => p.id);
+    const [purchases, stockIns] = await Promise.all([
+      this.prisma.halPurchase.groupBy({ by: ['productSlug'], where: { tenantId: DEV_TENANT_ID, productSlug: { in: slugs } }, _max: { createdAt: true } }),
+      this.prisma.stockMovement.groupBy({ by: ['productId'], where: { tenantId: DEV_TENANT_ID, productId: { in: ids }, delta: { gt: 0 } }, _max: { createdAt: true } }),
+    ]);
+    const lastPurchase = new Map(purchases.map((x) => [x.productSlug as string, x._max.createdAt!.getTime()]));
+    const lastStockIn = new Map(stockIns.map((x) => [x.productId, x._max.createdAt!.getTime()]));
+
+    const today: { slug: string; name: string; daysStale: number }[] = [];
+    const soon: { slug: string; name: string; inDays: number }[] = [];
+    for (const p of products) {
+      const rule = byProduct.get(p.slug) ?? (catOf.get(p.id) ? byCategory.get(catOf.get(p.id)!) : undefined);
+      if (!rule || rule.mode === 'EXCLUDE') continue;
+      const lastSupply = Math.max(lastPurchase.get(p.slug) ?? 0, lastStockIn.get(p.id) ?? 0, p.createdAt.getTime());
+      const daysStale = Math.floor((now - lastSupply) / DAY);
+      const until = rule.staleDays - daysStale;
+      if (until <= 0) today.push({ slug: p.slug, name: p.name, daysStale });
+      else if (until <= 2) soon.push({ slug: p.slug, name: p.name, inDays: until });
+    }
+    return { today, soon };
+  }
+
   /* ------------------------------ Günlük koşu ------------------------------ */
 
   /** Sabah 08:30 (İstanbul) — hal alımı işlendikten sonra, vitrin açılmadan. */

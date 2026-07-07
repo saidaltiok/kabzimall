@@ -42,10 +42,20 @@ export class CashService {
     return { inSum, outSum, expected: openingFloat + inSum - outSum };
   }
 
-  /** Açık oturum + hareketler + anlık bakiye (yoksa session:null). */
+  /**
+   * Açık oturum + hareketler + anlık bakiye. Oturum yoksa session:null döner;
+   * kasa kapalıyken biriken ASKIDA hareketler (pending) yine listelenir ki
+   * para izi görünür kalsın (açılışta otomatik oturuma bağlanırlar).
+   */
   async current() {
     const session = await this.openSession();
-    if (!session) return { session: null };
+    if (!session) {
+      const pending = await this.prisma.cashMovement.findMany({
+        where: { tenantId: DEV_TENANT_ID, sessionId: null },
+        orderBy: { createdAt: 'desc' },
+      });
+      return { session: null, pending };
+    }
     const movements = await this.prisma.cashMovement.findMany({
       where: { tenantId: DEV_TENANT_ID, sessionId: session.id },
       orderBy: { createdAt: 'desc' },
@@ -58,9 +68,17 @@ export class CashService {
     if (!Number.isInteger(openingFloat) || openingFloat < 0) throw new BadRequestException('Açılış bakiyesi (kuruş) 0 ya da pozitif tam sayı olmalı.');
     const existing = await this.openSession();
     if (existing) throw new BadRequestException('Zaten açık bir kasa oturumu var — önce kapatın.');
-    return this.prisma.registerSession.create({
+    const session = await this.prisma.registerSession.create({
       data: { tenantId: DEV_TENANT_ID, openingFloat, openedBy: actor ?? null, note: note?.trim() || null },
     });
+    // Askıda hareketler (kasa kapalıyken düşen otomatik tahsilat/alım) bu oturuma bağlanır —
+    // para izi kaybolmaz, açılışla birlikte bakiyeye girer.
+    const claimed = await this.prisma.cashMovement.updateMany({
+      where: { tenantId: DEV_TENANT_ID, sessionId: null },
+      data: { sessionId: session.id },
+    });
+    if (claimed.count > 0) this.logger.log(`Kasa açılışı: ${claimed.count} askıda hareket oturuma bağlandı.`);
+    return { ...session, claimedPending: claimed.count };
   }
 
   async addMovement(dto: MovementInput, actor?: string) {
@@ -116,57 +134,37 @@ export class CashService {
 
   /* --------------------- Otomatik beslemeler (hook'lar) --------------------- */
 
-  /** Teslim edilen kapıda-ödeme siparişi → GİRİŞ (kasa açıksa; sipariş başına bir kez). */
-  async recordSale(orderCode: string, amount: number) {
+  /**
+   * Otomatik hareket yaz — kasa açıksa oturuma, KAPALIYSA askıya (sessionId null).
+   * Para izi asla kaybolmaz; askıdakiler bir sonraki açılışta oturuma bağlanır.
+   * Mükerrer koruması TENANT genelinde (oturumlar arası tekrar yazılmaz).
+   */
+  private async recordAuto(type: 'IN' | 'OUT', category: string, amount: number, refCode: string, note: string) {
     try {
-      const session = await this.openSession();
-      if (!session || amount <= 0) return;
-      // Mükerrer koruması TENANT genelinde: oturum kapanıp açılsa bile aynı
-      // sipariş ikinci kez GİRİŞ yazılmaz (DELIVERED→...→DELIVERED tekrarı).
-      const dup = await this.prisma.cashMovement.findFirst({
-        where: { tenantId: DEV_TENANT_ID, category: 'SALE', refCode: orderCode },
-      });
+      if (amount <= 0) return;
+      const dup = await this.prisma.cashMovement.findFirst({ where: { tenantId: DEV_TENANT_ID, category, refCode } });
       if (dup) return;
+      const session = await this.openSession();
       await this.prisma.cashMovement.create({
-        data: { tenantId: DEV_TENANT_ID, sessionId: session.id, type: 'IN', category: 'SALE', amount, refCode: orderCode, note: 'Teslimat tahsilatı (otomatik)' },
+        data: { tenantId: DEV_TENANT_ID, sessionId: session?.id ?? null, type, category, amount, refCode, note: session ? note : `${note} — kasa kapalıyken (askıda)` },
       });
     } catch (e) {
-      this.logger.warn(`Kasa satış kaydı düşülemedi (${orderCode}): ${(e as Error).message}`);
+      this.logger.warn(`Kasa otomatik kaydı düşülemedi (${refCode}): ${(e as Error).message}`);
     }
+  }
+
+  /** Teslim edilen kapıda-ödeme siparişi → GİRİŞ (sipariş başına bir kez). */
+  recordSale(orderCode: string, amount: number) {
+    return this.recordAuto('IN', 'SALE', amount, orderCode, 'Teslimat tahsilatı (otomatik)');
   }
 
   /** Teslim edilmiş sipariş sonradan iptal edilirse → tahsilatı geri çıkar (ÇIKIŞ). */
-  async recordSaleReversal(orderCode: string, amount: number) {
-    try {
-      const session = await this.openSession();
-      if (!session || amount <= 0) return;
-      const dup = await this.prisma.cashMovement.findFirst({
-        where: { tenantId: DEV_TENANT_ID, category: 'SALE_REVERSAL', refCode: orderCode },
-      });
-      if (dup) return;
-      await this.prisma.cashMovement.create({
-        data: { tenantId: DEV_TENANT_ID, sessionId: session.id, type: 'OUT', category: 'SALE_REVERSAL', amount, refCode: orderCode, note: 'Teslim sonrası iptal — tahsilat iadesi (otomatik)' },
-      });
-    } catch (e) {
-      this.logger.warn(`Kasa iade kaydı düşülemedi (${orderCode}): ${(e as Error).message}`);
-    }
+  recordSaleReversal(orderCode: string, amount: number) {
+    return this.recordAuto('OUT', 'SALE_REVERSAL', amount, orderCode, 'Teslim sonrası iptal — tahsilat iadesi (otomatik)');
   }
 
-  /** Hal alımı → ÇIKIŞ (kasa açıksa; mükerrer düşmez). */
-  async recordHalPurchase(purchaseId: string, totalPaid: number, slug?: string | null) {
-    try {
-      const session = await this.openSession();
-      if (!session || totalPaid <= 0) return;
-      const ref = `HAL:${purchaseId}`;
-      const dup = await this.prisma.cashMovement.findFirst({
-        where: { tenantId: DEV_TENANT_ID, sessionId: session.id, category: 'HAL_PURCHASE', refCode: ref },
-      });
-      if (dup) return;
-      await this.prisma.cashMovement.create({
-        data: { tenantId: DEV_TENANT_ID, sessionId: session.id, type: 'OUT', category: 'HAL_PURCHASE', amount: totalPaid, refCode: ref, note: `Hal alımı${slug ? ` (${slug})` : ''} (otomatik)` },
-      });
-    } catch (e) {
-      this.logger.warn(`Kasa hal alımı kaydı düşülemedi (${purchaseId}): ${(e as Error).message}`);
-    }
+  /** Hal alımı → ÇIKIŞ. */
+  recordHalPurchase(purchaseId: string, totalPaid: number, slug?: string | null) {
+    return this.recordAuto('OUT', 'HAL_PURCHASE', totalPaid, `HAL:${purchaseId}`, `Hal alımı${slug ? ` (${slug})` : ''} (otomatik)`);
   }
 }

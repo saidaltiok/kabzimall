@@ -6,6 +6,7 @@ describe('Kasa modülü (oturum + hareketler + otomatik beslemeler)', () => {
   let app: INestApplication;
   let http: ReturnType<typeof authed>;
   let server: ReturnType<INestApplication['getHttpServer']>;
+  let pendingSale = 0; // kasa kapalıyken düşen askıda tahsilat (açılışta oturuma bağlanır)
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -17,14 +18,18 @@ describe('Kasa modülü (oturum + hareketler + otomatik beslemeler)', () => {
 
   afterAll(async () => { await app.close(); });
 
-  it('kasa kapalıyken: current session:null; hareket eklenemez; teslimat sessizce kayıt düşmez', async () => {
+  it('kasa kapalıyken: hareket eklenemez; teslimat ASKIYA düşer (para izi kaybolmaz)', async () => {
     expect((await http.get('/api/v1/admin/cash/current').expect(200)).body.session).toBeNull();
     await http.post('/api/v1/admin/cash/movements').send({ type: 'IN', amount: 1000 }).expect(400);
 
-    // kasa kapalıyken teslim edilen sipariş hata VERMEZ, kasaya da düşmez
+    // kasa kapalıyken teslim edilen sipariş hata vermez; askıda (pending) kayda düşer
     const o = await request(server).post('/api/v1/storefront/orders').send({ items: [{ slug: 'ksa-urun', qty: 1 }], customer: { name: 'Kasa Kapalı', phone: '05551110081', address: 'K Mah. 1' } }).expect(201);
     await http.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'DELIVERED' }).expect(200);
-    expect((await http.get('/api/v1/admin/cash/current').expect(200)).body.session).toBeNull();
+    const cur = await http.get('/api/v1/admin/cash/current').expect(200);
+    expect(cur.body.session).toBeNull();
+    const pending = cur.body.pending.find((m: { refCode: string }) => m.refCode === o.body.code);
+    expect(pending).toMatchObject({ type: 'IN', category: 'SALE', amount: o.body.grandTotal });
+    pendingSale = o.body.grandTotal;
   });
 
   it('açılış: geçersiz bakiye 400; açılır; ikinci açılış 400', async () => {
@@ -32,6 +37,7 @@ describe('Kasa modülü (oturum + hareketler + otomatik beslemeler)', () => {
     const s = await http.post('/api/v1/admin/cash/open').send({ openingFloat: 50000, note: 'Sabah' }).expect(201);
     expect(s.body.openingFloat).toBe(50000);
     expect(s.body.openedBy).toContain('@');
+    expect(s.body.claimedPending).toBe(1); // askıdaki tahsilat oturuma bağlandı
     await http.post('/api/v1/admin/cash/open').send({ openingFloat: 10000 }).expect(400);
   });
 
@@ -42,7 +48,8 @@ describe('Kasa modülü (oturum + hareketler + otomatik beslemeler)', () => {
 
     await http.post('/api/v1/admin/cash/movements').send({ type: 'OUT', category: 'EXPENSE', amount: 15000, note: 'Poşet' }).expect(201);
     const cur = await http.get('/api/v1/admin/cash/current').expect(200);
-    expect(cur.body.totals).toEqual({ inSum: 0, outSum: 15000, balance: 35000 }); // 50000 − 15000
+    // açılış 50000 + askıdan bağlanan tahsilat − masraf
+    expect(cur.body.totals).toEqual({ inSum: pendingSale, outSum: 15000, balance: 50000 + pendingSale - 15000 });
   });
 
   it('teslim edilen sipariş kasaya otomatik GİRİŞ düşer; durum tekrarı mükerrer düşmez', async () => {
@@ -50,11 +57,11 @@ describe('Kasa modülü (oturum + hareketler + otomatik beslemeler)', () => {
     await http.patch(`/api/v1/admin/orders/${o.body.id}/status`).send({ status: 'DELIVERED' }).expect(200);
 
     const cur = await http.get('/api/v1/admin/cash/current').expect(200);
-    const sale = cur.body.movements.find((m: { category: string }) => m.category === 'SALE');
+    const sale = cur.body.movements.find((m: { category: string; refCode: string }) => m.category === 'SALE' && m.refCode === o.body.code);
     expect(sale).toMatchObject({ type: 'IN', amount: o.body.grandTotal, refCode: o.body.code });
     // Sipariş başına tek SALE kaydı (mükerrer koruması tenant genelinde).
     expect(cur.body.movements.filter((m: { refCode: string }) => m.refCode === o.body.code)).toHaveLength(1);
-    expect(cur.body.totals.balance).toBe(50000 - 15000 + o.body.grandTotal);
+    expect(cur.body.totals.balance).toBe(50000 + pendingSale - 15000 + o.body.grandTotal);
   });
 
   it('hal alımı kasadan otomatik ÇIKIŞ düşer', async () => {

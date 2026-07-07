@@ -111,21 +111,31 @@ export class MarketService {
     });
   }
 
-  listProducts(opts: { search?: string; category?: string }) {
-    return this.prisma.product.findMany({
-      where: {
-        tenantId: DEV_TENANT_ID,
-        kind: 'SIMPLE', // hazır sepetler ayrı bölümde
-        isActive: true,
-        basePrice: { not: null }, // fiyatı olmayan ürün vitrine çıkmaz
-        ...(opts.search
-          ? { OR: [{ name: { contains: opts.search, mode: 'insensitive' } }, { slug: { contains: opts.search, mode: 'insensitive' } }] }
-          : {}),
-        ...(opts.category ? { category: { slug: opts.category } } : {}),
-      },
-      orderBy: [{ isFeatured: 'desc' }, { name: 'asc' }],
-      select: PUBLIC_PRODUCT_SELECT,
-    });
+  async listProducts(opts: { search?: string; category?: string }) {
+    const [rows, freshRows] = await Promise.all([
+      this.prisma.product.findMany({
+        where: {
+          tenantId: DEV_TENANT_ID,
+          kind: 'SIMPLE', // hazır sepetler ayrı bölümde
+          isActive: true,
+          basePrice: { not: null }, // fiyatı olmayan ürün vitrine çıkmaz
+          ...(opts.search
+            ? { OR: [{ name: { contains: opts.search, mode: 'insensitive' } }, { slug: { contains: opts.search, mode: 'insensitive' } }] }
+            : {}),
+          ...(opts.category ? { category: { slug: opts.category } } : {}),
+        },
+        orderBy: [{ isFeatured: 'desc' }, { name: 'asc' }],
+        select: PUBLIC_PRODUCT_SELECT,
+      }),
+      // Tazelik kanıtı: son 24 saatte hal ALIMI yapılan ürünler "bugün halden" rozeti alır.
+      this.prisma.halPurchase.groupBy({
+        by: ['productSlug'],
+        where: { tenantId: DEV_TENANT_ID, createdAt: { gte: new Date(Date.now() - 24 * 3_600_000) }, productSlug: { not: null } },
+        _max: { createdAt: true },
+      }),
+    ]);
+    const freshSet = new Set(freshRows.map((f) => f.productSlug as string));
+    return rows.map((p) => ({ ...p, freshToday: freshSet.has(p.slug) }));
   }
 
   async getProduct(slug: string) {
@@ -179,6 +189,7 @@ export class MarketService {
       minOrderTotal: s?.minOrderTotal ?? 0,
       deliveryTiers: this.normalizeTiers(s?.deliveryTiers),
       deliveryWindows: this.normalizeWindows(s?.deliveryWindows),
+      slotCapacity: s?.slotCapacity ?? null,
       depotLat: s?.depotLat ?? null,
       depotLng: s?.depotLng ?? null,
       contactPhone: s?.contactPhone ?? null,
@@ -190,12 +201,13 @@ export class MarketService {
   }
 
   /** Verilen alanları günceller; verilmeyenler korunur. */
-  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; deliveryWindows?: string[]; depotLat?: number | null; depotLng?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; contactEmail?: string | null; contactAddress?: string | null; contactInstagram?: string | null }) {
+  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; deliveryWindows?: string[]; slotCapacity?: number | null; depotLat?: number | null; depotLng?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; contactEmail?: string | null; contactAddress?: string | null; contactInstagram?: string | null }) {
     const cur = await this.getStoreSettings();
     const next = {
       minOrderTotal: patch.minOrderTotal ?? cur.minOrderTotal,
       deliveryTiers: patch.deliveryTiers ? this.normalizeTiers(patch.deliveryTiers) : cur.deliveryTiers,
       deliveryWindows: patch.deliveryWindows ? this.normalizeWindows(patch.deliveryWindows) : cur.deliveryWindows,
+      slotCapacity: patch.slotCapacity !== undefined ? patch.slotCapacity : cur.slotCapacity,
       depotLat: patch.depotLat !== undefined ? patch.depotLat : cur.depotLat,
       depotLng: patch.depotLng !== undefined ? patch.depotLng : cur.depotLng,
       contactPhone: patch.contactPhone !== undefined ? patch.contactPhone : cur.contactPhone,
@@ -207,10 +219,10 @@ export class MarketService {
     const tiersJson = next.deliveryTiers as unknown as Prisma.InputJsonValue;
     const s = await this.prisma.storeSetting.upsert({
       where: { tenantId: DEV_TENANT_ID },
-      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
-      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
+      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, slotCapacity: next.slotCapacity, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
+      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, slotCapacity: next.slotCapacity, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
     });
-    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), deliveryWindows: this.normalizeWindows(s.deliveryWindows), depotLat: s.depotLat, depotLng: s.depotLng, contactPhone: s.contactPhone, contactWhatsapp: s.contactWhatsapp, contactEmail: s.contactEmail, contactAddress: s.contactAddress, contactInstagram: s.contactInstagram };
+    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), deliveryWindows: this.normalizeWindows(s.deliveryWindows), slotCapacity: s.slotCapacity, depotLat: s.depotLat, depotLng: s.depotLng, contactPhone: s.contactPhone, contactWhatsapp: s.contactWhatsapp, contactEmail: s.contactEmail, contactAddress: s.contactAddress, contactInstagram: s.contactInstagram };
   }
 
   /**
@@ -306,11 +318,33 @@ export class MarketService {
 
   /* --------------------------- Teslimat slotu --------------------------- */
 
-  /** Ertesi gün(ler) için teslimat slotları (Faz 1: SCHEDULED, sonraki 2 gün). */
-  async availableSlots(): Promise<{ date: string; window: string; label: string }[]> {
+  /**
+   * Ertesi gün(ler) için teslimat slotları (sonraki 2 gün). Kapasite tanımlıysa
+   * (Ayarlar → pencere başına azami sipariş) dolu pencereler LİSTEDEN DÜŞER —
+   * createOrder/saat değişikliği aynı listeyi doğruladığından dolu slota
+   * sipariş alınamaz. remaining: kalan kontenjan (null = sınırsız).
+   */
+  async availableSlots(): Promise<{ date: string; window: string; label: string; remaining: number | null }[]> {
     const settings = await this.getStoreSettings();
     const windows = settings.deliveryWindows;
-    const out: { date: string; window: string; label: string }[] = [];
+    const capacity: number | null = settings.slotCapacity ?? null;
+
+    // Pencere doluluğu: iptal hariç, tarih+pencere başına sipariş sayısı (tek sorgu).
+    const usage = new Map<string, number>();
+    if (capacity != null) {
+      const from = new Date();
+      from.setUTCHours(0, 0, 0, 0);
+      const counts = await this.prisma.order.groupBy({
+        by: ['deliveryDate', 'deliveryWindow'],
+        where: { tenantId: DEV_TENANT_ID, status: { not: 'CANCELLED' }, deliveryDate: { gte: from }, deliveryWindow: { not: null } },
+        _count: { _all: true },
+      });
+      for (const c of counts) {
+        if (c.deliveryDate && c.deliveryWindow) usage.set(`${c.deliveryDate.toISOString().slice(0, 10)}|${c.deliveryWindow}`, c._count._all);
+      }
+    }
+
+    const out: { date: string; window: string; label: string; remaining: number | null }[] = [];
     for (let off = 1; off <= 2; off++) {
       const d = new Date();
       d.setUTCDate(d.getUTCDate() + off);
@@ -319,7 +353,11 @@ export class MarketService {
         off === 1
           ? 'Yarın'
           : `${DAY_TR[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-      for (const w of windows) out.push({ date, window: w, label: `${dayLabel} ${w}` });
+      for (const w of windows) {
+        const remaining = capacity != null ? Math.max(0, capacity - (usage.get(`${date}|${w}`) ?? 0)) : null;
+        if (remaining === 0) continue; // dolu pencere satışa kapalı
+        out.push({ date, window: w, label: `${dayLabel} ${w}`, remaining });
+      }
     }
     return out;
   }
@@ -706,6 +744,121 @@ export class MarketService {
       take: 50,
       include: { items: true },
     });
+  }
+
+  /**
+   * Panel bildirim merkezi (zil) — mevcut verilerden türetilir, ayrı tablo yok:
+   * yeni (aksiyon bekleyen) siparişler, bekleyen saat talepleri, açık destek.
+   */
+  async adminInbox() {
+    const [newOrders, slotRequests, openTickets] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { tenantId: DEV_TENANT_ID, status: 'CONFIRMED' },
+        orderBy: { createdAt: 'desc' }, take: 8,
+        select: { id: true, code: true, customerName: true, grandTotal: true, createdAt: true },
+      }),
+      this.prisma.order.findMany({
+        where: { tenantId: DEV_TENANT_ID, slotChangeStatus: 'PENDING' },
+        orderBy: { createdAt: 'desc' }, take: 8,
+        select: { id: true, code: true, customerName: true, slotChangeDate: true, slotChangeWindow: true },
+      }),
+      this.prisma.supportTicket.findMany({
+        where: { tenantId: DEV_TENANT_ID, status: 'OPEN' },
+        orderBy: { createdAt: 'desc' }, take: 8,
+        select: { id: true, name: true, orderCode: true, createdAt: true },
+      }),
+    ]);
+    return {
+      counts: { newOrders: newOrders.length, slotRequests: slotRequests.length, openTickets: openTickets.length, total: newOrders.length + slotRequests.length + openTickets.length },
+      newOrders, slotRequests, openTickets,
+    };
+  }
+
+  /* --------------------- Puanlama & sorun bildirimi --------------------- */
+
+  /** Teslim edilen siparişe 1-5 puan (tek sefer). ≤2 puan otomatik destek kaydı açar. */
+  async rateOrder(id: string, rating: number, comment?: string) {
+    const order = await this.getOrder(id);
+    if (order.status !== 'DELIVERED') throw new BadRequestException('Yalnız teslim edilen sipariş puanlanabilir.');
+    if (order.rating != null) throw new BadRequestException('Bu sipariş zaten puanlandı.');
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new BadRequestException('Puan 1-5 arası olmalı.');
+    const c = comment?.trim().slice(0, 500) || null;
+    await this.prisma.order.update({ where: { id }, data: { rating, ratingComment: c } });
+    if (rating <= 2) {
+      // Düşük puan sessiz kalmasın — destek kuyruğuna düşür.
+      await this.prisma.supportTicket.create({
+        data: {
+          tenantId: DEV_TENANT_ID, name: order.customerName, phone: order.customerPhone,
+          email: order.customerEmail, orderCode: order.code,
+          message: `[DÜŞÜK PUAN ${rating}/5] ${c ?? 'Yorum bırakılmadı.'}`,
+        },
+      }).catch(() => {});
+    }
+    return { ok: true, rating };
+  }
+
+  private static readonly ISSUE_REASONS: Record<string, string> = {
+    EKSIK: 'Eksik ürün', EZIK_CURUK: 'Ezik/çürük ürün', YANLIS_URUN: 'Yanlış ürün', DIGER: 'Diğer',
+  };
+  /** Otomatik telafi üst sınırı (kuruş) — üstü destek kuyruğuna düşer. */
+  private static readonly AUTO_CREDIT_LIMIT = 10000;
+
+  /**
+   * Self-servis sorun bildirimi (teslimden sonra 24 saat): kalem seç + sebep.
+   * Etkilenen tutar ≤ 100₺ ise ANINDA tek kullanımlık telafi kuponu üretilir
+   * (kapıda ödemede para iadesi yok — kredi doğal çözüm); üstü destek kuyruğuna düşer.
+   */
+  async reportIssue(id: string, dto: { itemIds: string[]; reason: string; message?: string }) {
+    const order = await this.getOrder(id);
+    if (order.status !== 'DELIVERED') throw new BadRequestException('Sorun bildirimi teslim edilen siparişler içindir.');
+    const deliveredAt = [...order.statusHistory].reverse().find((h) => h.toStatus === 'DELIVERED')?.createdAt;
+    if (!deliveredAt || Date.now() - deliveredAt.getTime() > 24 * 3_600_000) {
+      throw new BadRequestException('Sorun bildirimi teslimattan sonraki 24 saat içinde yapılabilir — lütfen İletişim sayfasından bize ulaşın.');
+    }
+    const reasonLabel = MarketService.ISSUE_REASONS[dto.reason];
+    if (!reasonLabel) throw new BadRequestException(`Geçersiz sebep. Sebepler: ${Object.keys(MarketService.ISSUE_REASONS).join(', ')}`);
+    const items = order.items.filter((it) => dto.itemIds?.includes(it.id));
+    if (items.length === 0) throw new BadRequestException('En az bir ürün seçin.');
+
+    // Aynı sipariş için tek bildirim (mükerrer kredi engeli).
+    const existing = await this.prisma.supportTicket.findFirst({
+      where: { tenantId: DEV_TENANT_ID, orderCode: order.code, message: { startsWith: '[SORUN' } },
+    });
+    if (existing) throw new BadRequestException('Bu sipariş için zaten bir sorun bildirimi var — destek ekibimiz ilgileniyor.');
+
+    const affected = items.reduce((s, it) => s + it.lineTotal, 0);
+    const detail = `[SORUN: ${reasonLabel}] Ürünler: ${items.map((i) => i.productName).join(', ')} (${fmtTL(affected)}). ${dto.message?.trim().slice(0, 500) ?? ''}`;
+
+    if (affected <= MarketService.AUTO_CREDIT_LIMIT) {
+      // Anında telafi: tek kullanımlık sabit tutar kuponu.
+      const code = `TELAFI-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      await this.prisma.coupon.create({
+        data: { tenantId: DEV_TENANT_ID, code, type: 'FIXED', value: affected, minSubtotal: 0, maxUses: 1 },
+      });
+      await this.prisma.supportTicket.create({
+        data: {
+          tenantId: DEV_TENANT_ID, name: order.customerName, phone: order.customerPhone, email: order.customerEmail,
+          orderCode: order.code, message: detail, status: 'CLOSED',
+          reply: `Otomatik telafi kuponu verildi: ${code} (${fmtTL(affected)})`, repliedBy: 'otomatik',
+        },
+      });
+      await this.prisma.notification.create({
+        data: { tenantId: DEV_TENANT_ID, orderId: id, message: `Sorun bildiriminiz için özür dileriz. ${fmtTL(affected)} değerinde telafi kuponunuz: ${code} — bir sonraki siparişinizde sepette kullanın.` },
+      });
+      await this.emailCustomer(id, order.customerEmail, `Telafi kuponunuz (${order.code})`, `Bildirdiğiniz sorun için özür dileriz. ${fmtTL(affected)} değerinde tek kullanımlık kuponunuz: ${code}`);
+      return { resolved: true, couponCode: code, amount: affected, message: `Özür dileriz! ${fmtTL(affected)} değerinde telafi kuponun hazır: ${code}` };
+    }
+
+    await this.prisma.supportTicket.create({
+      data: {
+        tenantId: DEV_TENANT_ID, name: order.customerName, phone: order.customerPhone, email: order.customerEmail,
+        orderCode: order.code, message: detail,
+      },
+    });
+    await this.prisma.notification.create({
+      data: { tenantId: DEV_TENANT_ID, orderId: id, message: 'Sorun bildiriminiz alındı — en kısa sürede sizi arayacağız.' },
+    });
+    return { resolved: false, amount: affected, message: 'Bildiriminiz alındı — tutar incelemesi için ekibimiz en kısa sürede dönüş yapacak.' };
   }
 
   /* ---------------------- Teslimat saati değişikliği ---------------------- */

@@ -30,6 +30,12 @@ export class MarkdownController {
     return this.service.removeRule(id);
   }
 
+  /** GET /intel/markdown/upcoming — bugün inecekler + 2 gün içinde eriyecekler (Bugün ekranı uyarısı). */
+  @Get('upcoming')
+  upcoming() {
+    return this.service.upcoming();
+  }
+
   /** POST /intel/markdown/run?dry=1 — koşuyu tetikle (dry=1: yalnız önizleme). */
   @Post('run')
   @Roles(...PRICE_WRITERS)

@@ -115,6 +115,8 @@ model StoreSetting {
   deliveryTiers Json     @map("delivery_tiers")
   /// Teslimat saat pencereleri (["10:00-13:00",...]) — panelden düzenlenir; boşsa varsayılan 3 pencere.
   deliveryWindows Json?  @map("delivery_windows")
+  /// Teslimat penceresi başına azami sipariş (null = sınırsız). Dolan pencere satışa kapanır.
+  slotCapacity  Int?     @map("slot_capacity")
   /// Dükkân/depo başlangıç noktası — rota optimizasyonu buradan başlar/biter.
   depotLat      Float?   @map("depot_lat")
   depotLng      Float?   @map("depot_lng")
@@ -149,6 +151,9 @@ model Order {
   slotChangeDate   DateTime? @map("slot_change_date") @db.Date
   slotChangeWindow String?   @map("slot_change_window")
   slotChangeStatus String?   @map("slot_change_status")
+  /// Teslimat sonrası müşteri puanı (1-5) + yorumu; tek sefer verilir.
+  rating          Int?
+  ratingComment   String?    @map("rating_comment")
   note           String?
   status         String   @default("CONFIRMED")
   paymentMethod  String   @default("COD") @map("payment_method")
@@ -537,7 +542,8 @@ model RegisterSession {
 model CashMovement {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
-  sessionId String   @map("session_id") @db.Uuid
+  /// null = askıda (kasa kapalıyken düşen otomatik kayıt); kasa açılınca oturuma bağlanır.
+  sessionId String?  @map("session_id") @db.Uuid
   type      String // IN | OUT
   category  String   @default("OTHER") // SALE | HAL_PURCHASE | EXPENSE | DEPOSIT | WITHDRAWAL | OTHER
   amount    Int // kuruş, pozitif
@@ -546,7 +552,7 @@ model CashMovement {
   createdBy String?  @map("created_by")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  session RegisterSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session RegisterSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, sessionId])
   @@map("cash_movements")
