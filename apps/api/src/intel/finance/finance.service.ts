@@ -105,6 +105,16 @@ export class FinanceService {
     const revenue = orders.reduce((s, o) => s + (o.finalTotal ?? o.grandTotal), 0);
     const orderCount = orders.length;
 
+    // Kısmi iadeler net ciroyu düşürür. Bilinçli tercih: iade, SİPARİŞİN değil
+    // İADENİN yapıldığı döneme yazılır (nakit-esas — kasa o gün etkilenir;
+    // küçük esnaf muhasebesiyle uyumlu, dönemler arası tahakkuk düzeltmesi yok).
+    const refundAgg = await this.prisma.orderRefund.aggregate({
+      _sum: { amount: true },
+      where: { tenantId: DEV_TENANT_ID, createdAt: { gte: from, lt: end } },
+    });
+    const refundTotal = refundAgg._sum.amount ?? 0;
+    const netRevenue = revenue - refundTotal;
+
     // COGS: TARİHSEL maliyet — satış anındaki birim maliyet (unitCostSnapshot).
     // Snapshot yoksa (eski kayıt) bugünkü maliyete düşülür; tanımsızsa uyarılır.
     let cogs = 0;
@@ -135,10 +145,10 @@ export class FinanceService {
       if (amt !== 0) { breakdown.push({ name: oh.name, category: oh.category, kind: oh.kind, amountInRange: amt }); overheadTotal += amt; }
     }
 
-    const grossProfit = revenue - cogs;
+    const grossProfit = netRevenue - cogs;
     return {
       from: fromStr, to: toStr, days, orderCount,
-      revenue, cogs, grossProfit,
+      revenue, refundTotal, netRevenue, cogs, grossProfit,
       overheadTotal, overheadBreakdown: breakdown,
       net: grossProfit - overheadTotal,
       missingCost, // maliyeti tanımsız (COGS'a girmeyen) ürünler

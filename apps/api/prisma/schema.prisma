@@ -178,10 +178,39 @@ model Order {
   items         OrderItem[]
   notifications Notification[]
   statusHistory OrderStatusHistory[]
+  refunds       OrderRefund[]
 
   @@index([tenantId, status])
   @@index([tenantId, channel, createdAt])
   @@map("orders")
+}
+
+/// Kısmi iade: teslim edilmiş siparişte seçili kalemler için nakit (kasadan
+/// SALE_REVERSAL) ya da kupon iadesi. K-Z net ciroyu bu kayıtlardan düşer.
+/// Toplam iadeler tahsilatı aşamaz; kısmi iadesi olan sipariş tam iptal edilemez.
+model OrderRefund {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  /// İade tutarı (kuruş).
+  amount     Int
+  /// CASH (kasadan nakit) | COUPON (tek kullanımlık sabit kupon).
+  method     String
+  /// method=COUPON ise üretilen kupon kodu.
+  couponCode String?  @map("coupon_code")
+  reason     String?
+  /// Kalem dökümü: [{ itemId, productName, qty, amount }].
+  items      Json
+  /// Ürünler stoğa geri alındı mı (çürük/fire ise false).
+  restock    Boolean  @default(false)
+  createdBy  String?  @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, orderId])
+  @@index([tenantId, createdAt])
+  @@map("order_refunds")
 }
 
 /// Sipariş durumu geçmişi (Teknik §6.1 order_status_history). Her geçiş için

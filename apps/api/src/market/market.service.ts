@@ -562,6 +562,7 @@ export class MarketService {
           },
           notifications: { orderBy: { createdAt: 'asc' } },
           statusHistory: { orderBy: { createdAt: 'asc' } },
+          refunds: { orderBy: { createdAt: 'asc' } },
         },
       })
       .catch(() => null);
@@ -638,6 +639,7 @@ export class MarketService {
         },
         notifications: { orderBy: { createdAt: 'asc' } },
         statusHistory: { orderBy: { createdAt: 'asc' } },
+        refunds: { orderBy: { createdAt: 'asc' } },
       },
     });
   }
@@ -682,6 +684,13 @@ export class MarketService {
    */
   async packOrder(id: string, items: { itemId: string; pickedQty: number }[], actor?: string) {
     const order = await this.getOrder(id);
+    // Para güvenliği: tahsilat sonrası finalTotal değişemez (iade tavanı buna dayanır).
+    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
+      throw new BadRequestException('Teslim edilmiş/iptal edilmiş sipariş yeniden paketlenemez.');
+    }
+    if (order.refunds.length > 0) {
+      throw new BadRequestException('Kısmi iadesi olan sipariş yeniden paketlenemez (iade tavanı bozulur).');
+    }
     const picked = new Map(items.map((i) => [i.itemId, i.pickedQty]));
     for (const pi of items) {
       if (!order.items.some((it) => it.id === pi.itemId)) {
@@ -721,6 +730,11 @@ export class MarketService {
 
     const cancelling = status === 'CANCELLED'; // order.status !== CANCELLED garanti (yukarıda no-op)
     const wasDelivered = order.status === 'DELIVERED';
+    const refunded = order.refunds.reduce((s, r) => s + r.amount, 0);
+    if (cancelling && refunded > 0) {
+      // Çifte iade/çifte stok koruması: kısmi iade başladıysa tam iptal kapalı.
+      throw new BadRequestException('Kısmi iadesi olan sipariş iptal edilemez — kalan tutarı kısmi iadeyle geri ödeyin.');
+    }
 
     await this.prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id }, data: { status } });
@@ -889,6 +903,114 @@ export class MarketService {
     await this.prisma.orderStatusHistory.create({
       data: { tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: order.status, changedBy: actor ?? null, note: `📌 ${trimmed.slice(0, 300)}` },
     });
+    return this.getOrder(id);
+  }
+
+  /* -------------------------- Kısmi iade ----------------------------- */
+
+  /**
+   * Kalem bazlı kısmi iade (yalnız DELIVERED): seçili kalemler (kg üründe kısmi
+   * miktar olabilir) nakit (kasadan SALE_REVERSAL) ya da tek kullanımlık kuponla
+   * geri ödenir. Toplam iadeler tahsilatı aşamaz. restock=true ise ürünler stoğa
+   * döner (çürük/fire için false bırak). K-Z net ciroyu bu kayıtlardan düşer.
+   */
+  async refundOrder(
+    id: string,
+    dto: { items: { itemId: string; qty?: number }[]; method: 'CASH' | 'COUPON'; restock?: boolean; reason?: string },
+    actor?: string,
+  ) {
+    const order = await this.getOrder(id);
+    if (order.status !== 'DELIVERED') {
+      throw new BadRequestException('Kısmi iade yalnız teslim edilmiş siparişte yapılabilir (öncesinde iptal kullanın).');
+    }
+    if (!dto?.items?.length) throw new BadRequestException('En az bir kalem seçin.');
+
+    const byId = new Map(order.items.map((it) => [it.id, it]));
+    const lines = dto.items.map((sel) => {
+      const it = byId.get(sel.itemId);
+      if (!it) throw new BadRequestException(`Kalem bu siparişe ait değil: ${sel.itemId}`);
+      const fullQty = it.pickedQty ?? it.orderedQty;
+      const qty = sel.qty ?? fullQty;
+      if (!(qty > 0) || qty > fullQty + 1e-9) {
+        throw new BadRequestException(`Geçersiz iade miktarı: ${it.productName} (en fazla ${fullQty} ${it.unitLabel ?? ''})`);
+      }
+      // Satır tutarından oranla (tartı sonrası kesinleşen tutar esas alınır).
+      const amount = Math.abs(qty - fullQty) < 1e-9 ? it.lineTotal : Math.round(Number(((it.lineTotal * qty) / fullQty).toPrecision(12)));
+      return { itemId: it.id, productId: it.productId, productName: it.productName, qty, amount };
+    });
+    if (new Set(lines.map((l) => l.itemId)).size !== lines.length) {
+      throw new BadRequestException('Aynı kalem birden çok kez seçilemez.');
+    }
+
+    const total = lines.reduce((s, l) => s + l.amount, 0);
+    const paid = order.finalTotal ?? order.grandTotal;
+    if (total <= 0) throw new BadRequestException('İade tutarı 0 olamaz.');
+
+    // Çifte tazmin koruması: otomatik telafi kuponu verilmiş siparişe ikinci
+    // kupon verilmez (nakit serbest — panel notuna uyarı düşer, karar personelin).
+    const telafi = await this.prisma.supportTicket.findFirst({
+      where: { tenantId: DEV_TENANT_ID, orderCode: order.code, status: 'CLOSED', repliedBy: 'otomatik', message: { startsWith: '[SORUN' } },
+    });
+    if (telafi && dto.method === 'COUPON') {
+      throw new BadRequestException('Bu siparişe otomatik telafi kuponu zaten verilmiş — çifte kupon yerine nakit iade kullanın (ya da önce kuponu pasifleştirin).');
+    }
+
+    const reason = dto.reason?.trim().slice(0, 300) || null;
+    const couponCode = dto.method === 'COUPON' ? `IADE-${Math.random().toString(36).slice(2, 6).toUpperCase()}` : null;
+
+    const refund = await this.prisma.$transaction(async (tx) => {
+      // Tavan kontrolü ATOMİK: sipariş satırı kilitlenir (eşzamanlı iki iade
+      // birbirini göremeden tavanı aşamaz), toplam kilit altında yeniden okunur.
+      await tx.$queryRaw`SELECT id FROM orders WHERE id = ${id}::uuid FOR UPDATE`;
+      const agg = await tx.orderRefund.aggregate({ _sum: { amount: true }, where: { tenantId: DEV_TENANT_ID, orderId: id } });
+      const already = agg._sum.amount ?? 0;
+      if (already + total > paid) {
+        throw new BadRequestException(`İade toplamı tahsilatı aşamaz: ödenen ${fmtTL(paid)}, önceki iadeler ${fmtTL(already)}, istenen ${fmtTL(total)}.`);
+      }
+      const r = await tx.orderRefund.create({
+        data: {
+          tenantId: DEV_TENANT_ID, orderId: id, amount: total, method: dto.method,
+          couponCode, reason, restock: !!dto.restock, createdBy: actor ?? null,
+          items: lines.map(({ itemId, productName, qty, amount }) => ({ itemId, productName, qty, amount })),
+        },
+      });
+      if (couponCode) {
+        await tx.coupon.create({ data: { tenantId: DEV_TENANT_ID, code: couponCode, type: 'FIXED', value: total, minSubtotal: 0, maxUses: 1 } });
+      }
+      if (dto.restock) {
+        const prods = await tx.product.findMany({
+          where: { id: { in: lines.map((l) => l.productId) } },
+          include: { components: { include: { component: { select: { id: true, stockQty: true } } } } },
+        });
+        const prodById = new Map(prods.map((p) => [p.id, p]));
+        for (const l of lines) {
+          const p = prodById.get(l.productId);
+          if (p) await this.adjustStock(tx, p, l.qty, 1, order.code, 'REFUND');
+        }
+      }
+      const summary = lines.map((l) => `${l.productName} ${l.qty}`).join(', ');
+      await tx.orderStatusHistory.create({
+        data: {
+          tenantId: DEV_TENANT_ID, orderId: id, fromStatus: order.status, toStatus: order.status, changedBy: actor ?? null,
+          note: `↩ Kısmi iade ${fmtTL(total)} (${dto.method === 'CASH' ? 'nakit' : `kupon ${couponCode}`}) — ${summary}${reason ? ` · ${reason}` : ''}${telafi ? ' · ⚠ bu siparişe telafi kuponu da verilmişti' : ''}`,
+        },
+      });
+      await tx.notification.create({
+        data: {
+          tenantId: DEV_TENANT_ID, orderId: id,
+          message: dto.method === 'CASH'
+            ? `${fmtTL(total)} iade edildi (nakit). Özür dileriz, afiyet olsun!`
+            : `${fmtTL(total)} değerinde iade kuponunuz: ${couponCode} — bir sonraki siparişinizde kullanın.`,
+        },
+      });
+      return r;
+    });
+    // Nakit iade kasadan düşer (kasa kapalıysa askıda bekler); kupon kasaya dokunmaz.
+    if (dto.method === 'CASH') await this.cash.recordRefund(refund.id, total, order.code);
+    await this.emailCustomer(id, order.customerEmail, `İade işlendi (${order.code})`,
+      dto.method === 'CASH'
+        ? `${fmtTL(total)} tutarındaki iadeniz nakit olarak işlendi.`
+        : `${fmtTL(total)} değerinde tek kullanımlık iade kuponunuz: ${couponCode}`);
     return this.getOrder(id);
   }
 

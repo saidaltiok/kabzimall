@@ -163,6 +163,11 @@ export class CashService {
     return this.recordAuto('OUT', 'SALE_REVERSAL', amount, orderCode, 'Teslim sonrası iptal — tahsilat iadesi (otomatik)');
   }
 
+  /** Kısmi iade → tahsilattan geri ÇIKIŞ (iade kaydı başına bir kez; refCode = IADE:{refundId}). */
+  recordRefund(refundId: string, amount: number, orderCode: string) {
+    return this.recordAuto('OUT', 'SALE_REVERSAL', amount, `IADE:${refundId}`, `Kısmi iade ${orderCode} (otomatik)`);
+  }
+
   /** Hal alımı → ÇIKIŞ. */
   recordHalPurchase(purchaseId: string, totalPaid: number, slug?: string | null) {
     return this.recordAuto('OUT', 'HAL_PURCHASE', totalPaid, `HAL:${purchaseId}`, `Hal alımı${slug ? ` (${slug})` : ''} (otomatik)`);

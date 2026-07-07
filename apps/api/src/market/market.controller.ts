@@ -14,6 +14,7 @@ import { PackOrderDto } from './dto/pack-order.dto';
 import { UpdateStoreSettingsDto } from './dto/store-settings.dto';
 import { SlotChangeRequestDto, SlotChangeDecisionDto } from './dto/slot-change.dto';
 import { PosSaleDto } from './dto/pos-sale.dto';
+import { RefundOrderDto } from './dto/refund-order.dto';
 import { RequestOtpDto, VerifyOtpDto } from './dto/customer-auth.dto';
 
 @ApiTags('market: vitrin (public)')
@@ -235,6 +236,14 @@ export class AdminOrdersController {
   @ApiBody({ schema: { example: { items: [{ itemId: '<kalem-uuid>', pickedQty: 1.85 }] } } })
   pack(@Param('id') id: string, @Body() dto: PackOrderDto, @CurrentUser() user: JwtUser) {
     return this.service.packOrder(id, dto.items, user.email);
+  }
+
+  /** POST /admin/orders/:id/refund — kalem bazlı kısmi iade (nakit ya da kupon; ops. stok geri). */
+  @Post(':id/refund')
+  @Roles(...ORDER_WRITERS)
+  @ApiBody({ schema: { example: { items: [{ itemId: '<kalem-uuid>', qty: 0.5 }], method: 'CASH', restock: false, reason: 'ezik çilek' } } })
+  refund(@Param('id') id: string, @Body() dto: RefundOrderDto, @CurrentUser() user: JwtUser) {
+    return this.service.refundOrder(id, dto, user?.email);
   }
 
   /** POST /admin/orders/:id/slot-change { approve } — bekleyen saat talebini onayla/reddet; müşteri bilgilendirilir. */
