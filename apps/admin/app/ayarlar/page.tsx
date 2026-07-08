@@ -8,7 +8,7 @@ import SectionTabs, { SETTINGS_TABS } from '@/components/SectionTabs';
 import { tlToKurus } from '@/lib/money';
 
 interface Tier { minSubtotal: number; fee: number }
-interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; deliveryWindows: string[]; slotCapacity: number | null; depotLat: number | null; depotLng: number | null; contactPhone: string | null; contactWhatsapp: string | null; contactEmail: string | null; contactAddress: string | null; contactInstagram: string | null }
+interface Settings { minOrderTotal: number; deliveryTiers: Tier[]; deliveryWindows: string[]; slotCapacity: number | null; requireGeo: boolean; depotLat: number | null; depotLng: number | null; contactPhone: string | null; contactWhatsapp: string | null; contactEmail: string | null; contactAddress: string | null; contactInstagram: string | null }
 
 const toTl = (k: number) => (k ? (k / 100).toFixed(2) : '');
 const toKurus = (v: string) => tlToKurus(v) ?? 0;
@@ -26,6 +26,7 @@ export default function AyarlarPage() {
   const [cInstagram, setCInstagram] = useState('');
   const [windowsText, setWindowsText] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [requireGeo, setRequireGeo] = useState(true);
   const [rows, setRows] = useState<TierRow[]>([]);
   const [saved, setSaved] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,6 +42,7 @@ export default function AyarlarPage() {
     setCAddress(s.contactAddress ?? ''); setCInstagram(s.contactInstagram ?? '');
     setWindowsText((s.deliveryWindows ?? []).join('\n'));
     setCapacity(s.slotCapacity != null ? String(s.slotCapacity) : '');
+    setRequireGeo(s.requireGeo);
     setRows(s.deliveryTiers.map((t) => ({ minTl: toTl(t.minSubtotal), feeTl: t.fee ? toTl(t.fee) : '0' })));
   }
 
@@ -62,7 +64,7 @@ export default function AyarlarPage() {
         .map((r) => ({ minSubtotal: toKurus(r.minTl), fee: toKurus(r.feeTl) }));
       const dLat = depotLat.trim() === '' ? null : parseFloat(depotLat.replace(',', '.'));
       const dLng = depotLng.trim() === '' ? null : parseFloat(depotLng.replace(',', '.'));
-      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers, depotLat: dLat, depotLng: dLng, contactPhone: cPhone.trim() || null, contactWhatsapp: cWhatsapp.trim() || null, contactEmail: cEmail.trim() || null, contactAddress: cAddress.trim() || null, contactInstagram: cInstagram.trim() || null, deliveryWindows: windowsText.split(/\n+/).map((w) => w.trim()).filter(Boolean), slotCapacity: capacity.trim() === '' ? null : parseInt(capacity, 10) });
+      const r = await apiSend<Settings>('PUT', '/admin/settings', { minOrderTotal: toKurus(minTl), deliveryTiers, depotLat: dLat, depotLng: dLng, contactPhone: cPhone.trim() || null, contactWhatsapp: cWhatsapp.trim() || null, contactEmail: cEmail.trim() || null, contactAddress: cAddress.trim() || null, contactInstagram: cInstagram.trim() || null, deliveryWindows: windowsText.split(/\n+/).map((w) => w.trim()).filter(Boolean), slotCapacity: capacity.trim() === '' ? null : parseInt(capacity, 10), requireGeo });
       apply(r);
       setOk('✓ Mağaza ayarları kaydedildi.');
     } catch (e) {
@@ -126,6 +128,17 @@ export default function AyarlarPage() {
             <input value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="15" style={{ width: 90 }} />
             <p className="note2" style={{ margin: '4px 0 0' }}>Bir pencere bu sayıya ulaşınca müşteriye kapanır; azalanlarda &quot;son X yer&quot; görünür.</p>
           </div>
+        </div>
+
+        <div className="card" style={{ maxWidth: 420 }}>
+          <div className="ct">Teslimat konumu</div>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', fontSize: 13.5 }}>
+            <input type="checkbox" checked={requireGeo} onChange={(e) => setRequireGeo(e.target.checked)} style={{ marginTop: 2 }} />
+            <span>
+              <b>Haritadan konum seçimi zorunlu</b>
+              <p className="note2" style={{ margin: '4px 0 0' }}>Açıkken müşteri, sipariş verirken haritadan teslimat noktasını işaretlemek zorundadır — kurye adresi kesin bulur, dağıtım rotasına girer. Kapatırsanız konum isteğe bağlı olur.</p>
+            </span>
+          </label>
         </div>
 
         <div className="card" style={{ maxWidth: 520 }}>

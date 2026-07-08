@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { apiGet, apiPost, customerSession, savedCoupon, clearCoupon } from '@/lib/api';
+import { apiGet, apiPost, customerSession, savedCoupon, clearCoupon, listAddresses, createAddress, type SavedAddress } from '@/lib/api';
 
 // Harita yalnızca istemcide (leaflet SSR'a girmez).
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
@@ -61,14 +61,38 @@ export default function CheckoutPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false); // sipariş onay modalı
+  // Giriş yapan müşterinin kayıtlı adresleri (tek dokunuşla doldur).
+  const [session, setSession] = useState<{ token: string; email: string } | null>(null);
+  const [savedAddrs, setSavedAddrs] = useState<SavedAddress[]>([]);
+  const [pickedAddrId, setPickedAddrId] = useState<string | null>(null);
+  const [saveAddr, setSaveAddr] = useState(false); // "bu adresi kaydet"
   /** Alanlara dokunulunca hata gösterilir (baştan kırmızı olmasın). */
   const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
   const touch = (f: string) => setTouched((t) => ({ ...t, [f]: true }));
 
+  /** Bir kayıtlı adresi forma uygula (tek dokunuş). */
+  function applyAddress(a: SavedAddress) {
+    setPickedAddrId(a.id);
+    setName(a.name);
+    setPhone(a.phone);
+    setAddress(a.addressText);
+    setDistrict(a.district ?? '');
+    setGeo({ lat: a.lat, lng: a.lng });
+  }
+
   useEffect(() => {
     // Girişli müşterinin doğrulanmış e-postasını önden doldur (değiştirilebilir).
     const s = customerSession();
-    if (s) setEmail((cur) => cur || s.email);
+    if (s) {
+      setSession(s);
+      setEmail((cur) => cur || s.email);
+      // Kayıtlı adresleri getir; varsayılan varsa formu önden doldur.
+      listAddresses(s.token).then((list) => {
+        setSavedAddrs(list);
+        const def = list.find((a) => a.isDefault) ?? list[0];
+        if (def) applyAddress(def);
+      }).catch(() => {});
+    }
     apiGet<{ data: Slot[] }>('/storefront/slots').then((r) => setSlots(r.data)).catch(() => {});
     apiGet<{ data: { name: string }[] }>('/storefront/zones').then((r) => setZones(r.data.map((z) => z.name))).catch(() => {});
     apiGet<StoreSettings>('/storefront/settings').then(setSettings).catch(() => {});
@@ -124,6 +148,13 @@ export default function CheckoutPage() {
       });
       clearCoupon();
       rememberOrder(order.id, order.code);
+      // Girişli müşteri "bu adresi kaydet" dediyse Adreslerim'e ekle (akışı bloklamaz).
+      if (session && saveAddr && geo && !pickedAddrId) {
+        await createAddress(session.token, {
+          label: 'Adresim', name, phone, addressText: address,
+          district: district || null, lat: geo.lat, lng: geo.lng,
+        }).catch(() => {});
+      }
       clear();
       router.push(`/siparis/${order.id}`);
     } catch (e) {
@@ -141,7 +172,8 @@ export default function CheckoutPage() {
   const phoneOk = isPhone(phone);
   const addressOk = address.trim().length >= 5;
   const emailOk = email.trim() === '' || isEmail(email);
-  const valid = nameOk && phoneOk && addressOk && emailOk && !!slotKey && (zones.length === 0 || !!district) && !belowMin && consent;
+  const geoOk = settings.requireGeo === false || !!geo; // harita konumu zorunlu (mağaza ayarı; varsayılan açık)
+  const valid = nameOk && phoneOk && addressOk && emailOk && geoOk && !!slotKey && (zones.length === 0 || !!district) && !belowMin && consent;
   const errStyle = { color: 'var(--berry, #b3261e)', fontSize: 12, marginTop: 4 } as const;
 
   return (
@@ -151,6 +183,27 @@ export default function CheckoutPage() {
         <div>
           <div className="block">
             <h3>Teslimat bilgileri</h3>
+            {session && savedAddrs.length > 0 && (
+              <div className="field">
+                <label>Kayıtlı adreslerim</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {savedAddrs.map((a) => (
+                    <button
+                      key={a.id} type="button" onClick={() => applyAddress(a)}
+                      style={{
+                        border: `1.5px solid ${pickedAddrId === a.id ? 'var(--forest)' : 'var(--line)'}`,
+                        background: pickedAddrId === a.id ? 'var(--forest)' : '#fff', color: pickedAddrId === a.id ? '#fff' : 'inherit',
+                        borderRadius: 12, padding: '8px 12px', fontSize: 12.5, cursor: 'pointer', textAlign: 'left',
+                      }}
+                      title={a.addressText}
+                    >
+                      {pickedAddrId === a.id ? '✓ ' : '📍 '}<b>{a.label}</b>{a.isDefault ? ' ·varsayılan' : ''}
+                    </button>
+                  ))}
+                  <Link href="/adreslerim" className="back" style={{ alignSelf: 'center', fontSize: 12.5 }}>+ Yönet</Link>
+                </div>
+              </div>
+            )}
             <div className="field">
               <label>Ad Soyad</label>
               <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => touch('name')} placeholder="Ayşe Yılmaz" aria-invalid={touched.name && !nameOk} />
@@ -186,8 +239,15 @@ export default function CheckoutPage() {
               {touched.address && !addressOk && <div style={errStyle}>Kuryenin bulabilmesi için açık adres girin (mahalle, cadde, no).</div>}
             </div>
             <div className="field">
-              <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : <span className="muted">(kuryenin sizi kolay bulması için)</span>}</label>
-              <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => setGeo({ lat, lng })} onGeolocate={(lat, lng) => setGeoSelf({ lat, lng })} />
+              <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : settings.requireGeo === false ? <span className="muted">(kuryenin sizi kolay bulması için)</span> : <span style={{ color: 'var(--berry, #b3261e)' }}>* zorunlu — kuryenin sizi bulması için</span>}</label>
+              <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => { setGeo({ lat, lng }); setPickedAddrId(null); }} onGeolocate={(lat, lng) => setGeoSelf({ lat, lng })} />
+              {settings.requireGeo !== false && (touched.name || touched.phone || touched.address) && !geo && <div style={errStyle}>Kuryenin sizi bulabilmesi için haritadan konumunuzu işaretleyin.</div>}
+              {session && geo && !pickedAddrId && (
+                <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12.5, marginTop: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={saveAddr} onChange={(e) => setSaveAddr(e.target.checked)} />
+                  Bu adresi <b>Adreslerim</b>&apos;e kaydet (sonraki siparişlerde hızlı seç)
+                </label>
+              )}
             </div>
             <div className="field">
               <label>Sipariş notu (opsiyonel)</label>
@@ -279,7 +339,7 @@ export default function CheckoutPage() {
             {busy ? 'Gönderiliyor…' : 'Siparişi onayla'}
           </button>
           {belowMin && <p className="note" style={{ color: 'var(--honey)' }}>Asgari sipariş tutarı {tl(minOrderTotal)}. Sepete {tl(minOrderTotal - subtotal)} daha ekleyin.</p>}
-          {!valid && !belowMin && <p className="note">Ad, telefon, adresi doldurun; teslimat saatini seçin ve sözleşmeyi onaylayın.</p>}
+          {!valid && !belowMin && <p className="note">Ad, telefon, adresi doldurun; <b>haritadan konumu işaretleyin</b>; teslimat saatini seçin ve sözleşmeyi onaylayın.</p>}
           <TrustBadges compact />
         </div>
       </div>

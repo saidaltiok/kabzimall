@@ -55,6 +55,7 @@ export default function Header() {
         </nav>
 
         <div className="spacer" />
+        {email && <Link href="/adreslerim" className="hdr-orders" title="Kayıtlı teslimat adreslerin">📍 Adreslerim</Link>}
         <Link href="/siparislerim" className="hdr-orders" title={email ? `${email} — siparişlerin ve çıkış` : 'E-postana gelen kodla giriş yap'}>
           {email ? <>👤 {shortName} · Siparişlerim</> : <>Giriş yap · Siparişlerim</>}
         </Link>
@@ -77,6 +78,7 @@ export default function Header() {
           {NAV.map(([href, label]) => (
             <Link key={href} href={href}>{label}</Link>
           ))}
+          {email && <Link href="/adreslerim">📍 Adreslerim</Link>}
           <Link href="/siparislerim">{email ? `👤 ${shortName} · Siparişlerim` : 'Giriş yap · Siparişlerim'}</Link>
         </nav>
       )}

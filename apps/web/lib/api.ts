@@ -49,12 +49,45 @@ export function clearCustomerSession() {
   window.dispatchEvent(new Event('km-session'));
 }
 
-export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
+export async function apiPost<T = unknown>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
   return handle(
     await fetch(`${API_BASE}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(body),
     }),
   );
 }
+
+export async function apiPatch<T = unknown>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+  return handle(
+    await fetch(`${API_BASE}${path}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function apiDelete<T = unknown>(path: string, headers?: Record<string, string>): Promise<T> {
+  return handle(await fetch(`${API_BASE}${path}`, { method: 'DELETE', headers }));
+}
+
+/* ---------------- Adreslerim (giriş gerektirir) ---------------- */
+
+export interface SavedAddress {
+  id: string; label: string; name: string; phone: string;
+  addressText: string; district: string | null; lat: number; lng: number; isDefault: boolean;
+}
+export type AddressInput = Omit<SavedAddress, 'id' | 'isDefault'> & { isDefault?: boolean };
+
+const authHeader = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+export const listAddresses = (token: string) =>
+  apiGet<{ data: SavedAddress[] }>('/storefront/addresses', authHeader(token)).then((r) => r.data);
+export const createAddress = (token: string, body: AddressInput) =>
+  apiPost<SavedAddress>('/storefront/addresses', body, authHeader(token));
+export const updateAddress = (token: string, id: string, body: Partial<AddressInput>) =>
+  apiPatch<SavedAddress>(`/storefront/addresses/${id}`, body, authHeader(token));
+export const deleteAddress = (token: string, id: string) =>
+  apiDelete(`/storefront/addresses/${id}`, authHeader(token));

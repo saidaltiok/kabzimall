@@ -8,6 +8,8 @@ export interface DeliveryTier {
 export interface StoreSettings {
   minOrderTotal: number;
   deliveryTiers: DeliveryTier[];
+  /** Sipariş için haritadan konum seçimi zorunlu mu (sunucu ayarı). */
+  requireGeo?: boolean;
 }
 
 export const DEFAULT_SETTINGS: StoreSettings = {
@@ -16,6 +18,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     { minSubtotal: 0, fee: 4990 },
     { minSubtotal: 40000, fee: 0 },
   ],
+  requireGeo: true,
 };
 
 const sorted = (tiers: DeliveryTier[]) => [...tiers].sort((a, b) => a.minSubtotal - b.minSubtotal);
