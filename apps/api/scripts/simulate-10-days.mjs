@@ -184,19 +184,17 @@ async function main() {
       else if (d <= 7 && chance(0.15)) couponCode = 'SEBZE10';
 
       const saat = ri(9, 18);
+      // Kadıköy çevresine dağılmış gerçekçi teslimat noktası (harita konumu zorunlu).
+      const geo = { lat: 40.985 + (rnd() - 0.5) * 0.05, lng: 29.03 + (rnd() - 0.5) * 0.05 };
+      const cust = { name: mus.name, phone: mus.phone, email: mus.email ?? undefined, address: mus.addr, district: 'Kadıköy', lat: geo.lat, lng: geo.lng };
       let o;
       try {
         o = await api('POST', '/storefront/orders', {
-          items,
-          customer: { name: mus.name, phone: mus.phone, email: mus.email ?? undefined, address: mus.addr, district: 'Kadıköy' },
-          note: pick(NOTES) ?? undefined,
-          couponCode,
+          items, customer: cust, note: pick(NOTES) ?? undefined, couponCode,
         });
       } catch (e) {
         if (couponCode) { // kupon tükenmiş olabilir — kuponsuz tekrar dene
-          o = await api('POST', '/storefront/orders', {
-            items, customer: { name: mus.name, phone: mus.phone, email: mus.email ?? undefined, address: mus.addr, district: 'Kadıköy' },
-          }).catch(() => null);
+          o = await api('POST', '/storefront/orders', { items, customer: cust }).catch(() => null);
         }
         if (!o) { console.log(`  ! sipariş: ${e.message}`); continue; }
       }

@@ -66,6 +66,17 @@ export async function resetDb(app: INestApplication): Promise<void> {
   await prisma.markdownRule.deleteMany();
   await prisma.cashMovement.deleteMany();
   await prisma.registerSession.deleteMany();
+  await prisma.customerAddress.deleteMany();
+  // Testler harita konumu göndermeden sipariş verir → geo zorunluluğunu KAPAT
+  // (varsayılanı korurken davranışı bozmadan). Kuralı doğrulayan test bunu açar.
+  await prisma.storeSetting.create({
+    data: {
+      tenantId: DEV_TENANT_ID,
+      minOrderTotal: 0,
+      deliveryTiers: [{ minSubtotal: 0, fee: 4990 }, { minSubtotal: 40000, fee: 0 }],
+      requireGeo: false,
+    },
+  });
 }
 
 /** Geçerli bir JWT üretir (DB kullanıcısı gerekmez — guard stateless). */

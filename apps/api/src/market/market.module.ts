@@ -10,6 +10,7 @@ import { CouponService } from './coupon.service';
 import { BannerService } from './banner.service';
 import { SupportService } from './support.service';
 import { CustomersService } from './customers.service';
+import { AddressService } from './address.service';
 import { StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController, AdminCouponsController, AdminBannersController, AdminSupportController, AdminCustomersController, AdminPosController } from './market.controller';
 
 /**
@@ -19,6 +20,6 @@ import { StorefrontController, AdminOrdersController, DeliveryZonesController, A
 @Module({
   imports: [JwtModule.register({ secret: JWT_SECRET }), CashModule], // OTP imzası + kasa hook'u (teslimat tahsilatı)
   controllers: [StorefrontController, AdminOrdersController, DeliveryZonesController, AdminSettingsController, AdminCouponsController, AdminBannersController, AdminSupportController, AdminCustomersController, AdminPosController],
-  providers: [MarketService, MailService, CustomerAuthService, CouponService, BannerService, SupportService, CustomersService, CostComponentsService],
+  providers: [MarketService, MailService, CustomerAuthService, CouponService, BannerService, SupportService, CustomersService, AddressService, CostComponentsService],
 })
 export class MarketModule {}

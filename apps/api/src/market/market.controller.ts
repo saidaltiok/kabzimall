@@ -16,6 +16,8 @@ import { SlotChangeRequestDto, SlotChangeDecisionDto } from './dto/slot-change.d
 import { PosSaleDto } from './dto/pos-sale.dto';
 import { RefundOrderDto } from './dto/refund-order.dto';
 import { RequestOtpDto, VerifyOtpDto } from './dto/customer-auth.dto';
+import { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
+import { AddressService } from './address.service';
 
 @ApiTags('market: vitrin (public)')
 @Public()
@@ -27,6 +29,7 @@ export class StorefrontController {
     private readonly coupons: CouponService,
     private readonly banners: BannerService,
     private readonly supportService: SupportService,
+    private readonly addresses: AddressService,
   ) {}
 
   /** GET /storefront/banners — aktif vitrin duyuruları (sortOrder sırasıyla). */
@@ -76,6 +79,38 @@ export class StorefrontController {
     const email = this.customerAuth.emailFromAuthHeader(auth);
     const data = (await this.service.myOrders(email)).map((o) => this.service.sanitizeForCustomer(o));
     return { email, data, meta: { total: data.length } };
+  }
+
+  /* -------------------------- Adreslerim -------------------------- */
+
+  /** GET /storefront/addresses — giriş yapan müşterinin kayıtlı adresleri. */
+  @Get('addresses')
+  async listAddresses(@Headers('authorization') auth?: string) {
+    const email = this.customerAuth.emailFromAuthHeader(auth);
+    const data = await this.addresses.list(email);
+    return { data, meta: { total: data.length } };
+  }
+
+  /** POST /storefront/addresses — yeni adres (harita konumu zorunlu). */
+  @Post('addresses')
+  @ApiBody({ schema: { example: { label: 'Ev', name: 'Ayşe Yılmaz', phone: '0555 555 55 55', addressText: 'Moda Cad. 41/3', district: 'Kadıköy', lat: 40.987, lng: 29.026, isDefault: true } } })
+  createAddress(@Body() dto: CreateAddressDto, @Headers('authorization') auth?: string) {
+    const email = this.customerAuth.emailFromAuthHeader(auth);
+    return this.addresses.create(email, dto);
+  }
+
+  /** PATCH /storefront/addresses/:id — adresi güncelle. */
+  @Patch('addresses/:id')
+  updateAddress(@Param('id') id: string, @Body() dto: UpdateAddressDto, @Headers('authorization') auth?: string) {
+    const email = this.customerAuth.emailFromAuthHeader(auth);
+    return this.addresses.update(email, id, dto);
+  }
+
+  /** DELETE /storefront/addresses/:id — adresi sil. */
+  @Delete('addresses/:id')
+  removeAddress(@Param('id') id: string, @Headers('authorization') auth?: string) {
+    const email = this.customerAuth.emailFromAuthHeader(auth);
+    return this.addresses.remove(email, id);
   }
 
   @Get('categories')

@@ -200,6 +200,7 @@ export class MarketService {
       deliveryTiers: this.normalizeTiers(s?.deliveryTiers),
       deliveryWindows: this.normalizeWindows(s?.deliveryWindows),
       slotCapacity: s?.slotCapacity ?? null,
+      requireGeo: s?.requireGeo ?? true,
       depotLat: s?.depotLat ?? null,
       depotLng: s?.depotLng ?? null,
       contactPhone: s?.contactPhone ?? null,
@@ -211,13 +212,14 @@ export class MarketService {
   }
 
   /** Verilen alanları günceller; verilmeyenler korunur. */
-  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; deliveryWindows?: string[]; slotCapacity?: number | null; depotLat?: number | null; depotLng?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; contactEmail?: string | null; contactAddress?: string | null; contactInstagram?: string | null }) {
+  async updateStoreSettings(patch: { minOrderTotal?: number; deliveryTiers?: DeliveryTier[]; deliveryWindows?: string[]; slotCapacity?: number | null; requireGeo?: boolean; depotLat?: number | null; depotLng?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; contactEmail?: string | null; contactAddress?: string | null; contactInstagram?: string | null }) {
     const cur = await this.getStoreSettings();
     const next = {
       minOrderTotal: patch.minOrderTotal ?? cur.minOrderTotal,
       deliveryTiers: patch.deliveryTiers ? this.normalizeTiers(patch.deliveryTiers) : cur.deliveryTiers,
       deliveryWindows: patch.deliveryWindows ? this.normalizeWindows(patch.deliveryWindows) : cur.deliveryWindows,
       slotCapacity: patch.slotCapacity !== undefined ? patch.slotCapacity : cur.slotCapacity,
+      requireGeo: patch.requireGeo !== undefined ? patch.requireGeo : cur.requireGeo,
       depotLat: patch.depotLat !== undefined ? patch.depotLat : cur.depotLat,
       depotLng: patch.depotLng !== undefined ? patch.depotLng : cur.depotLng,
       contactPhone: patch.contactPhone !== undefined ? patch.contactPhone : cur.contactPhone,
@@ -229,10 +231,10 @@ export class MarketService {
     const tiersJson = next.deliveryTiers as unknown as Prisma.InputJsonValue;
     const s = await this.prisma.storeSetting.upsert({
       where: { tenantId: DEV_TENANT_ID },
-      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, slotCapacity: next.slotCapacity, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
-      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, slotCapacity: next.slotCapacity, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
+      create: { tenantId: DEV_TENANT_ID, minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, slotCapacity: next.slotCapacity, requireGeo: next.requireGeo, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
+      update: { minOrderTotal: next.minOrderTotal, deliveryTiers: tiersJson, deliveryWindows: next.deliveryWindows, slotCapacity: next.slotCapacity, requireGeo: next.requireGeo, depotLat: next.depotLat, depotLng: next.depotLng, contactPhone: next.contactPhone, contactWhatsapp: next.contactWhatsapp, contactEmail: next.contactEmail, contactAddress: next.contactAddress, contactInstagram: next.contactInstagram },
     });
-    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), deliveryWindows: this.normalizeWindows(s.deliveryWindows), slotCapacity: s.slotCapacity, depotLat: s.depotLat, depotLng: s.depotLng, contactPhone: s.contactPhone, contactWhatsapp: s.contactWhatsapp, contactEmail: s.contactEmail, contactAddress: s.contactAddress, contactInstagram: s.contactInstagram };
+    return { minOrderTotal: s.minOrderTotal, deliveryTiers: this.normalizeTiers(s.deliveryTiers), deliveryWindows: this.normalizeWindows(s.deliveryWindows), slotCapacity: s.slotCapacity, requireGeo: s.requireGeo, depotLat: s.depotLat, depotLng: s.depotLng, contactPhone: s.contactPhone, contactWhatsapp: s.contactWhatsapp, contactEmail: s.contactEmail, contactAddress: s.contactAddress, contactInstagram: s.contactInstagram };
   }
 
   /**
@@ -445,6 +447,10 @@ export class MarketService {
     const settings = await this.getStoreSettings();
     if (settings.minOrderTotal > 0 && subtotal < settings.minOrderTotal) {
       throw new BadRequestException(`Asgari sipariş tutarı ${fmtTL(settings.minOrderTotal)}. Sepet ara toplamı: ${fmtTL(subtotal)}.`);
+    }
+    // Harita konumu zorunluysa (kurye adresi kesin bulsun): lat/lng gelmeli.
+    if (settings.requireGeo && (dto.customer.lat == null || dto.customer.lng == null)) {
+      throw new BadRequestException('Teslimat konumunu haritadan işaretleyin — kuryenin sizi bulması için gerekli.');
     }
 
     const fee = deliveryFee(subtotal, settings.deliveryTiers); // eşik indirim ÖNCESİ ara toplama göre (müşteri lehine)

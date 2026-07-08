@@ -117,6 +117,8 @@ model StoreSetting {
   deliveryWindows Json?  @map("delivery_windows")
   /// Teslimat penceresi başına azami sipariş (null = sınırsız). Dolan pencere satışa kapanır.
   slotCapacity  Int?     @map("slot_capacity")
+  /// Siparişte haritadan konum seçimi zorunlu mu (kuryenin adresi kesin bulması için).
+  requireGeo    Boolean  @default(true) @map("require_geo")
   /// Dükkân/depo başlangıç noktası — rota optimizasyonu buradan başlar/biter.
   depotLat      Float?   @map("depot_lat")
   depotLng      Float?   @map("depot_lng")
@@ -343,6 +345,32 @@ model CustomerOtp {
 
   @@index([tenantId, email])
   @@map("customer_otps")
+}
+
+/// Müşterinin kayıtlı teslimat adresi ("Adreslerim"). Kimlik e-posta bazlı
+/// (ayrı müşteri tablosu yok — OTP ile doğrulanan e-posta anahtardır).
+/// Harita konumu (lat/lng) zorunludur: kurye adresi kesin bulur, rotaya girer.
+model CustomerAddress {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  /// Sahibi — doğrulanmış müşteri e-postası (küçük harfe indirgenmiş).
+  email       String
+  /// Kısa etiket: "Ev", "İş", "Annem" gibi.
+  label       String
+  /// Teslimat alıcısı ad-soyad + telefon (adres başka birine de ait olabilir).
+  name        String
+  phone       String
+  addressText String   @map("address_text")
+  district    String?
+  lat         Float
+  lng         Float
+  /// Varsayılan adres (checkout'ta önden seçili gelir; e-posta başına tek true).
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([tenantId, email])
+  @@map("customer_addresses")
 }
 
 model Notification {

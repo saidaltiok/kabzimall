@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 
 export class DeliveryTierDto {
   /** Bu ara toplam ve üstüne uygulanan ücret (kuruş). */
@@ -28,6 +28,10 @@ export class UpdateStoreSettingsDto {
   /** Teslimat penceresi başına azami sipariş (null = sınırsız). Dolan pencere satışa kapanır. */
   @IsOptional() @ValidateIf((o: UpdateStoreSettingsDto) => o.slotCapacity !== null) @IsInt() @Min(1) @Max(500)
   slotCapacity?: number | null;
+
+  /** Siparişte haritadan konum seçimi zorunlu mu. */
+  @IsOptional() @IsBoolean()
+  requireGeo?: boolean;
 
   /** Dükkân/depo başlangıç noktası (rota optimizasyonu). */
   @IsOptional() @IsNumber() @Min(-90) @Max(90)
