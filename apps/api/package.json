@@ -14,7 +14,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
-    "db:seed": "node prisma/seed.mjs"
+    "db:seed": "node prisma/seed.mjs",
+    "sim:10gun": "node scripts/simulate-10-days.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
