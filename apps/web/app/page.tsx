@@ -205,20 +205,24 @@ export default function HomePage() {
                 {baskets.map((b) => {
                   const discounted = b.discountedPrice != null && b.discountedPrice > 0 && b.discountedPrice < b.basePrice;
                   return (
-                    <div className="prod" key={b.slug} style={{ display: 'flex', flexDirection: 'column' }}>
-                      {discounted && <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{Math.round((1 - b.price / b.basePrice) * 100)} İNDİRİM</span>}
+                    <div className="prod" key={b.slug}>
+                      {discounted && <span className="pill disc">%{Math.round((1 - b.price / b.basePrice) * 100)} İNDİRİM</span>}
                       <div className="ph">
                         {b.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={b.imageUrl} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                          <img src={b.imageUrl} alt={b.name} loading="lazy" />
                         ) : '🧺'}
                       </div>
                       <div className="nm">{b.name}</div>
-                      <div className="pr">
-                        {tl(b.price)} {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.basePrice)}</s>}
+                      <div className="or">{b.components.length} çeşit ürün</div>
+                      <div className="foot">
+                        <div>
+                          <div className="pr">{tl(b.price)} <span className="unit">/paket</span></div>
+                          {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(b.basePrice)}</s>}
+                        </div>
+                        <button className="add" onClick={() => addBasket(b)} aria-label="Sepete ekle">+</button>
                       </div>
                       {inCart(b.slug) > 0 && <div className="incart">🛒 {inCart(b.slug)} paket sepette</div>}
-                      <button className="cta" style={{ marginTop: 8, padding: 10, fontSize: 13 }} onClick={() => addBasket(b)}>Sepete ekle</button>
                     </div>
                   );
                 })}

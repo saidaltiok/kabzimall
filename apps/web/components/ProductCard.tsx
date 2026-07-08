@@ -40,9 +40,9 @@ export default function ProductCard({ product: p, onAdded }: { product: CardProd
   return (
     <div className="prod" style={soldOut ? { opacity: 0.6 } : undefined}>
       {soldOut ? (
-        <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: '#eee', color: 'var(--muted)' }}>TÜKENDİ</span>
+        <span className="pill out">TÜKENDİ</span>
       ) : discounted ? (
-        <span className="pill" style={{ position: 'absolute', top: 16, left: 16, background: 'var(--persimmon)', color: '#fff' }}>%{discPct} İNDİRİM</span>
+        <span className="pill disc">%{discPct} İNDİRİM</span>
       ) : p.freshToday ? (
         <span className="pill fresh" title="Son 24 saatte halden alındı">🌿 BUGÜN HALDEN</span>
       ) : p.isFreshDaily ? (
@@ -51,24 +51,28 @@ export default function ProductCard({ product: p, onAdded }: { product: CardProd
         <span className="pill local">YÖRESEL</span>
       ) : null}
       <button className="fav" onClick={() => toggle(p.slug)} aria-label={isFav(p.slug) ? 'Favorilerden çıkar' : 'Favorilere ekle'}>{isFav(p.slug) ? '❤️' : '🤍'}</button>
-      {!soldOut && <button className="add" onClick={addToCart} aria-label="Sepete ekle">+</button>}
       <Link href={`/urun/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
         <div className="ph">
           {p.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+            <img src={p.imageUrl} alt={p.name} loading="lazy" />
           ) : (
             emojiFor(p.slug, p.category?.slug)
           )}
         </div>
         <div className="nm">{p.name}</div>
-        <div className="or">{p.originRegion ?? ' '}</div>
-        <div className="pr">
-          {tl(eff)} {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>}
-        </div>
-        <div className="unit">/ {p.unitLabel ?? 'birim'}</div>
-        {cartLabel && <div className="incart">{cartLabel}</div>}
+        <div className="or">{p.originRegion ?? p.category?.name ?? ''}</div>
       </Link>
+      <div className="foot">
+        <div>
+          <div className="pr">
+            {tl(eff)} <span className="unit">/{p.unitLabel ?? 'birim'}</span>
+          </div>
+          {discounted && <s style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{tl(p.basePrice)}</s>}
+        </div>
+        {!soldOut && <button className="add" onClick={addToCart} aria-label="Sepete ekle">+</button>}
+      </div>
+      {cartLabel && <div className="incart">{cartLabel}</div>}
     </div>
   );
 }
