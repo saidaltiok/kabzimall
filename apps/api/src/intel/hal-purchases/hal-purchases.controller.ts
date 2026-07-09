@@ -4,11 +4,32 @@ import { Roles } from '../../auth/decorators';
 import { PRICE_WRITERS } from '../../auth/auth.constants';
 import { HalPurchasesService } from './hal-purchases.service';
 import { CreateHalPurchaseDto } from './dto/create-hal-purchase.dto';
+import { InvoiceOcrService } from './invoice-ocr.service';
 
 @ApiTags('intel: hal alımı (mutabakat)')
 @Controller('intel/hal-purchases')
 export class HalPurchasesController {
-  constructor(private readonly service: HalPurchasesService) {}
+  constructor(
+    private readonly service: HalPurchasesService,
+    private readonly ocr: InvoiceOcrService,
+  ) {}
+
+  /** GET /api/v1/intel/hal-purchases/ocr-status — OCR (fatura okuma) açık mı. */
+  @Get('ocr-status')
+  ocrStatus() {
+    return { enabled: this.ocr.enabled };
+  }
+
+  /**
+   * POST /api/v1/intel/hal-purchases/ocr — fatura fotoğrafını oku (kaydetmez).
+   * Kalemleri gözden geçirip toplu POST ile onaylarsınız.
+   */
+  @Post('ocr')
+  @Roles(...PRICE_WRITERS)
+  @ApiBody({ schema: { example: { image: 'data:image/jpeg;base64,...', mediaType: 'image/jpeg' } } })
+  parseInvoice(@Body() dto: { image: string; mediaType?: string }) {
+    return this.ocr.parse(dto.image ?? '', dto.mediaType ?? 'image/jpeg');
+  }
 
   /**
    * POST /api/v1/intel/hal-purchases

@@ -4,6 +4,9 @@ import { PriceController } from './price/price.controller';
 import { PriceService } from './price/price.service';
 import { HalPurchasesController } from './hal-purchases/hal-purchases.controller';
 import { HalPurchasesService } from './hal-purchases/hal-purchases.service';
+import { InvoiceOcrService } from './hal-purchases/invoice-ocr.service';
+import { PricingCockpitController } from './pricing-cockpit/pricing-cockpit.controller';
+import { PricingCockpitService } from './pricing-cockpit/pricing-cockpit.service';
 import { CostPoolController } from './cost-pool/cost-pool.controller';
 import { CostPoolService } from './cost-pool/cost-pool.service';
 import { HalController } from './hal/hal.controller';
@@ -75,6 +78,7 @@ import { FinanceController } from './finance/finance.controller';
     PricingMatrixController,
     FinanceController,
     MarkdownController,
+    PricingCockpitController,
   ],
   providers: [
     PriceService,
@@ -94,6 +98,8 @@ import { FinanceController } from './finance/finance.controller';
     PricingMatrixService,
     FinanceService,
     MarkdownService,
+    InvoiceOcrService,
+    PricingCockpitService,
   ],
 })
 export class IntelModule {}

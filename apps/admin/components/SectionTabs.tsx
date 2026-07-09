@@ -8,11 +8,13 @@ export interface SectionTab { href: string; label: string; icon?: string }
 /* Ekran grupları — sidebar 9 girişe iner, ilgili ekranlar grup içi sekmeyle gezilir. */
 export const MARKET_TABS: SectionTab[] = [
   { href: '/hal', label: 'Hal fiyatları', icon: '🥬' },
+  { href: '/hal-alim', label: 'Hal alımı (fatura)', icon: '🧾' },
   { href: '/rakip', label: 'Rakip fiyatları', icon: '🏷️' },
 ];
 // Fiyat matrisi toplu yayın + marj görünümünü kapsadığı için "Toplu yayına al"
 // ve "Marj tablosu" sekmeden kaldırıldı (rotalar erişilebilir kalır; menü sadeleşir).
 export const PRICING_TABS: SectionTab[] = [
+  { href: '/kokpit', label: 'Fiyat kokpiti', icon: '🎛️' },
   { href: '/matris', label: 'Fiyat matrisi', icon: '🧮' },
   { href: '/oner', label: 'Tek ürün fiyatla', icon: '🎯' },
   { href: '/senaryo', label: 'Senaryo', icon: '🔮' },
