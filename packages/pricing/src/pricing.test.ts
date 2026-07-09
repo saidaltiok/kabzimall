@@ -136,6 +136,17 @@ test('GROUP_AVG(Premium) → Macrocenter = 48,90 ₺', () => {
   assert.equal(suggestPrice(domates, rakipler, 'GROUP_AVG', { group: 'Premium' }).price, 4890);
 });
 
+test('offsetPct: rakip tabanına ± % ayarlama (dinamik strateji)', () => {
+  // COMP_AVG ort. 44,18 → −%5 = 41,97 → psych 41,90
+  assert.equal(suggestPrice(domates, rakipler, 'COMP_AVG', { offsetPct: -0.05 }).price, 4190);
+  // COMP_AVG +%10 = 48,60 → 48,90
+  assert.equal(suggestPrice(domates, rakipler, 'COMP_AVG', { offsetPct: 0.10 }).price, 4890);
+  // MEDIAN 44,00 → +%9 = 47,96 → 47,90
+  assert.equal(suggestPrice(domates, rakipler, 'MEDIAN', { offsetPct: 0.09 }).price, 4790);
+  // offset yoksa davranış değişmez (geriye dönük uyum)
+  assert.equal(suggestPrice(domates, rakipler, 'COMP_AVG').price, 4390);
+});
+
 test('Taban marj koruması: çok düşük rakip fiyatı yükseltilir', () => {
   const ucuzRakip: Competitor[] = [{ name: 'X', group: 'İndirim', price: 2700 }];
   const r = suggestPrice(domates, ucuzRakip, 'LOWEST', { floorMargin: 0.15 });

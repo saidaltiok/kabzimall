@@ -143,16 +143,16 @@ export default function KasaPage() {
                   <input type="checkbox" checked={blind} onChange={(e) => setBlind(e.target.checked)} />
                   Kör sayım — beklenen tutarı gizle (önce say, sonra karşılaştır)
                 </label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(58px, 1fr))', gap: 6, marginBottom: 8 }}>
                   {DENOMS.map((d) => (
-                    <div className="field" key={d} style={{ width: 56 }}>
+                    <div className="field" key={d} style={{ minWidth: 0 }}>
                       <label>{d} ₺</label>
-                      <input inputMode="numeric" value={denoms[d] ?? ''} onChange={(e) => syncCount({ ...denoms, [d]: e.target.value }, coinsTl)} placeholder="0" />
+                      <input inputMode="numeric" value={denoms[d] ?? ''} onChange={(e) => syncCount({ ...denoms, [d]: e.target.value }, coinsTl)} placeholder="0" style={{ width: '100%', boxSizing: 'border-box' }} />
                     </div>
                   ))}
-                  <div className="field" style={{ width: 80 }}>
+                  <div className="field" style={{ minWidth: 0 }}>
                     <label>Bozuk (₺)</label>
-                    <input value={coinsTl} onChange={(e) => syncCount(denoms, e.target.value)} placeholder="0,00" />
+                    <input value={coinsTl} onChange={(e) => syncCount(denoms, e.target.value)} placeholder="0,00" style={{ width: '100%', boxSizing: 'border-box' }} />
                   </div>
                 </div>
                 <div className="form-row" style={{ alignItems: 'flex-end' }}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiGet } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
@@ -63,6 +63,11 @@ export default function SatisPage() {
   const [mvDays, setMvDays] = useState('30');
   const [movers, setMovers] = useState<Movers | null>(null);
   const [affinity, setAffinity] = useState<Affinity | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
+  // Detay yüklenince (satıra tıklama / tek ürün) ekranı oraya kaydır — en altta sessizce açılmasın.
+  useEffect(() => {
+    if (sales && productId) detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [sales, productId]);
 
   useEffect(() => {
     apiGet<Overview>(`/intel/analytics/overview?days=${ovDays}`).then(setOverview).catch(() => {});

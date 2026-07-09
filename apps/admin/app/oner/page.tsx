@@ -21,16 +21,18 @@ interface SuggestResult {
 const STRATS: [string, string][] = [
   ['MARGIN', 'Maliyet + hedef marj'],
   ['COMP_AVG', 'Rakip ortalaması'],
-  ['COMP_AVG_MINUS', 'Ortalama − %3'],
   ['MEDIAN', 'Medyan'],
   ['LOWEST', 'En düşük rakip'],
   ['FLOOR', 'Min net kârı koru'],
 ];
+/** Rakip tabanlı stratejiler: "ayarlama %" (offset) uygulanabilir. */
+const COMP_BASED = new Set(['COMP_AVG', 'MEDIAN', 'LOWEST']);
 
 export default function OnerPage() {
   const [productId, setProductId] = useState('');
   const [strategy, setStrategy] = useState('MARGIN');
   const [target, setTarget] = useState('0.30');
+  const [offset, setOffset] = useState(''); // rakip tabanlı stratejide ± % ayarlama (ör. -5, +9)
   const [result, setResult] = useState<SuggestResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,11 @@ export default function OnerPage() {
     try {
       const params: Record<string, number> = {};
       if (strategy === 'MARGIN' && target) params.targetMargin = Number(target);
+      // Rakip tabanlı stratejide ± % ayarlama (ör. -5 → ort. −%5, +9 → medyan +%9).
+      if (COMP_BASED.has(strategy) && offset.trim() !== '') {
+        const off = parseFloat(offset.replace(',', '.'));
+        if (Number.isFinite(off)) params.offsetPct = off / 100;
+      }
       const r = await apiSend<SuggestResult>('POST', '/intel/price/suggest-product', { productId, strategy, params });
       setResult(r);
     } catch (e) {
@@ -52,7 +59,7 @@ export default function OnerPage() {
     } finally {
       setBusy(false);
     }
-  }, [productId, strategy, target]);
+  }, [productId, strategy, target, offset]);
 
   // Ürünler tablosundan "Fiyatla →" ile gelince ürünü ön-seç (?p=slug).
   useEffect(() => {
@@ -60,11 +67,11 @@ export default function OnerPage() {
     if (p) setProductId(p);
   }, []);
 
-  // Ürün veya strateji değişince otomatik öner (prototipteki anlık his).
+  // Ürün / strateji / ayarlama değişince otomatik öner (prototipteki anlık his).
   useEffect(() => {
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId, strategy]);
+  }, [productId, strategy, offset]);
 
   async function apply() {
     if (!result) return;
@@ -94,7 +101,8 @@ export default function OnerPage() {
         <p className="hint">
           Ürünü seçin; maliyet (hal alış + fire/işçilik) ve rakipler veritabanından toplanır, seçtiğiniz
           strateji uygulanır (komisyon + hedef marj, psikolojik yuvarlama + taban marj kuralı dâhil).
-          Öneriyi tek tıkla mağaza fiyatı yapabilirsiniz.
+          <b> Rakip ortalaması / Medyan / En düşük</b> stratejilerinde <b>Ayarlama (%)</b> ile dinamik kural
+          kurun: <b>−5</b> = seçili tabanın %5 altı, <b>+9</b> = %9 üstü. Öneriyi tek tıkla mağaza fiyatı yapabilirsiniz.
         </p>
 
         <div className="calcgrid">
@@ -112,6 +120,18 @@ export default function OnerPage() {
                   onChange={(e) => setTarget(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && run()}
                   disabled={strategy !== 'MARGIN'}
+                />
+              </div>
+              <div className="field">
+                <label>Ayarlama (%) <span className="muted" style={{ fontWeight: 400 }}>eksi = ucuz</span></label>
+                <input
+                  value={offset}
+                  onChange={(e) => setOffset(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && run()}
+                  disabled={!COMP_BASED.has(strategy)}
+                  placeholder="-5 / +9"
+                  style={{ width: 90 }}
+                  title="Rakip tabanlı stratejide seçilen tabana uygulanır: -5 → ort. %5 altı, +9 → %9 üstü"
                 />
               </div>
             </div>

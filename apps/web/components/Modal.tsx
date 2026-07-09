@@ -36,12 +36,13 @@ export default function Modal({
         .modal-overlay { position: fixed; inset: 0; background: rgba(20, 30, 24, 0.55); backdrop-filter: blur(2px);
           display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 1000; animation: mo-fade .15s ease; }
         .modal-card { background: var(--cream, #f6f1e7); border-radius: 18px; width: 100%; max-width: ${maxWidth}px;
-          box-shadow: 0 40px 90px -30px rgba(0,0,0,.5); overflow: hidden; animation: mo-pop .18s ease; }
-        .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 6px; }
+          box-shadow: 0 40px 90px -30px rgba(0,0,0,.5); overflow: hidden; animation: mo-pop .18s ease;
+          display: flex; flex-direction: column; max-height: calc(100dvh - 36px); }
+        .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 6px; flex: none; }
         .modal-head h3 { margin: 0; font-size: 19px; }
         .modal-x { border: none; background: none; font-size: 16px; cursor: pointer; color: var(--muted, #7c7667); padding: 4px 6px; }
-        .modal-body { padding: 6px 20px 8px; font-size: 14px; line-height: 1.6; }
-        .modal-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 20px 18px; }
+        .modal-body { padding: 6px 20px 8px; font-size: 14px; line-height: 1.6; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1 1 auto; min-height: 0; }
+        .modal-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 20px 18px; flex: none; }
         @keyframes mo-fade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes mo-pop { from { transform: translateY(8px) scale(.98); opacity: .6 } to { transform: none; opacity: 1 } }
       `}</style>

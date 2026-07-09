@@ -76,6 +76,10 @@ export class SuggestParamsDto {
   @IsOptional() @IsNumber() @Min(0)
   halMarkupPct?: number;
 
+  /** Rakip tabanlı stratejide ± yüzde ayarlama: −0.5..+0.5 (ör. −0.05 = ort. −%5, +0.09 = medyan +%9). */
+  @IsOptional() @IsNumber() @Min(-0.5) @Max(0.5)
+  offsetPct?: number;
+
   @IsOptional() @IsBoolean()
   psychological?: boolean;
 

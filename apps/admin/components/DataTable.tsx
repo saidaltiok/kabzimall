@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Icon from './Icon';
 
 export interface Column<T> {
   key: string;
@@ -119,7 +120,7 @@ export default function DataTable<T>({ id, columns, rows, rowKey, onRowClick, em
   return (
     <div style={{ position: 'relative' }}>
       <div ref={menuRef} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, position: 'relative', zIndex: 20 }}>
-        <button className="btn ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setMenuOpen((o) => !o)} title="Sütunları düzenle: gizle · sabitle · sırala">⚙ Sütunlar</button>
+        <button className="btn ghost" style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }} onClick={() => setMenuOpen((o) => !o)} title="Sütunları düzenle: gizle · sabitle · sırala"><Icon name="settings" size={14} /> Sütunlar</button>
         {menuOpen && (
           <div style={{ position: 'absolute', right: 0, top: 34, width: 280, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 40px -18px rgba(0,0,0,.35)', padding: 8, maxHeight: 360, overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 6px 8px' }}>
@@ -132,9 +133,9 @@ export default function DataTable<T>({ id, columns, rows, rowKey, onRowClick, em
                 <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px', fontSize: 12.5 }}>
                   <input type="checkbox" checked={!hidden.includes(k)} disabled={c.locked} onChange={() => toggleHidden(k)} />
                   <span style={{ flex: 1, opacity: hidden.includes(k) ? 0.5 : 1 }}>{c.label}</span>
-                  {!c.locked && <button title={pinned.includes(k) ? 'Sabitlemeyi kaldır' : 'Sola sabitle'} onClick={() => togglePin(k)} style={{ border: 'none', background: 'none', cursor: 'pointer', opacity: pinned.includes(k) ? 1 : 0.35 }}>📌</button>}
-                  <button title="Yukarı" onClick={() => move(k, -1)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>↑</button>
-                  <button title="Aşağı" onClick={() => move(k, 1)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>↓</button>
+                  {!c.locked && <button title={pinned.includes(k) ? 'Sabitlemeyi kaldır' : 'Sola sabitle'} onClick={() => togglePin(k)} style={{ border: 'none', background: 'none', cursor: 'pointer', opacity: pinned.includes(k) ? 1 : 0.4, display: 'inline-flex', color: pinned.includes(k) ? 'var(--forest)' : 'inherit' }}><Icon name="pin" size={15} /></button>}
+                  <button title="Yukarı" onClick={() => move(k, -1)} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'inline-flex' }}><Icon name="arrowUp" size={15} /></button>
+                  <button title="Aşağı" onClick={() => move(k, 1)} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'inline-flex' }}><Icon name="arrowDown" size={15} /></button>
                 </div>
               );
             })}

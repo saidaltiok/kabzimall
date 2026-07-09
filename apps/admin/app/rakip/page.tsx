@@ -67,8 +67,8 @@ export default function RakipPage() {
   async function toggleAll() {
     const next = !allOpen; setAllOpen(next);
     if (next && !coverage) {
-      try { const r = await apiGet<{ data: CoverageRow[] }>('/intel/competitor-prices/coverage'); setCoverage(r.data); }
-      catch (e) { setError((e as Error).message); }
+      try { const r = await apiGet<{ rows: CoverageRow[] }>('/intel/competitor-prices/coverage'); setCoverage(r.rows ?? []); }
+      catch (e) { setError((e as Error).message); setCoverage([]); }
     }
   }
 

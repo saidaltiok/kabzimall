@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import { tlToKurus } from '@/lib/money';
 import Topbar from '@/components/Topbar';
+import { MealCardLogo, type PayId } from '@/components/MealCardLogo';
 
 interface Product {
   slug: string; name: string; kind: string; unitLabel: string | null;
@@ -20,33 +21,21 @@ interface Today { total: number; count: number; byMethod: Record<string, MethodB
 
 /**
  * Ödeme yöntemleri. Yalnız Nakit kasadaki nakde eklenir; diğerleri bankaya/karta gider.
- * `brand` renkli rozetli yemek kartları; `icon` nakit/kart için emoji. `bps` = komisyon
+ * `brand` yemek kartlarında kurumsal logo (MealCardLogo) gösterilir; `bps` = komisyon
  * binde (backend PAYMENT_COMMISSION_BPS ile aynı; net tahsilat tahmini için).
  */
-interface Pay { id: string; label: string; icon?: string; brand?: string; color?: string; bps: number }
+interface Pay { id: PayId; label: string; brand?: boolean; bps: number }
 const PAYMENTS: Pay[] = [
-  { id: 'CASH', label: 'Nakit', icon: '💵', bps: 0 },
-  { id: 'CARD', label: 'Kredi/Banka Kartı', icon: '💳', bps: 180 },
-  { id: 'MULTINET', label: 'Multinet', brand: 'multinet', color: '#f36f21', bps: 600 },
-  { id: 'SETCARD', label: 'Setcard', brand: 'setcard', color: '#0067b1', bps: 600 },
-  { id: 'EDENRED', label: 'Edenred', brand: 'edenred', color: '#1b3c8c', bps: 600 },
-  { id: 'METROPOL', label: 'Metropol', brand: 'metropol', color: '#ed1c24', bps: 600 },
-  { id: 'TOKENFLEX', label: 'Token Flex', brand: 'token flex', color: '#6d28d9', bps: 600 },
+  { id: 'CASH', label: 'Nakit', bps: 0 },
+  { id: 'CARD', label: 'Kredi/Banka Kartı', bps: 180 },
+  { id: 'MULTINET', label: 'Multinet', brand: true, bps: 600 },
+  { id: 'SETCARD', label: 'Setcard', brand: true, bps: 600 },
+  { id: 'EDENRED', label: 'Edenred', brand: true, bps: 600 },
+  { id: 'METROPOL', label: 'Metropol', brand: true, bps: 600 },
+  { id: 'TOKENFLEX', label: 'Token Flex', brand: true, bps: 600 },
 ];
 const payLabel = (id: string) => PAYMENTS.find((p) => p.id === id)?.label ?? id;
 const payOf = (id: string) => PAYMENTS.find((p) => p.id === id);
-
-/** Ödeme yöntemi simgesi: yemek kartları marka renkli rozet, diğerleri emoji. */
-function PayIcon({ p, on }: { p: Pay; on?: boolean }) {
-  if (p.brand) {
-    return (
-      <span style={{ display: 'inline-block', background: on ? '#fff' : p.color, color: on ? p.color : '#fff', borderRadius: 5, padding: '2px 7px', fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3, textTransform: 'lowercase', lineHeight: 1.4 }}>
-        {p.brand}
-      </span>
-    );
-  }
-  return <span>{p.icon}</span>;
-}
 
 /** İndirim varsa vitrindeki geçerli fiyat, yoksa taban fiyat (kuruş). */
 const effective = (p: Product) =>
@@ -199,9 +188,9 @@ export default function TezgahPage() {
                   return (
                     <button
                       key={p.id} type="button" onClick={() => setPayment(p.id)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1.5px solid ${on ? 'var(--forest)' : 'var(--line)'}`, background: on ? 'var(--forest)' : '#fff', color: on ? '#fff' : 'inherit', borderRadius: 20, padding: '6px 12px', fontSize: 12.5, cursor: 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1.5px solid ${on ? 'var(--forest)' : 'var(--line)'}`, background: on ? 'var(--forest)' : '#fff', color: on ? '#fff' : 'inherit', borderRadius: 20, padding: '6px 10px', fontSize: 12.5, cursor: 'pointer' }}
                     >
-                      <PayIcon p={p} on={on} /> {p.label}
+                      <MealCardLogo id={p.id} h={16} />{!p.brand && <span>{p.label}</span>}
                     </button>
                   );
                 })}
@@ -228,7 +217,7 @@ export default function TezgahPage() {
                 <div style={{ fontSize: 22, fontWeight: 800 }}>{tl(total)}</div>
               </div>
               <button className="btn" style={{ background: 'var(--forest)', fontSize: 14, padding: '10px 18px', display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy || !allValid} onClick={collect}>
-                {(() => { const p = payOf(payment); return p ? <PayIcon p={p} /> : null; })()} Tahsil et
+                <MealCardLogo id={payment as PayId} h={16} /> Tahsil et
               </button>
             </div>
           </div>

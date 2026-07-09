@@ -53,6 +53,12 @@ export interface SuggestParams {
   manualPrice?: Kurus;       // MANUAL
   halMarkupPct?: number;     // HAL_MARKUP; varsayılan 1.0 (%100)
   psychological?: boolean;   // varsayılan true
+  /**
+   * Rakip tabanlı stratejilerde (COMP_AVG / MEDIAN / LOWEST / GROUP_AVG) tabana
+   * uygulanan yüzde ayarlama. +0.09 → taban ×1.09 (%9 üstü), −0.05 → ×0.95 (%5 altı).
+   * Kullanıcı "ortalama −%5" / "medyan +%9" gibi dinamik kuralları böyle tanımlar.
+   */
+  offsetPct?: number;
   /** Fırsat ürünü: taban marj uygulanmaz, zararına satışa izin verilir. */
   opportunity?: boolean;
 }
@@ -150,16 +156,18 @@ function strategyValue(
   c: CostInput, competitors: Competitor[], strategy: Strategy, params: SuggestParams
 ): number {
   const prices = competitors.map((x) => x.price);
+  // Rakip tabanlı stratejilere uygulanan ± yüzde ayarlama (offsetPct).
+  const off = (v: number) => (params.offsetPct ? v * (1 + params.offsetPct) : v);
   switch (strategy) {
     case 'MARGIN':         return priceForMargin(c, params.targetMargin ?? 0.3);
     case 'HAL_MARKUP':     return c.halAvg * (1 + (params.halMarkupPct ?? 1.0));
-    case 'COMP_AVG':       return avg(prices);
+    case 'COMP_AVG':       return off(avg(prices));
     case 'COMP_AVG_MINUS': return avg(prices) * (1 - (params.minusPct ?? 0.03));
-    case 'MEDIAN':         return median(prices);
-    case 'LOWEST':         return prices.length ? Math.min(...prices) : NaN;
+    case 'MEDIAN':         return off(median(prices));
+    case 'LOWEST':         return prices.length ? off(Math.min(...prices)) : NaN;
     case 'GROUP_AVG': {
       const g = competitors.filter((x) => x.group === params.group).map((x) => x.price);
-      return g.length ? avg(g) : NaN;
+      return g.length ? off(avg(g)) : NaN;
     }
     case 'FLOOR':          return priceForMargin(c, params.floorMargin ?? DEFAULT_FLOOR_MARGIN);
     case 'MANUAL':         return params.manualPrice ?? NaN;

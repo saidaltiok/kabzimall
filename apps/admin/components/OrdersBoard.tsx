@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Modal from './Modal';
 import OrderDetail, { type DetailOrder } from './OrderDetail';
+import Icon, { type IconName } from './Icon';
 
 interface OrderItem {
   id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; note: string | null;
@@ -32,12 +33,12 @@ const SUB_LABEL: Record<string, string> = {
 };
 
 /** Operasyon akışı (soldan sağa ilerler). İptal ayrı tutulur. */
-const FLOW: [string, string, string][] = [
-  ['CONFIRMED', 'Onaylandı', '🆕'],
-  ['PREPARING', 'Hazırlanıyor', '👜'],
-  ['READY', 'Hazır', '✅'],
-  ['OUT_FOR_DELIVERY', 'Yolda', '🛵'],
-  ['DELIVERED', 'Teslim edildi', '🏠'],
+const FLOW: [string, string, IconName][] = [
+  ['CONFIRMED', 'Onaylandı', 'info'],
+  ['PREPARING', 'Hazırlanıyor', 'basket'],
+  ['READY', 'Hazır', 'check'],
+  ['OUT_FOR_DELIVERY', 'Yolda', 'truck'],
+  ['DELIVERED', 'Teslim edildi', 'home'],
 ];
 
 /**
@@ -147,7 +148,7 @@ export default function OrdersBoard() {
           return (
             <div className="col" key={status}>
               <h3>
-                <span>{icon} {label}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name={icon} size={16} /> {label}</span>
                 <span className="cnt">{col.length}</span>
               </h3>
               {col.length === 0 ? (
@@ -211,11 +212,11 @@ export default function OrdersBoard() {
                       ) : (
                         <div className="oc-act">
                           {status === 'PREPARING' ? (
-                            <button className="btn" disabled={busy === o.id} onClick={() => openPack(o)}>⚖️ Paketle</button>
+                            <button className="btn" disabled={busy === o.id} onClick={() => openPack(o)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="basket" size={15} /> Paketle</button>
                           ) : (
                             !isLast && (
-                              <button className="btn" disabled={busy === o.id} onClick={() => advance(o)}>
-                                {busy === o.id ? '…' : `${FLOW[i + 1][2]} İleri al`}
+                              <button className="btn" disabled={busy === o.id} onClick={() => advance(o)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                {busy === o.id ? '…' : <><Icon name={FLOW[i + 1][2]} size={15} /> İleri al</>}
                               </button>
                             )
                           )}

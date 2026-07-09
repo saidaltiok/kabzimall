@@ -15,6 +15,7 @@ import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal } from '@/lib/deli
 import { isName, isPhone, isEmail, sanitizePhone, formatPhone } from '@/lib/validate';
 import Modal from '@/components/Modal';
 import TrustBadges from '@/components/TrustBadges';
+import { MealCardLogo } from '@/components/MealCardLogo';
 
 interface Slot { date: string; window: string; label: string; remaining: number | null }
 
@@ -23,14 +24,14 @@ const NOTE_CHIPS = ['Kapıya bırak', 'Zili çalma', 'Gelmeden ara', 'Poşetleri
 
 /** Kapıda ödeme yöntemleri (online ödeme henüz yok — kurye teslimatta tahsil eder). */
 type PayMethod = 'COD' | 'CARD' | 'MULTINET' | 'SETCARD' | 'EDENRED' | 'METROPOL' | 'TOKENFLEX';
-const PAY_METHODS: { id: PayMethod; label: string; desc: string; icon?: string; brand?: string; color?: string }[] = [
-  { id: 'COD', label: 'Kapıda nakit', desc: 'Kuryeye nakit ödeme', icon: '💵' },
-  { id: 'CARD', label: 'Kapıda kredi/banka kartı', desc: 'Kuryenin POS cihazından', icon: '💳' },
-  { id: 'MULTINET', label: 'Multinet', desc: 'Yemek kartı — kapıda', brand: 'multinet', color: '#f36f21' },
-  { id: 'SETCARD', label: 'Setcard', desc: 'Yemek kartı — kapıda', brand: 'setcard', color: '#0067b1' },
-  { id: 'EDENRED', label: 'Edenred', desc: 'Yemek kartı — kapıda', brand: 'edenred', color: '#1b3c8c' },
-  { id: 'METROPOL', label: 'Metropol', desc: 'Yemek kartı — kapıda', brand: 'metropol', color: '#ed1c24' },
-  { id: 'TOKENFLEX', label: 'Token Flex', desc: 'Yemek kartı — kapıda', brand: 'token flex', color: '#6d28d9' },
+const PAY_METHODS: { id: PayMethod; label: string; desc: string; brand?: boolean }[] = [
+  { id: 'COD', label: 'Kapıda nakit', desc: 'Kuryeye nakit ödeme' },
+  { id: 'CARD', label: 'Kapıda kredi/banka kartı', desc: 'Kuryenin POS cihazından' },
+  { id: 'MULTINET', label: 'Multinet', desc: 'Yemek kartı — kapıda', brand: true },
+  { id: 'SETCARD', label: 'Setcard', desc: 'Yemek kartı — kapıda', brand: true },
+  { id: 'EDENRED', label: 'Edenred', desc: 'Yemek kartı — kapıda', brand: true },
+  { id: 'METROPOL', label: 'Metropol', desc: 'Yemek kartı — kapıda', brand: true },
+  { id: 'TOKENFLEX', label: 'Token Flex', desc: 'Yemek kartı — kapıda', brand: true },
 ];
 
 type SubPref = 'CALL' | 'REMOVE' | 'SUBSTITUTE';
@@ -338,10 +339,8 @@ export default function CheckoutPage() {
                 onClick={() => setPayMethod(p.id)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {p.brand
-                    ? <span style={{ display: 'inline-block', background: p.color, color: '#fff', borderRadius: 5, padding: '2px 7px', fontSize: 10.5, fontWeight: 800, textTransform: 'lowercase' }}>{p.brand}</span>
-                    : <span>{p.icon}</span>}
-                  <div><b>{p.label}</b><div className="muted" style={{ fontSize: 12 }}>{p.desc}</div></div>
+                  <MealCardLogo id={p.id} h={17} />
+                  <div>{!p.brand && <b>{p.label}</b>}<div className="muted" style={{ fontSize: 12 }}>{p.desc}</div></div>
                 </div>
                 <span>{payMethod === p.id ? '✓' : ''}</span>
               </div>

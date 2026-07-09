@@ -17,20 +17,22 @@ interface Competitor { id: string; name: string; group: string }
 interface Matrix { groups: string[]; competitors: Competitor[]; rows: Row[]; date: string }
 
 type Agg = 'avg' | 'median' | 'min' | 'max';
-interface CustomCol { id: string; label: string; compIds: string[]; agg: Agg }
+interface CustomCol { id: string; label: string; compIds: string[]; agg: Agg; offsetPct: number }
 
 const AGG_LABEL: Record<Agg, string> = { avg: 'Ortalama', median: 'Medyan', min: 'En düşük', max: 'En yüksek' };
 const k2 = (k: number | null) => (k == null ? '—' : (k / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const offLabel = (o: number) => (o ? ` ${o > 0 ? '+' : ''}%${o}` : '');
 
-/** Bir satırın seçili rakiplerindeki fiyatlardan istenen kırılımı hesapla (client-side). */
-function aggregate(row: Row, compIds: string[], agg: Agg): number | null {
+/** Bir satırın seçili rakiplerindeki fiyatlardan istenen kırılımı + ± offset ile hesapla (client-side). */
+function aggregate(row: Row, compIds: string[], agg: Agg, offsetPct = 0): number | null {
   const vals = compIds.map((id) => row.byComp[id]).filter((v): v is number => v != null);
   if (vals.length === 0) return null;
-  if (agg === 'min') return Math.min(...vals);
-  if (agg === 'max') return Math.max(...vals);
-  if (agg === 'avg') return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
-  const s = [...vals].sort((a, b) => a - b); const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+  let base: number;
+  if (agg === 'min') base = Math.min(...vals);
+  else if (agg === 'max') base = Math.max(...vals);
+  else if (agg === 'avg') base = vals.reduce((s, v) => s + v, 0) / vals.length;
+  else { const s = [...vals].sort((a, b) => a - b); const m = Math.floor(s.length / 2); base = s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+  return Math.round(base * (1 + offsetPct / 100));
 }
 
 // Basit deterministik id (Math.random yok — sütun sırasına göre).
@@ -54,6 +56,7 @@ export default function MatrisPage() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [bLabel, setBLabel] = useState('');
   const [bAgg, setBAgg] = useState<Agg>('avg');
+  const [bOffset, setBOffset] = useState('');
   const [bComps, setBComps] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -99,13 +102,32 @@ export default function MatrisPage() {
   function addCustomCol() {
     if (bComps.size === 0) { setError('Sütun için en az bir rakip seç.'); return; }
     const ids = [...bComps];
+    const off = bOffset.trim() === '' ? 0 : parseFloat(bOffset.replace(',', '.'));
+    const offsetPct = Number.isFinite(off) ? off : 0;
     const names = data?.competitors.filter((c) => bComps.has(c.id)).map((c) => c.name) ?? [];
-    const label = bLabel.trim() || `${names.join('+')} ${AGG_LABEL[bAgg].toLowerCase()}`;
-    setCustomCols((cs) => [...cs, { id: nextColId(), label, compIds: ids, agg: bAgg }]);
-    setBLabel(''); setBComps(new Set()); setBuilderOpen(false); setError(null);
+    const label = bLabel.trim() || `${names.join('+')} ${AGG_LABEL[bAgg].toLowerCase()}${offLabel(offsetPct)}`;
+    setCustomCols((cs) => [...cs, { id: nextColId(), label, compIds: ids, agg: bAgg, offsetPct }]);
+    setBLabel(''); setBOffset(''); setBComps(new Set()); setBuilderOpen(false); setError(null);
   }
   const removeCustomCol = (id: string) => setCustomCols((cs) => cs.filter((c) => c.id !== id));
   const toggleBComp = (id: string) => setBComps((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  /** Bir özel sütunun hesapladığı fiyatı yayın kutularına yaz (taban korumalı). Seçili satır varsa onlara, yoksa filtrelenen tümüne. */
+  function applyColumnToPublish(col: CustomCol) {
+    const targets = rows.filter((r) => (sel.size ? sel.has(r.slug) : true));
+    let written = 0;
+    setPrices((p) => {
+      const n = { ...p };
+      for (const r of targets) {
+        const v = aggregate(r, col.compIds, col.agg, col.offsetPct);
+        if (v == null) continue;
+        const floored = r.floorPrice != null ? Math.max(v, r.floorPrice) : v;
+        n[r.slug] = k2(floored); written++;
+      }
+      return n;
+    });
+    setOk(`✓ "${col.label}" ${written} ürünün yayın kutusuna yazıldı (taban korumalı). Kontrol edip “Seçilenleri yayınla” ile onayla.`);
+  }
 
   async function publish(allowBelowFloor = false) {
     const items = [...sel]
@@ -163,7 +185,7 @@ export default function MatrisPage() {
               <li><b>Güncel</b>: Senin şu an yayında olan satış fiyatın (indirimli varsa o).</li>
               <li><b>Öneri</b>: Motorun taban marjı koruyarak hesapladığı önerilen fiyat — tıklayınca yayın kutusuna yazılır.</li>
               <li><b>Yayın fiyatı</b>: Yayınlamak istediğin fiyat. Taban altındaysa kırmızı uyarır.</li>
-              <li><b>Özel sütunlar</b>: Aşağıdan seçtiğin rakiplerin (ör. A101+BİM+ŞOK) ortalama/medyan/en düşük/en yüksek kırılımı.</li>
+              <li><b>Özel sütunlar</b>: Aşağıdan seçtiğin rakiplerin (ör. A101+BİM+ŞOK) ortalama/medyan/en düşük/en yüksek kırılımı; istersen <b>±% ayarlama</b> ekle (ör. ort. −%5). Sütun çipindeki <b>→ yayına yaz</b> ile bu stratejiyi seçili/tüm ürünlerin yayın fiyatına taban-korumalı yazabilirsin.</li>
             </ul>
           </div>
         )}
@@ -185,7 +207,8 @@ export default function MatrisPage() {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: builderOpen ? 12 : 0 }}>
               {customCols.map((c) => (
                 <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--forest)', color: 'var(--forest)', borderRadius: 20, padding: '4px 6px 4px 12px', fontSize: 12.5, fontWeight: 600 }}>
-                  {c.label} <span className="muted" style={{ fontWeight: 400 }}>({c.compIds.length} rakip · {AGG_LABEL[c.agg]})</span>
+                  {c.label} <span className="muted" style={{ fontWeight: 400 }}>({c.compIds.length} rakip · {AGG_LABEL[c.agg]}{offLabel(c.offsetPct)})</span>
+                  <button onClick={() => applyColumnToPublish(c)} title={`Bu stratejiyi ${sel.size ? 'seçili' : 'filtrelenen tüm'} ürünlerin yayın fiyatına yaz (taban korumalı)`} style={{ border: 'none', background: 'var(--forest)', color: '#fff', borderRadius: 12, padding: '2px 9px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>→ yayına yaz</button>
                   <button onClick={() => removeCustomCol(c.id)} title="Sütunu kaldır" style={{ border: 'none', background: 'var(--cream, #f0ede6)', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
                 </span>
               ))}
@@ -209,6 +232,9 @@ export default function MatrisPage() {
                         <option value="min">En düşük</option>
                         <option value="max">En yüksek</option>
                       </select>
+                    </div>
+                    <div className="field"><label>Ayarlama (%) <span className="muted" style={{ fontWeight: 400 }}>eksi = ucuz</span></label>
+                      <input value={bOffset} onChange={(e) => setBOffset(e.target.value)} placeholder="-5 / +9" style={{ width: 90 }} title="Seçili tabana uygulanır: -5 → %5 altı, +9 → %9 üstü" />
                     </div>
                     <button className="btn" onClick={addCustomCol} disabled={bComps.size === 0}>Sütunu ekle ({bComps.size})</button>
                   </div>
@@ -284,7 +310,7 @@ export default function MatrisPage() {
                       <td className="num">{k2(r.avg)}</td>
                       <td className="num">{k2(r.premiumAvg)}</td>
                       <td className="num">{k2(r.median)}</td>
-                      {customCols.map((c) => <td key={c.id} className="num" style={{ background: 'rgba(45,106,79,.05)' }}>{k2(aggregate(r, c.compIds, c.agg))}</td>)}
+                      {customCols.map((c) => <td key={c.id} className="num" style={{ background: 'rgba(45,106,79,.05)' }}>{k2(aggregate(r, c.compIds, c.agg, c.offsetPct))}</td>)}
                       <td className="num">{k2(r.currentPrice)}</td>
                       <td className="num">
                         {r.suggested != null ? (
