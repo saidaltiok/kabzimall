@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
+import Icon from '@/components/Icon';
 
 interface Row {
   slug: string;
@@ -75,7 +76,7 @@ export default function YayinlaPage() {
     try {
       const r = await apiSend<{ published: number; flooredCount: number }>('POST', '/intel/competitor-prices/publish', { slugs, basis });
       const flooredNote = r.flooredCount > 0 ? ` (${r.flooredCount} tanesi maliyet altına düşmesin diye taban fiyata yükseltildi)` : '';
-      setOk(`✓ ${r.published} ürün yayına alındı (fiyatlandı + aktifleştirildi)${flooredNote}.`);
+      setOk(`${r.published} ürün yayına alındı (fiyatlandı + aktifleştirildi)${flooredNote}.`);
       setSel(new Set());
       await load();
     } catch (e) {
@@ -96,7 +97,7 @@ export default function YayinlaPage() {
           <b>Kesişim kümesi</b> = en çok rakipte bulunan ürünler (herkesin sattığı = en çok tercih edilenler).
           Eşiği seç, <b>Kesişimi seç</b> ile işaretle, başlangıç fiyatı için rakip <b>medyan/min</b> tabanını belirle,
           <b>Yayına al</b>. Ürünler aktifleşir ve web mağazasında görünür.
-          <b> Maliyet altına asla düşülmez</b> — rakip fiyatı maliyetin altındaysa (⚠️ taban) otomatik taban marja yükseltilir.
+          <b> Maliyet altına asla düşülmez</b> — rakip fiyatı maliyetin altındaysa (<Icon name="warning" size={14} style={{ verticalAlign: '-0.15em' }} /> taban) otomatik taban marja yükseltilir.
         </p>
 
         <div className="form-row" style={{ marginBottom: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -117,8 +118,8 @@ export default function YayinlaPage() {
           </div>
           <button className="btn ghost" onClick={selectIntersection}>Kesişimi seç ({intersectionCount})</button>
           <button className="btn ghost" onClick={clearSel} disabled={sel.size === 0}>Temizle</button>
-          <button className="btn" style={{ background: 'var(--persimmon)' }} onClick={publish} disabled={busy || sel.size === 0}>
-            {busy ? 'Yayınlanıyor…' : `🚀 Seçilenleri yayına al (${sel.size})`}
+          <button className="btn" style={{ background: 'var(--persimmon)', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={publish} disabled={busy || sel.size === 0}>
+            {busy ? 'Yayınlanıyor…' : <><Icon name="send" size={15} /> Seçilenleri yayına al ({sel.size})</>}
           </button>
         </div>
 
@@ -163,7 +164,7 @@ export default function YayinlaPage() {
                       </td>
                       <td className="num savecell">
                         {tl(priceFor(r))}
-                        {floored && <span className="tagp zararina" style={{ marginLeft: 6, fontSize: 10 }} title={`Rakip fiyatı maliyetin altındaydı, taban fiyata (${r.floorPrice != null ? tl(r.floorPrice) : '?'}) yükseltildi`}>⚠️ taban</span>}
+                        {floored && <span className="tagp zararina" style={{ marginLeft: 6, fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }} title={`Rakip fiyatı maliyetin altındaydı, taban fiyata (${r.floorPrice != null ? tl(r.floorPrice) : '?'}) yükseltildi`}><Icon name="warning" size={12} /> taban</span>}
                       </td>
                       <td className="num muted">{r.ourPrice != null ? tl(r.ourPrice) : '—'}</td>
                       <td>{r.isActive ? <span className="tagp ok">yayında</span> : <span className="tagp info">pasif</span>}</td>

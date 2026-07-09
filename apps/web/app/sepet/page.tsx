@@ -8,6 +8,7 @@ import { useCart } from '@/lib/cart';
 import { tl } from '@/lib/format';
 import { DEFAULT_SETTINGS, type StoreSettings, feeForSubtotal, nextTier } from '@/lib/delivery';
 import { emojiFor } from '@/lib/format';
+import Icon from '@/components/Icon';
 
 interface SuggestProduct {
   slug: string; name: string; unitLabel: string | null; imageUrl: string | null;
@@ -70,7 +71,7 @@ export default function CartPage() {
   if (items.length === 0)
     return (
       <div className="empty">
-        <div className="big">🧺</div>
+        <div className="big"><Icon name="basket" size={44} /></div>
         <h2 className="serif">Sepetin boş</h2>
         <div>Taze ürünleri keşfetmeye başla.</div>
         <p><Link href="/" className="back">← Alışverişe başla</Link></p>
@@ -91,7 +92,7 @@ export default function CartPage() {
           style={{ marginLeft: 'auto', fontSize: 13, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--berry)' }}
           onClick={() => { if (confirm('Sepetteki tüm ürünler kaldırılacak. Emin misiniz?')) clear(); }}
         >
-          🗑 Sepeti boşalt
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="trash" size={15} /> Sepeti boşalt</span>
         </button>
       </h1>
       <div className="layout2">
@@ -112,7 +113,7 @@ export default function CartPage() {
                   {!it.basketSlug && (
                     <input
                       className="notein"
-                      placeholder="📝 Ürün notu (ör. çok olgun olmasın)"
+                      placeholder="Ürün notu (ör. çok olgun olmasın)"
                       defaultValue={it.note ?? ''}
                       onBlur={(e) => setNote(k, e.target.value)}
                     />
@@ -135,7 +136,7 @@ export default function CartPage() {
           {next && (
             <div style={{ background: '#fff', borderRadius: 16, padding: '12px 16px', marginTop: 4, boxShadow: 'var(--shadow-sm)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-                <span>{next.fee === 0 ? '🚚 Ücretsiz teslimata' : `🚚 ${tl(next.fee)} teslimata`} <b style={{ color: 'var(--persimmon-d)' }}>{tl(next.minSubtotal - subtotal)}</b> kaldı</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="truck" size={15} /> {next.fee === 0 ? 'Ücretsiz teslimata' : `${tl(next.fee)} teslimata`} <b style={{ color: 'var(--persimmon-d)' }}>{tl(next.minSubtotal - subtotal)}</b> kaldı</span>
                 <span className="muted">{tl(next.minSubtotal)}</span>
               </div>
               <div style={{ background: 'var(--cream-d)', borderRadius: 20, height: 8, overflow: 'hidden' }}>
@@ -193,12 +194,12 @@ export default function CartPage() {
           )}
           <div className="ln">
             <span>Teslimat</span>
-            <span className="save">{fee === 0 ? 'Ücretsiz 🎉' : tl(fee)}</span>
+            <span className="save">{fee === 0 ? 'Ücretsiz' : tl(fee)}</span>
           </div>
           <div className="ln tot serif"><span>Toplam (tahmini)</span><span>{tl(subtotal - (coupon?.discount ?? 0) + fee)}</span></div>
           {!coupon && (
             <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              <input className="notein" style={{ flex: 1, marginTop: 0 }} placeholder="🎟️ Kupon kodu" value={couponInput}
+              <input className="notein" style={{ flex: 1, marginTop: 0 }} placeholder="Kupon kodu" value={couponInput}
                 onChange={(e) => setCouponInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applyCoupon()} />
               <button className="cta" style={{ marginTop: 0, width: 'auto', padding: '8px 14px', fontSize: 13 }} disabled={couponBusy || !couponInput.trim()} onClick={applyCoupon}>
                 {couponBusy ? '…' : 'Uygula'}
@@ -214,7 +215,7 @@ export default function CartPage() {
           </div>
           {belowMin && (
             <div className="note" style={{ color: 'var(--honey)' }}>
-              ⚠️ Asgari sipariş tutarı {tl(minOrderTotal)}. {tl(minOrderTotal - subtotal)} daha eklemelisin.
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="warning" size={15} /> Asgari sipariş tutarı {tl(minOrderTotal)}. {tl(minOrderTotal - subtotal)} daha eklemelisin.</span>
             </div>
           )}
           <button className="cta" disabled={belowMin} onClick={() => router.push('/odeme')}>

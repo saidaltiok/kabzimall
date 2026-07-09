@@ -7,6 +7,7 @@ import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import Modal from '@/components/Modal';
 import SectionTabs, { PRODUCTS_TABS } from '@/components/SectionTabs';
+import Icon from '@/components/Icon';
 import { tlToKurus } from '@/lib/money';
 
 interface XlRow { slug: string; name: string; changes: { alan: string; eski: string; yeni: string }[]; errors: string[]; warnings: string[] }
@@ -130,7 +131,7 @@ export default function KatalogPage() {
       a.download = 'kabzimall-urunler.csv';
       a.click();
       URL.revokeObjectURL(a.href);
-      setOk('✓ kabzimall-urunler.csv indirildi — Excel\'de düzenleyip "İçeri al" ile geri yükle.');
+      setOk('kabzimall-urunler.csv indirildi — Excel\'de düzenleyip "İçeri al" ile geri yükle.');
     } catch (e) { setError((e as Error).message); } finally { setXlBusy(false); }
   }
 
@@ -150,7 +151,7 @@ export default function KatalogPage() {
     try {
       const r = await apiSend<XlResult>('POST', '/catalog/products/import-csv', { csv: xlCsv, apply: true });
       setXlPreview(null); setXlCsv(null);
-      setOk(`✓ Excel içe alındı: ${r.summary.degisen} ürün güncellendi${r.summary.hatali ? `, ${r.summary.hatali} satır hatalı (atlandı)` : ''}.`);
+      setOk(`Excel içe alındı: ${r.summary.degisen} ürün güncellendi${r.summary.hatali ? `, ${r.summary.hatali} satır hatalı (atlandı)` : ''}.`);
       await load();
     } catch (e) { setError((e as Error).message); } finally { setXlBusy(false); }
   }
@@ -177,10 +178,10 @@ export default function KatalogPage() {
         await apiSend('PUT', `/catalog/products/${form.id}/substitutes`, {
           slugs: form.substitutes.split(',').map((s) => s.trim()).filter(Boolean),
         });
-        setOk(`✓ ${form.name} güncellendi.`);
+        setOk(`${form.name} güncellendi.`);
       } else {
         await apiSend('POST', '/catalog/products', { slug: form.slug, ...payload });
-        setOk(`✓ ${form.name} eklendi.`);
+        setOk(`${form.name} eklendi.`);
       }
       reset();
       await load();
@@ -236,9 +237,9 @@ export default function KatalogPage() {
         {ok && <div className="ok-box">{ok}</div>}
 
         <div className="miniinfo" style={{ marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span>📊 <b>Excel ile toplu düzenleme:</b> fiyat/indirim/stok/aktifliği dosyada değiştir, önizleyip uygula.</span>
-          <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px' }} disabled={xlBusy} onClick={xlExport}>⬇ Excel'e aktar</button>
-          <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px' }} disabled={xlBusy} onClick={() => fileRef.current?.click()}>⬆ İçeri al</button>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="chart" size={16} /> <b>Excel ile toplu düzenleme:</b> fiyat/indirim/stok/aktifliği dosyada değiştir, önizleyip uygula.</span>
+          <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={xlBusy} onClick={xlExport}><Icon name="download" size={15} /> Excel'e aktar</button>
+          <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={xlBusy} onClick={() => fileRef.current?.click()}><Icon name="arrowUp" size={15} /> İçeri al</button>
           <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) xlPreviewFile(f); e.target.value = ''; }} />
           <span className="muted" style={{ fontSize: 11 }}>
@@ -265,8 +266,8 @@ export default function KatalogPage() {
                       {r.changes.map((c, i) => (
                         <div key={i} style={{ fontSize: 12.5 }}>{c.alan}: <s className="muted">{c.eski}</s> → <b>{c.yeni}</b></div>
                       ))}
-                      {r.errors.map((e, i) => <div key={i} style={{ color: 'var(--berry)', fontSize: 12.5 }}>✕ {e} — satır uygulanmaz</div>)}
-                      {r.warnings.map((w, i) => <div key={i} style={{ color: '#7c4a03', fontSize: 12.5 }}>⚠ {w}</div>)}
+                      {r.errors.map((e, i) => <div key={i} style={{ color: 'var(--berry)', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="x" size={15} /> {e} — satır uygulanmaz</div>)}
+                      {r.warnings.map((w, i) => <div key={i} style={{ color: '#7c4a03', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="warning" size={15} /> {w}</div>)}
                     </div>
                   ))}
                 </div>
@@ -275,8 +276,8 @@ export default function KatalogPage() {
                 <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>… ilk 200 satır gösteriliyor (özet sayılar tam dosyayı kapsar).</p>
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
-                <button className="btn" disabled={xlBusy || xlPreview.summary.degisen === 0} onClick={xlApply}>
-                  ✓ {xlPreview.summary.degisen} ürünü güncelle
+                <button className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={xlBusy || xlPreview.summary.degisen === 0} onClick={xlApply}>
+                  <Icon name="check" size={15} /> {xlPreview.summary.degisen} ürünü güncelle
                 </button>
                 <button className="btn ghost" onClick={() => { setXlPreview(null); setXlCsv(null); }}>Vazgeç</button>
                 {xlPreview.summary.hatali > 0 && <span className="muted" style={{ fontSize: 12 }}>Hatalı satırlar atlanır — dosyada düzeltip yeniden yükleyebilirsin.</span>}
@@ -407,7 +408,7 @@ export default function KatalogPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={p.imageUrl} alt="" style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover' }} />
                         )}
-                        {p.name}{p.isFreshDaily && ' 🌿'}
+                        {p.name}{p.isFreshDaily && <Icon name="leaf" size={14} style={{ color: 'var(--forest)' }} />}
                         {p.kind === 'BASKET' && <span className="tagp info" style={{ marginLeft: 4 }}>paket</span>}
                       </span>
                     </td>

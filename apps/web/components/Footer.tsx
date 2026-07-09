@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
+import Icon from './Icon';
 
 interface Contact {
   contactPhone: string | null;
@@ -43,11 +44,11 @@ export default function Footer() {
         <div>
           <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 10, opacity: 0.95 }}>İletişim</div>
           <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.9 }}>
-            {c?.contactAddress && <div>📍 {c.contactAddress}</div>}
-            {c?.contactPhone && <div>📞 <a href={`tel:${c.contactPhone.replace(/\s/g, '')}`} style={{ color: '#F6F1E7' }}>{c.contactPhone}</a></div>}
-            {c?.contactWhatsapp && <div>💬 <a href={`https://wa.me/${c.contactWhatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ color: '#F6F1E7' }}>WhatsApp</a></div>}
-            {c?.contactEmail && <div>✉️ <a href={`mailto:${c.contactEmail}`} style={{ color: '#F6F1E7' }}>{c.contactEmail}</a></div>}
-            {c?.contactInstagram && <div>📷 <a href={`https://instagram.com/${c.contactInstagram.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#F6F1E7' }}>{c.contactInstagram}</a></div>}
+            {c?.contactAddress && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="mappin" size={15} /> {c.contactAddress}</div>}
+            {c?.contactPhone && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="phone" size={15} /> <a href={`tel:${c.contactPhone.replace(/\s/g, '')}`} style={{ color: '#F6F1E7' }}>{c.contactPhone}</a></div>}
+            {c?.contactWhatsapp && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="message" size={15} /> <a href={`https://wa.me/${c.contactWhatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ color: '#F6F1E7' }}>WhatsApp</a></div>}
+            {c?.contactEmail && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="mail" size={15} /> <a href={`mailto:${c.contactEmail}`} style={{ color: '#F6F1E7' }}>{c.contactEmail}</a></div>}
+            {c?.contactInstagram && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="camera" size={15} /> <a href={`https://instagram.com/${c.contactInstagram.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#F6F1E7' }}>{c.contactInstagram}</a></div>}
             {!c?.contactPhone && !c?.contactAddress && <div style={{ opacity: 0.6 }}>İletişim bilgileri yakında.</div>}
           </div>
         </div>

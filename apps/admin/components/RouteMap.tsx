@@ -29,9 +29,13 @@ export default function RouteMap({ depot, stops }: Props) {
       const layer = layerRef.current!;
       layer.clearLayers();
 
-      // Depo işareti.
+      // Depo işareti (kurumsal store ikonu — Icon setiyle aynı çizim).
+      const depotHtml = '<div style="background:#1F4D38;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">'
+        + '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M4 9.5 5.2 5h13.6L20 9.5" /><path d="M5.2 9.5V19.5h13.6V9.5" /><path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" /><path d="M9.5 19.5v-5h5v5" />'
+        + '</svg></div>';
       L.marker([depot.lat, depot.lng], {
-        icon: L.divIcon({ className: 'route-depot', html: '🏪', iconSize: [28, 28], iconAnchor: [14, 26] }),
+        icon: L.divIcon({ className: 'route-depot', html: depotHtml, iconSize: [28, 28], iconAnchor: [14, 26] }),
       }).addTo(layer).bindTooltip('Depo / dükkân');
 
       // Numaralı duraklar.

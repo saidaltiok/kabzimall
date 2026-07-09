@@ -8,6 +8,7 @@ import { tl, emojiFor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import OrderTimeline from '@/components/OrderTimeline';
 import Modal from '@/components/Modal';
+import Icon from '@/components/Icon';
 
 interface OrderItem { id: string; productName: string; orderedQty: number; pickedQty: number | null; unitLabel: string | null; lineTotal: number; note: string | null; product: { slug: string } | null }
 interface StoreProduct {
@@ -198,7 +199,7 @@ export default function OrderPage() {
   return (
     <div style={{ padding: '30px 0' }}>
       <div style={{ textAlign: 'center', marginBottom: 22 }}>
-        <div style={{ fontSize: 64 }}>✅</div>
+        <div style={{ fontSize: 64, color: 'var(--forest)' }}><Icon name="check" size={64} /></div>
         <h1 className="serif" style={{ fontSize: 26, margin: '10px 0 4px' }}>Siparişin alındı!</h1>
         <div className="muted">Sipariş no <b style={{ color: 'var(--ink)' }}>{order.code}</b> · {STATUS[order.status] ?? order.status}</div>
       </div>
@@ -213,7 +214,7 @@ export default function OrderPage() {
               ) : (
                 <span className="muted">· {it.orderedQty} {it.unitLabel ?? ''}{it.pickedQty != null ? ' ⚖️' : ''}</span>
               )}
-              {it.note && <span className="muted" style={{ display: 'block', fontSize: 12, fontStyle: 'italic' }}>📝 {it.note}</span>}
+              {it.note && <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontStyle: 'italic' }}><Icon name="edit" size={14} /> {it.note}</span>}
             </span>
             <b>{tl(it.lineTotal)}</b>
           </div>
@@ -230,12 +231,12 @@ export default function OrderPage() {
         </div>
         {order.finalTotal != null && (
           <div className="ln serif" style={{ fontSize: 18, fontWeight: 700, color: 'var(--forest)' }}>
-            <span>💵 Kapıda ödenecek (tartı sonrası kesin)</span><span>{tl(order.finalTotal)}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="cash" size={16} /> Kapıda ödenecek (tartı sonrası kesin)</span><span>{tl(order.finalTotal)}</span>
           </div>
         )}
         {(order.refunds?.length ?? 0) > 0 && order.refunds!.map((r) => (
           <div className="ln" key={r.id} style={{ color: 'var(--berry, #b23)' }}>
-            <span>↩ İade edildi ({r.method === 'CASH' ? 'nakit' : `kupon: ${r.couponCode} — sonraki siparişinde geçerli`})</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="undo" size={15} /> İade edildi ({r.method === 'CASH' ? 'nakit' : `kupon: ${r.couponCode} — sonraki siparişinde geçerli`})</span>
             <b>−{tl(r.amount)}</b>
           </div>
         ))}
@@ -252,7 +253,7 @@ export default function OrderPage() {
         <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 6 }}>
           {reorderMsg && <div className="error" style={{ marginBottom: 8 }}>{reorderMsg}</div>}
           <button className="cta" style={{ marginTop: 0 }} onClick={reorder} disabled={reordering}>
-            {reordering ? 'Sepete ekleniyor…' : '🔁 Aynısını tekrar sipariş ver'}
+            {reordering ? 'Sepete ekleniyor…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="refresh" size={15} /> Aynısını tekrar sipariş ver</span>}
           </button>
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Ürünler güncel fiyat ve stok durumuyla sepete eklenir.</p>
         </div>
@@ -275,13 +276,13 @@ export default function OrderPage() {
           <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
             {order.slotChangeStatus === 'PENDING' ? (
               <div style={{ fontSize: 13 }}>
-                🕒 <b>Saat değişikliği talebin onay bekliyor:</b> {order.slotChangeDate?.slice(0, 10)} · {order.slotChangeWindow}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="clock" size={15} /> <b>Saat değişikliği talebin onay bekliyor:</b></span> {order.slotChangeDate?.slice(0, 10)} · {order.slotChangeWindow}
                 <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Mağaza onaylayınca teslimat saatin güncellenir ve bilgilendirilirsin.</div>
               </div>
             ) : !slotOpen ? (
               <>
                 <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, padding: 0 }} onClick={openSlotChange}>
-                  🕒 Teslimat saatini değiştir
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="clock" size={15} /> Teslimat saatini değiştir</span>
                 </button>
                 <span className="muted" style={{ fontSize: 12, marginLeft: 10 }}>Hazırlanmaya başlamadan önce değiştirebilirsin.</span>
               </>
@@ -293,7 +294,7 @@ export default function OrderPage() {
                   const key = `${s.date}|${s.window}`;
                   return (
                     <div key={key} className={`choice ${slotKey === key ? 'sel' : ''}`} style={{ marginBottom: 6, cursor: 'pointer' }} onClick={() => setSlotKey(key)}>
-                      <span>{s.label}</span><span>{slotKey === key ? '✓' : ''}</span>
+                      <span>{s.label}</span><span>{slotKey === key ? <Icon name="check" size={16} /> : ''}</span>
                     </div>
                   );
                 })}
@@ -322,7 +323,7 @@ export default function OrderPage() {
       {/* Teslim sonrası: puanlama + sorun bildirimi */}
       {order.status === 'DELIVERED' && (
         <div className="success-card" style={{ marginTop: 16, textAlign: 'center' }}>
-          {issueResult && <div className="ok-note" style={{ background: '#eaf3ea', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 14 }}>✅ {issueResult}</div>}
+          {issueResult && <div className="ok-note" style={{ background: '#eaf3ea', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><Icon name="check" size={16} /> {issueResult}</div>}
           {(ratingDone ?? order.rating) != null ? (
             <div style={{ fontSize: 14 }}>
               Değerlendirmen: <span style={{ color: 'var(--honey)', fontSize: 18 }}>{'★'.repeat(ratingDone ?? order.rating!)}{'☆'.repeat(5 - (ratingDone ?? order.rating!))}</span>
@@ -349,7 +350,7 @@ export default function OrderPage() {
           {!issueResult && (
             <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
               <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 13.5 }} onClick={() => setIssueOpen(true)}>
-                🛠 Üründe sorun mu vardı? Bildir, telafi edelim
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="settings" size={15} /> Üründe sorun mu vardı? Bildir, telafi edelim</span>
               </button>
               <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>Teslimattan sonraki 24 saat içinde; küçük tutarlar anında kuponla telafi edilir.</div>
             </div>
@@ -395,7 +396,7 @@ export default function OrderPage() {
           <h3 className="serif" style={{ margin: '0 0 12px', fontSize: 16 }}>Bildirimler</h3>
           {order.notifications.map((n) => (
             <div key={n.id} className="ln" style={{ alignItems: 'flex-start' }}>
-              <span>🔔 {n.message}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="bell" size={15} /> {n.message}</span>
               <span className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(n.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</span>
             </div>
           ))}
@@ -414,11 +415,11 @@ export default function OrderPage() {
               target="_blank" rel="noreferrer"
               href={`https://wa.me/${whatsapp.replace(/\D/g, '').replace(/^0/, '90')}?text=${encodeURIComponent(`Merhaba, ${order.code} numaralı siparişim hakkında yardım almak istiyorum.`)}`}
             >
-              💬 WhatsApp canlı yardım
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="message" size={16} /> WhatsApp canlı yardım</span>
             </a>
           )}
           <Link className="cta" style={{ marginTop: 0, width: 'auto', padding: '10px 18px', textDecoration: 'none' }} href={`/iletisim?siparis=${order.code}`}>
-            ✉️ Destek talebi oluştur
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="mail" size={16} /> Destek talebi oluştur</span>
           </Link>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiGet, apiPost, customerSession, setCustomerSession, clearCustomerSession } from '@/lib/api';
 import { tl } from '@/lib/format';
 import { getOrderHistory, rememberOrder } from '@/lib/orders';
+import Icon from '@/components/Icon';
 
 interface Order { id: string; code: string; status: string; grandTotal: number; deliveryWindow: string | null }
 
@@ -103,7 +104,7 @@ export default function MyOrdersPage() {
 
   const loginForm = session ? (
     <div className="block" style={{ maxWidth: 460, margin: '0 auto 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 13.5 }}>✓ Giriş yapıldı: <b>{session.email}</b></span>
+      <span style={{ fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="check" size={15} /> Giriş yapıldı: <b>{session.email}</b></span>
       <button className="back" style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--berry)', fontSize: 13 }} onClick={logout}>Çıkış</button>
     </div>
   ) : (
@@ -162,7 +163,7 @@ export default function MyOrdersPage() {
         {loginForm}
         {lookupForm}
         <div className="empty" style={{ paddingTop: 20 }}>
-          <div className="big">📦</div>
+          <div className="big"><Icon name="box" size={44} /></div>
           <h2 className="serif">Bu cihazda kayıtlı sipariş yok</h2>
           <div>İlk siparişini ver ya da yukarıdan kod + telefonla sorgula.</div>
           <p><Link href="/" className="back">← Alışverişe başla</Link></p>
@@ -180,7 +181,7 @@ export default function MyOrdersPage() {
         return (
           <Link href={`/siparis/${o.id}`} key={o.id}>
             <div className="orow">
-              <div style={{ fontSize: 26 }}>🧾</div>
+              <div style={{ fontSize: 26, display: 'flex', alignItems: 'center' }}><Icon name="receipt" size={26} /></div>
               <div>
                 <div style={{ fontWeight: 600 }}>{o.code}</div>
                 <div className="muted" style={{ fontSize: 12 }}>

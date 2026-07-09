@@ -6,6 +6,7 @@ import { tl, dt } from '@/lib/format';
 import { tlToKurus } from '@/lib/money';
 import Topbar from '@/components/Topbar';
 import { MealCardLogo, type PayId } from '@/components/MealCardLogo';
+import Icon from '@/components/Icon';
 
 interface Product {
   slug: string; name: string; kind: string; unitLabel: string | null;
@@ -111,7 +112,7 @@ export default function TezgahPage() {
         items, note: note.trim() || undefined, paymentMethod: payment,
       });
       const dest = payment === 'CASH' ? 'nakit kasaya işlendi' : `${payLabel(payment)} ile tahsil edildi (kasaya girmez)`;
-      setOk(`✓ ${r.code} · ${items.length} kalem · ${tl(r.finalTotal)} — ${dest}.`);
+      setOk(`${r.code} · ${items.length} kalem · ${tl(r.finalTotal)} — ${dest}.`);
       setWarnings(r.warnings ?? []);
       setLines([]); setNote(''); setPayment('CASH'); load();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -131,7 +132,7 @@ export default function TezgahPage() {
       <div className="body">
         {error && <div className="error">{error}</div>}
         {ok && <div className="ok-box">{ok}</div>}
-        {warnings.map((w, i) => <div className="error" key={i} style={{ background: '#fff7ed', borderColor: 'var(--honey)', color: '#7c4a03' }}>⚠ {w}</div>)}
+        {warnings.map((w, i) => <div className="error" key={i} style={{ background: '#fff7ed', borderColor: 'var(--honey)', color: '#7c4a03', display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="warning" size={16} /> {w}</div>)}
 
         <div className="grid2">
           <div className="card">
@@ -173,7 +174,7 @@ export default function TezgahPage() {
                         <td className="num"><input className="cell" value={l.qty} onChange={(e) => setLine(l.slug, { qty: e.target.value })} style={{ width: 62 }} /></td>
                         <td className="num"><input className="cell" value={l.priceTl} onChange={(e) => setLine(l.slug, { priceTl: e.target.value })} placeholder="0,00" style={{ width: 76 }} /></td>
                         <td className="num" style={{ fontWeight: 700 }}>{lk != null ? tl(lk) : <span className="tagp risk">eksik</span>}</td>
-                        <td><button className="btn ghost" style={{ padding: '3px 8px', fontSize: 12, color: 'var(--berry)' }} onClick={() => removeLine(l.slug)}>✕</button></td>
+                        <td><button className="btn ghost" style={{ padding: '3px 8px', fontSize: 12, color: 'var(--berry)' }} onClick={() => removeLine(l.slug)}><Icon name="x" size={15} /></button></td>
                       </tr>
                     );
                   })}
@@ -262,7 +263,7 @@ export default function TezgahPage() {
                     <td className="num">
                       {s.status === 'CANCELLED'
                         ? <span className="muted">—</span>
-                        : <button className="btn ghost" style={{ padding: '3px 10px', fontSize: 12 }} disabled={busy} onClick={() => refund(s)}>↩ İade</button>}
+                        : <button className="btn ghost" style={{ padding: '3px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy} onClick={() => refund(s)}><Icon name="undo" size={15} /> İade</button>}
                     </td>
                   </tr>
                 ))}

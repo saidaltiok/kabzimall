@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiGet, apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import Icon from '@/components/Icon';
 
 /* ------------------------------- Tipler ------------------------------- */
 
@@ -106,7 +107,7 @@ export default function BugunPage() {
         netMargin: d.suggestedMargin,
         reason: 'Bugün ekranından tek tık uygulama',
       });
-      setOk(`✓ ${d.name}: ${tl(d.suggestedPrice)} uygulandı.`);
+      setOk(`${d.name}: ${tl(d.suggestedPrice)} uygulandı.`);
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -129,7 +130,7 @@ export default function BugunPage() {
         done++;
       } catch { /* tekil hata toplu akışı bozmasın */ }
     }
-    setOk(`✓ ${done}/${dec.decisions.length} ürünün fiyatı güncellendi.`);
+    setOk(`${done}/${dec.decisions.length} ürünün fiyatı güncellendi.`);
     setBusy(null);
     load();
   }
@@ -149,13 +150,13 @@ export default function BugunPage() {
         {/* 1 — Bugünün verisi geldi mi? */}
         {k && (
           <div className="miniinfo" style={{ marginBottom: 16, flexWrap: 'wrap' }}>
-            <span>
-              {halOk ? '🟢' : '🟠'} Hal fiyatları:{' '}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name={halOk ? 'check' : 'warning'} size={16} /> Hal fiyatları:{' '}
               <b>{halOk ? `${k.productsWithHalToday} ürün geldi` : 'bugün henüz yok'}</b>
               {!halOk && <> · <Link href="/hal" style={{ color: 'var(--forest)', fontWeight: 600 }}>Hal ekranından çek/gir →</Link></>}
             </span>
-            <span>
-              {rakipOk ? '🟢' : '🟠'} Rakip fiyatları:{' '}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name={rakipOk ? 'check' : 'warning'} size={16} /> Rakip fiyatları:{' '}
               <b>{rakipOk ? `${k.competitorPricesToday} kayıt geldi` : 'bugün henüz yok'}</b>
               {!rakipOk && <> · <Link href="/rakip" style={{ color: 'var(--forest)', fontWeight: 600 }}>Şimdi güncelle →</Link></>}
             </span>
@@ -166,7 +167,7 @@ export default function BugunPage() {
         {/* 1.5 — AI günlük özet */}
         {brief && (
           <div className="aibox" style={{ marginBottom: 16 }}>
-            <span className="k">{brief.source === 'llm' ? '🤖 AI Sabah Brifingi' : '📋 Sabah Brifingi'}</span>
+            <span className="k" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{brief.source === 'llm' ? <><Icon name="settings" size={16} /> AI Sabah Brifingi</> : <><Icon name="receipt" size={16} /> Sabah Brifingi</>}</span>
             {brief.text}
             {brief.source === 'rules' && <span className="muted" style={{ fontSize: 11 }}> (kural bazlı — ANTHROPIC_API_KEY takılınca AI yazar)</span>}
           </div>
@@ -175,7 +176,7 @@ export default function BugunPage() {
         {/* 1.7 — Oto-indirim: eriyecek ürünler (yalnız varsa görünür) */}
         {melt && (melt.today.length > 0 || melt.soon.length > 0) && (
           <div className="card" style={{ marginBottom: 16, borderLeft: '3px solid var(--honey)' }}>
-            <div className="ct">🏷️ Oto-indirim radarı
+            <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="tag" size={16} /> Oto-indirim radarı
               <span>{melt.today.length > 0 ? `bugün ${melt.today.length} ürün inecek` : ''}{melt.today.length > 0 && melt.soon.length > 0 ? ' · ' : ''}{melt.soon.length > 0 ? `${melt.soon.length} aday yaklaşıyor` : ''}</span>
             </div>
             <div className="miniinfo" style={{ flexWrap: 'wrap' }}>
@@ -196,16 +197,16 @@ export default function BugunPage() {
         {dec && (
           <div className="card" style={{ marginBottom: 16, borderLeft: '3px solid var(--persimmon)' }}>
             <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              🎯 Bugünün fiyat kararları
+              <Icon name="target" size={16} /> Bugünün fiyat kararları
               <span>{dec.decisions.length} ürün aksiyon bekliyor</span>
               {dec.decisions.length > 1 && (
-                <button className="btn" style={{ marginLeft: 'auto', background: 'var(--persimmon)' }} onClick={applyAll} disabled={busy != null}>
-                  {busy === '__all__' ? 'Uygulanıyor…' : `⚡ Hepsini uygula (${dec.decisions.length})`}
+                <button className="btn" style={{ marginLeft: 'auto', background: 'var(--persimmon)', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={applyAll} disabled={busy != null}>
+                  {busy === '__all__' ? 'Uygulanıyor…' : <><Icon name="send" size={15} /> Hepsini uygula ({dec.decisions.length})</>}
                 </button>
               )}
             </div>
             {dec.decisions.length === 0 ? (
-              <p className="muted">Bugün fiyat aksiyonu gerektiren ürün yok. 👍</p>
+              <p className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Bugün fiyat aksiyonu gerektiren ürün yok. <Icon name="check" size={15} /></p>
             ) : (
               <table>
                 <thead>
@@ -235,8 +236,8 @@ export default function BugunPage() {
                       </td>
                       <td className="num">{pct(d.suggestedMargin)}</td>
                       <td className="num">
-                        <button className="btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => apply(d)} disabled={busy != null}>
-                          {busy === d.productId ? '…' : '✓ Uygula'}
+                        <button className="btn" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => apply(d)} disabled={busy != null}>
+                          {busy === d.productId ? '…' : <><Icon name="check" size={15} /> Uygula</>}
                         </button>
                       </td>
                     </tr>
@@ -246,7 +247,7 @@ export default function BugunPage() {
             )}
             {dec.info.length > 0 && (
               <p className="note2" style={{ marginTop: 10 }}>
-                ℹ️ Fiyatlanamayanlar (veri eksik): {dec.info.map((i) => i.name).join(', ')} —{' '}
+                <Icon name="info" size={15} style={{ verticalAlign: '-0.2em' }} /> Fiyatlanamayanlar (veri eksik): {dec.info.map((i) => i.name).join(', ')} —{' '}
                 <Link href="/hal" style={{ color: 'var(--forest)', fontWeight: 600 }}>hal fiyatı</Link> ya da{' '}
                 <Link href="/maliyet" style={{ color: 'var(--forest)', fontWeight: 600 }}>maliyet</Link> girilince öneri üretilebilir.
               </p>
@@ -304,7 +305,7 @@ function Ops({ ops }: { ops: OpsSummary }) {
       </div>
       <div className="kpis">
         <Kpi l="Bugünkü sipariş" v={String(ops.ordersToday)} d="web · 00:00'dan beri" />
-        <Kpi l="Bugünkü ciro" v={tl(ops.revenueToday)} d={(ops.posToday?.count ?? 0) > 0 ? `🛒 ${ops.posToday!.count} tezgâh fişi (${tl(ops.posToday!.revenue)}) dahil` : 'web + tezgâh · iptaller hariç'} />
+        <Kpi l="Bugünkü ciro" v={tl(ops.revenueToday)} d={(ops.posToday?.count ?? 0) > 0 ? `${ops.posToday!.count} tezgâh fişi (${tl(ops.posToday!.revenue)}) dahil` : 'web + tezgâh · iptaller hariç'} />
         <Kpi l="Aktif sipariş" v={String(ops.activeCount)} d="işlem bekliyor" alert={ops.activeCount > 0} />
         <Kpi l="Düşük stok" v={String(ops.lowStock.length)} d="≤ 5 birim" alert={ops.lowStock.length > 0} />
       </div>
@@ -313,7 +314,7 @@ function Ops({ ops }: { ops: OpsSummary }) {
         <div className="card">
           <div className="ct">Aktif sipariş durumları</div>
           {ops.activeCount === 0 ? (
-            <p className="muted">Aktif sipariş yok. 👍</p>
+            <p className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Aktif sipariş yok. <Icon name="check" size={15} /></p>
           ) : (
             <div className="pchips">
               {OPS_STATUS.map(([s, label]) => (
@@ -326,7 +327,7 @@ function Ops({ ops }: { ops: OpsSummary }) {
         <div className="card">
           <div className="ct">Düşük stok uyarıları <span>{ops.lowStock.length} ürün</span></div>
           {ops.lowStock.length === 0 ? (
-            <p className="muted">Stoğu düşük ürün yok. 👍</p>
+            <p className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Stoğu düşük ürün yok. <Icon name="check" size={15} /></p>
           ) : (
             <table>
               <thead><tr><th>Ürün</th><th className="num">Kalan</th></tr></thead>

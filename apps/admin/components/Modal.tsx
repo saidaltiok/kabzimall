@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
+import Icon from './Icon';
 
 /** Panel geneli modal — overlay'e tıklama ve Esc ile kapanır. */
 export default function Modal({
@@ -30,7 +31,7 @@ export default function Modal({
             <h3>{title}</h3>
             {sub && <div className="muted" style={{ fontSize: 12 }}>{sub}</div>}
           </div>
-          <button className="admodal-x" onClick={onClose} aria-label="Kapat">✕</button>
+          <button className="admodal-x" onClick={onClose} aria-label="Kapat"><Icon name="x" size={16} /></button>
         </div>
         <div className="admodal-body">{children}</div>
       </div>

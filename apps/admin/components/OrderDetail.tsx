@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { tl, dt } from '@/lib/format';
+import Icon from './Icon';
 
 export interface DetailItem {
   id: string; productName: string; orderedQty: number; pickedQty: number | null;
@@ -28,10 +29,10 @@ const STATUS_TR: Record<string, string> = {
   OUT_FOR_DELIVERY: 'Yolda', DELIVERED: 'Teslim edildi', CANCELLED: 'İptal',
 };
 const SUB_LABEL: Record<string, string> = {
-  CALL: '📞 Eksikte: müşteriyi ara', REMOVE: '➖ Eksikte: ürünü çıkar', SUBSTITUTE: '🔄 Eksikte: benzeriyle değiştir',
+  CALL: 'Eksikte: müşteriyi ara', REMOVE: 'Eksikte: ürünü çıkar', SUBSTITUTE: 'Eksikte: benzeriyle değiştir',
 };
 const PAY_LABEL: Record<string, string> = {
-  COD: '💵 Kapıda nakit', CASH: '💵 Nakit', CARD: '💳 Kapıda kart',
+  COD: 'Kapıda nakit', CASH: 'Nakit', CARD: 'Kapıda kart',
   SETCARD: 'Setcard', MULTINET: 'Multinet', TOKENFLEX: 'Token Flex', EDENRED: 'Edenred', METROPOL: 'Metropol',
 };
 
@@ -93,18 +94,18 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
         {o.customerEmail && <span className="muted">· {o.customerEmail}</span>}
         {o.rating != null && (
           <span className={`tagp ${o.rating <= 2 ? 'zararina' : 'info'}`} title={o.ratingComment ?? undefined}>
-            {'★'.repeat(o.rating)}{'☆'.repeat(5 - o.rating)} {o.rating}/5{o.ratingComment ? ' 💬' : ''}
+            {'★'.repeat(o.rating)}{'☆'.repeat(5 - o.rating)} {o.rating}/5{o.ratingComment ? <> <Icon name="message" size={13} /></> : ''}
           </span>
         )}
       </div>
       {o.rating != null && o.ratingComment && (
-        <div className="muted" style={{ marginBottom: 8, fontSize: 12, fontStyle: 'italic' }}>💬 “{o.ratingComment}”</div>
+        <div className="muted" style={{ marginBottom: 8, fontSize: 12, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="message" size={14} /> “{o.ratingComment}”</div>
       )}
 
       <div style={{ marginBottom: 8 }}>
         <b>Adres:</b> {o.addressText ?? '—'}
         {o.lat != null && o.lng != null ? (
-          <> · 📍 <a href={`https://www.google.com/maps?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer" style={{ color: 'var(--forest)', fontWeight: 600 }}>Haritada gör</a></>
+          <> · <Icon name="mappin" size={14} /> <a href={`https://www.google.com/maps?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer" style={{ color: 'var(--forest)', fontWeight: 600 }}>Haritada gör</a></>
         ) : (
           <> · <span className="muted">konum yok</span></>
         )}
@@ -120,11 +121,11 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
 
       {o.slotChangeStatus === 'PENDING' && (
         <div style={{ margin: '10px 0', padding: '10px 12px', background: '#fff7ed', border: '1px solid var(--honey)', borderRadius: 10 }}>
-          <div style={{ marginBottom: 8 }}>🕒 <b>Saat değişikliği talebi:</b> {o.deliveryDate?.slice(0, 10)} {o.deliveryWindow} → <b>{o.slotChangeDate?.slice(0, 10)} {o.slotChangeWindow}</b></div>
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><Icon name="clock" size={14} /> <b>Saat değişikliği talebi:</b> {o.deliveryDate?.slice(0, 10)} {o.deliveryWindow} → <b>{o.slotChangeDate?.slice(0, 10)} {o.slotChangeWindow}</b></div>
           {onSlotDecide && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button className="btn" style={{ fontSize: 12, padding: '5px 12px' }} disabled={busy} onClick={() => onSlotDecide(true)}>✓ Onayla</button>
-              <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px', color: 'var(--berry)' }} disabled={busy} onClick={() => onSlotDecide(false)}>✕ Reddet</button>
+              <button className="btn" style={{ fontSize: 12, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy} onClick={() => onSlotDecide(true)}><Icon name="check" size={15} /> Onayla</button>
+              <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px', color: 'var(--berry)', display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy} onClick={() => onSlotDecide(false)}><Icon name="x" size={15} /> Reddet</button>
               <span className="muted" style={{ fontSize: 11 }}>İki durumda da müşteri bilgilendirilir.</span>
             </div>
           )}
@@ -139,10 +140,10 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
               <td>
                 {it.productName}
                 {it.product?.stockQty != null && it.product.stockQty <= 0 && <span className="tagp zararina" style={{ marginLeft: 6 }}>stok bitti</span>}
-                {it.note && <div style={{ fontSize: 11, color: 'var(--persimmon-d)', fontStyle: 'italic' }}>📝 {it.note}</div>}
+                {it.note && <div style={{ fontSize: 11, color: 'var(--persimmon-d)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="edit" size={13} /> {it.note}</div>}
                 {(it.product?.substitutes?.length ?? 0) > 0 && (
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    🔄 İkame: {it.product!.substitutes.filter((s) => s.substitute.isActive).map((s) => `${s.substitute.name}${s.substitute.stockQty != null && s.substitute.stockQty <= 0 ? ' (stok yok)' : ''}`).join(', ')}
+                  <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Icon name="refresh" size={13} /> İkame: {it.product!.substitutes.filter((s) => s.substitute.isActive).map((s) => `${s.substitute.name}${s.substitute.stockQty != null && s.substitute.stockQty <= 0 ? ' (stok yok)' : ''}`).join(', ')}
                   </div>
                 )}
               </td>
@@ -156,7 +157,7 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
 
       <div style={{ marginTop: 10, display: 'grid', gap: 3, maxWidth: 280, marginLeft: 'auto', fontSize: 13 }}>
         {o.subtotal != null && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Ara toplam</span><span>{tl(o.subtotal)}</span></div>}
-        {(o.discountTotal ?? 0) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">🎟️ {o.couponCode}</span><span>−{tl(o.discountTotal!)}</span></div>}
+        {(o.discountTotal ?? 0) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="tag" size={13} /> {o.couponCode}</span><span>−{tl(o.discountTotal!)}</span></div>}
         {o.deliveryFee != null && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Teslimat</span><span>{o.deliveryFee === 0 ? 'Ücretsiz' : tl(o.deliveryFee)}</span></div>}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
           <span>{o.finalTotal != null ? 'Kesinleşen' : 'Tahmini'}</span><span>{tl(o.finalTotal ?? o.grandTotal)}</span>
@@ -164,7 +165,7 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
         {refundedTotal > 0 && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--berry)' }}>
-              <span>↩ İade edildi</span><span>−{tl(refundedTotal)}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="undo" size={13} /> İade edildi</span><span>−{tl(refundedTotal)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
               <span>Kalan tahsilat</span><span>{tl(paid - refundedTotal)}</span>
@@ -179,7 +180,7 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
           <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
             {o.refunds!.map((r) => (
               <li key={r.id}>
-                ↩ <b>{tl(r.amount)}</b> · {r.method === 'CASH' ? 'nakit' : `kupon ${r.couponCode}`}
+                <Icon name="undo" size={12} /> <b>{tl(r.amount)}</b> · {r.method === 'CASH' ? 'nakit' : `kupon ${r.couponCode}`}
                 {r.restock ? ' · stoğa geri alındı' : ''}{r.reason ? ` · ${r.reason}` : ''}
                 {r.createdBy ? ` · ${r.createdBy}` : ''} · {dt(r.createdAt)}
               </li>
@@ -191,10 +192,10 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
       {onRefund && o.status === 'DELIVERED' && refundedTotal < paid && (
         <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
           {!refundOpen ? (
-            <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => setRefundOpen(true)}>↩ Kısmi iade</button>
+            <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setRefundOpen(true)}><Icon name="undo" size={15} /> Kısmi iade</button>
           ) : (
             <div style={{ background: '#fff7ed', border: '1px solid var(--honey)', borderRadius: 10, padding: '10px 12px' }}>
-              <b style={{ fontSize: 12.5 }}>↩ Kısmi iade — kalemleri seç</b>
+              <b style={{ fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="undo" size={14} /> Kısmi iade — kalemleri seç</b>
               <div style={{ display: 'grid', gap: 4, margin: '8px 0', maxHeight: 240, overflowY: 'auto' }}>
                 {o.items.map((it) => {
                   const sel = refSel[it.id] !== undefined;
@@ -227,8 +228,8 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <select value={refMethod} onChange={(e) => setRefMethod(e.target.value as 'CASH' | 'COUPON')} style={{ fontSize: 12 }}>
-                  <option value="CASH">💵 Nakit (kasadan düşer)</option>
-                  <option value="COUPON">🎟️ Tek kullanımlık kupon</option>
+                  <option value="CASH">Nakit (kasadan düşer)</option>
+                  <option value="COUPON">Tek kullanımlık kupon</option>
                 </select>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer' }}>
                   <input type="checkbox" checked={refRestock} onChange={(e) => setRefRestock(e.target.checked)} />
@@ -239,8 +240,8 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
                 <b>Toplam: {tl(refTotal)}</b>
                 {refundedTotal + refTotal > paid && <span className="tagp zararina">tahsilatı aşıyor</span>}
-                <button className="btn" style={{ marginLeft: 'auto', fontSize: 12, padding: '6px 14px', background: 'var(--berry)' }} disabled={busy || !refValid} onClick={sendRefund}>
-                  ↩ İade et
+                <button className="btn" style={{ marginLeft: 'auto', fontSize: 12, padding: '6px 14px', background: 'var(--berry)', display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy || !refValid} onClick={sendRefund}>
+                  <Icon name="undo" size={15} /> İade et
                 </button>
                 <button className="btn ghost" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => { setRefundOpen(false); setRefSel({}); }}>Vazgeç</button>
               </div>
@@ -253,7 +254,7 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
         <div style={{ marginTop: 12 }}>
           <b style={{ fontSize: 12 }}>Gönderilen bildirimler</b>
           <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
-            {o.notifications!.map((n) => <li key={n.id}>🔔 {n.message}</li>)}
+            {o.notifications!.map((n) => <li key={n.id}><Icon name="bell" size={12} /> {n.message}</li>)}
           </ul>
         </div>
       )}

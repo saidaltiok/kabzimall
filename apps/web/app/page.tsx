@@ -9,6 +9,7 @@ import { useCart } from '@/lib/cart';
 import { useFavs } from '@/lib/favs';
 import { getOrderHistory } from '@/lib/orders';
 import ProductCard, { CardProduct } from '@/components/ProductCard';
+import Icon from '@/components/Icon';
 
 interface Product extends CardProduct {
   isFeatured: boolean;
@@ -53,7 +54,7 @@ export default function HomePage() {
   const inCart = (slug: string) => items.find((i) => i.slug === slug && !i.basketSlug)?.qty ?? 0;
 
   function flash(name: string) {
-    setToast(`${name} sepete eklendi ✓`);
+    setToast(`${name} sepete eklendi`);
     window.setTimeout(() => setToast(null), 1800);
   }
 
@@ -94,7 +95,7 @@ export default function HomePage() {
   async function copyCoupon(code: string) {
     try {
       await navigator.clipboard.writeText(code);
-      setToast(`Kupon kodu kopyalandı: ${code} ✓`);
+      setToast(`Kupon kodu kopyalandı: ${code}`);
     } catch {
       setToast(`Kupon kodu: ${code} — sepette girebilirsin`);
     }
@@ -167,14 +168,14 @@ export default function HomePage() {
         <div className="s">{banner?.subtitle ?? 'Sabah toplanan ürünler, ertesi gün kapında.'}</div>
         {banner?.couponCode && (
           <button className="promo-coupon" onClick={() => copyCoupon(banner.couponCode!)} title="Kodu kopyala">
-            🎟️ {banner.couponCode} <span className="cp">kopyala</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="tag" size={16} /> {banner.couponCode} <span className="cp">kopyala</span></span>
           </button>
         )}
       </div>
 
       <div className="cats">
         <button className={`cat ${cat === 'all' ? 'sel' : ''}`} onClick={() => setCat('all')}>
-          <span className="ring">🛒</span>Tümü
+          <span className="ring"><Icon name="cart" size={16} /></span>Tümü
         </button>
         {categories.map((c) => (
           <button key={c.slug} className={`cat ${cat === c.slug ? 'sel' : ''}`} onClick={() => setCat(c.slug)}>
@@ -184,12 +185,12 @@ export default function HomePage() {
         ))}
         {favs.length > 0 && (
           <button className={`cat ${cat === 'favs' ? 'sel' : ''}`} onClick={() => setCat('favs')}>
-            <span className="ring">❤️</span>Favorilerim
+            <span className="ring"><Icon name="star" size={16} /></span>Favorilerim
           </button>
         )}
       </div>
 
-      <input className="search" placeholder="🔍 Domates, çilek, zeytin…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <input className="search" placeholder="Domates, çilek, zeytin…" value={q} onChange={(e) => setQ(e.target.value)} />
 
       {showcase ? (
         <>
@@ -200,7 +201,7 @@ export default function HomePage() {
 
           {baskets.length > 0 && (
             <>
-              <div className="sectit"><h2 className="serif">🧺 Hazır sepetler</h2></div>
+              <div className="sectit"><h2 className="serif"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="basket" size={16} /> Hazır sepetler</span></h2></div>
               <div className="rail">
                 {baskets.map((b) => {
                   const discounted = b.discountedPrice != null && b.discountedPrice > 0 && b.discountedPrice < b.basePrice;
@@ -211,7 +212,7 @@ export default function HomePage() {
                         {b.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={b.imageUrl} alt={b.name} loading="lazy" />
-                        ) : '🧺'}
+                        ) : <Icon name="basket" size={40} />}
                       </div>
                       <div className="nm">{b.name}</div>
                       <div className="or">{b.components.length} çeşit ürün</div>
@@ -222,7 +223,7 @@ export default function HomePage() {
                         </div>
                         <button className="add" onClick={() => addBasket(b)} aria-label="Sepete ekle">+</button>
                       </div>
-                      {inCart(b.slug) > 0 && <div className="incart">🛒 {inCart(b.slug)} paket sepette</div>}
+                      {inCart(b.slug) > 0 && <div className="incart"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="cart" size={14} /> {inCart(b.slug)} paket sepette</span></div>}
                     </div>
                   );
                 })}
@@ -243,13 +244,13 @@ export default function HomePage() {
       ) : (
         <>
           <div className="sectit">
-            <h2 className="serif">{cat === 'favs' ? '❤️ Favorilerim' : q ? `“${q}” için sonuçlar` : categories.find((c) => c.slug === cat)?.name}</h2>
+            <h2 className="serif">{cat === 'favs' ? 'Favorilerim' : q ? `“${q}” için sonuçlar` : categories.find((c) => c.slug === cat)?.name}</h2>
           </div>
           {flat.length === 0 ? (
             cat === 'favs' ? (
-              <div className="empty"><div className="big">🤍</div><h2 className="serif">Henüz favorin yok</h2><div>Ürün kartlarındaki kalbe dokunarak favorilerine ekle.</div></div>
+              <div className="empty"><div className="big"><Icon name="star" size={44} /></div><h2 className="serif">Henüz favorin yok</h2><div>Ürün kartlarındaki kalbe dokunarak favorilerine ekle.</div></div>
             ) : (
-              <div className="empty"><div className="big">🧺</div><h2 className="serif">Ürün bulunamadı</h2><div>Farklı bir kategori ya da arama dene.</div></div>
+              <div className="empty"><div className="big"><Icon name="basket" size={44} /></div><h2 className="serif">Ürün bulunamadı</h2><div>Farklı bir kategori ya da arama dene.</div></div>
             )
           ) : (
             <div className="grid">

@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { MARKET_TABS } from '@/components/SectionTabs';
+import Icon from '@/components/Icon';
 
 interface Product { slug: string; name: string; kind: string; unitLabel: string | null; isActive: boolean }
 interface GridRow { productId: string; count: number; dailyAverage: number }
@@ -78,7 +79,7 @@ export default function HalPage() {
     setBusy(true); setError(null); setOk(null);
     try {
       await apiSend('POST', '/intel/hal/bulk', { date, entries });
-      setOk(`✓ ${entries.length} ürünün ${date} hal fiyatı kaydedildi.`);
+      setOk(`${entries.length} ürünün ${date} hal fiyatı kaydedildi.`);
       await load(date);
     } catch (e) {
       setError((e as Error).message);
@@ -124,7 +125,7 @@ export default function HalPage() {
       const body: Record<string, unknown> = { date, createMissing: true, side: ibbSide };
       if (ibbCat) body.category = ibbCat;
       const r = await apiSend<{ totalRows: number; created: number; priced: number }>('POST', '/intel/hal/ibb/import', body);
-      setOk(`✓ İBB içe aktarım: ${r.priced} ürün fiyatı yazıldı, ${r.created} yeni ürün oluşturuldu (${r.totalRows} satır tarandı).`);
+      setOk(`İBB içe aktarım: ${r.priced} ürün fiyatı yazıldı, ${r.created} yeni ürün oluşturuldu (${r.totalRows} satır tarandı).`);
       await load(date);
     } catch (e) {
       setError((e as Error).message);
@@ -146,7 +147,7 @@ export default function HalPage() {
       );
       const entries = chosen.map((x) => ({ productId: x.slug, price: x.r.price, source: 'IBB' }));
       await apiSend('POST', '/intel/hal/bulk', { date, entries });
-      setOk(`✓ İBB'den ${entries.length} ürün fiyatı ${date} tarihine kaydedildi.`);
+      setOk(`İBB'den ${entries.length} ürün fiyatı ${date} tarihine kaydedildi.`);
       setIbbRows(null);
       await load(date);
     } catch (e) {
@@ -195,7 +196,7 @@ export default function HalPage() {
         </p>
 
         <div className="card" style={{ borderLeft: '3px solid var(--persimmon)' }}>
-          <div className="ct">🏛️ İBB'den otomatik çek <span>Avrupa Yakası Hali · {date}</span></div>
+          <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="building" size={16} /> İBB'den otomatik çek <span>Avrupa Yakası Hali · {date}</span></div>
           <div className="form-row" style={{ alignItems: 'flex-end' }}>
             <div className="field"><label>Yaka</label>
               <select value={ibbSide} onChange={(e) => setIbbSide(e.target.value)}>
@@ -209,7 +210,7 @@ export default function HalPage() {
               </select>
             </div>
             <button className="btn" onClick={fetchIbb} disabled={ibbBusy}>{ibbBusy ? 'Çekiliyor…' : 'İBB\'den çek (önizle)'}</button>
-            <button className="btn" onClick={importAllIbb} disabled={ibbBusy} style={{ background: 'var(--persimmon)' }}>{ibbBusy ? '…' : '⤵ Tümünü içeri al (eksikleri oluştur)'}</button>
+            <button className="btn" onClick={importAllIbb} disabled={ibbBusy} style={{ background: 'var(--persimmon)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>{ibbBusy ? '…' : <><Icon name="download" size={15} /> Tümünü içeri al (eksikleri oluştur)</>}</button>
             {ibbRows && <button className="btn ghost" onClick={saveIbb} disabled={ibbBusy}>Eşleşenleri hal&apos;e yaz</button>}
           </div>
           {ibbRows && (
@@ -243,7 +244,7 @@ export default function HalPage() {
           <div className="field"><label>Gün</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <button className="btn ghost" onClick={fillFromYesterday} disabled={Object.keys(prev).length === 0}>Dünden doldur</button>
           <button className="btn" onClick={saveAll} disabled={busy || enteredCount === 0}>{busy ? 'Kaydediliyor…' : `Tümünü kaydet (${enteredCount})`}</button>
-          <button className="btn ghost" onClick={exportCsv} disabled={products.length === 0}>⬇ Excel'e aktar (CSV)</button>
+          <button className="btn ghost" onClick={exportCsv} disabled={products.length === 0} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="download" size={15} /> Excel'e aktar (CSV)</button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -277,7 +278,7 @@ export default function HalPage() {
                       </td>
                       <td className="num savecell">{g ? tl(g.dailyAverage) : '—'}{g && g.count > 1 ? <span className="muted" style={{ fontSize: 10 }}> ({g.count})</span> : null}</td>
                       <td>
-                        {outlier ? <span className="tagp zararina">⚠️ %{Math.round((dev as number) * 100)} sapma</span>
+                        {outlier ? <span className="tagp zararina" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="warning" size={13} /> %{Math.round((dev as number) * 100)} sapma</span>
                           : dev != null && dev !== 0 ? <span className="tagp info">%{Math.round((dev as number) * 100) > 0 ? '+' : ''}{Math.round((dev as number) * 100)}</span>
                           : g ? <span className="tagp ok">girildi</span> : ''}
                       </td>

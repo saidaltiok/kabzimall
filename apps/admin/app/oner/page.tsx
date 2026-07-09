@@ -5,6 +5,7 @@ import { apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
+import Icon from '@/components/Icon';
 import { ProductPicker } from '@/components/pickers';
 
 interface SuggestResult {
@@ -85,7 +86,7 @@ export default function OnerPage() {
         netMargin: result.netMargin,
         reason: 'Panelden uygulandı',
       });
-      setApplied(`✓ Mağaza fiyatı ${tl(result.price)} olarak yayınlandı${result.floored ? '' : ''}. Varsa eski indirim kaldırıldı.`);
+      setApplied(`Mağaza fiyatı ${tl(result.price)} olarak yayınlandı${result.floored ? '' : ''}. Varsa eski indirim kaldırıldı.`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -170,15 +171,17 @@ export default function OnerPage() {
                   <span>Maliyet <b>{tl(result.directCost)}</b></span>
                 </div>
                 <div className="note2">
-                  {result.belowCost
-                    ? '⚠️ Bu fiyat maliyetin altında (fırsat ürünü olabilir).'
-                    : result.floored
-                      ? '⚠️ Taban marj devreye girdi: öneri min net kârın altına düşmeyecek şekilde yükseltildi.'
-                      : 'Hesap: maliyet ÷ (1 − marj − komisyon) → psikolojik yuvarlama.'}
+                  {result.belowCost ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="warning" size={15} /> Bu fiyat maliyetin altında (fırsat ürünü olabilir).</span>
+                  ) : result.floored ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="warning" size={15} /> Taban marj devreye girdi: öneri min net kârın altına düşmeyecek şekilde yükseltildi.</span>
+                  ) : (
+                    'Hesap: maliyet ÷ (1 − marj − komisyon) → psikolojik yuvarlama.'
+                  )}
                 </div>
                 <div style={{ marginTop: 14 }}>
-                  <button className="applybtn" onClick={apply} disabled={busy}>
-                    ✓ Bu fiyatı mağazaya yaz
+                  <button className="applybtn" onClick={apply} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="check" size={15} /> Bu fiyatı mağazaya yaz
                   </button>
                 </div>
               </div>

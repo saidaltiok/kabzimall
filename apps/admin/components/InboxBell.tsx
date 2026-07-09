@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { tl } from '@/lib/format';
+import Icon from './Icon';
 
 interface Inbox {
   counts: { newOrders: number; slotRequests: number; openTickets: number; total: number };
@@ -38,9 +39,9 @@ export default function InboxBell() {
       <button
         onClick={() => setOpen((o) => !o)}
         title="Bildirimler"
-        style={{ position: 'relative', border: '1px solid var(--line)', background: '#fff', borderRadius: 12, width: 38, height: 38, cursor: 'pointer', fontSize: 16 }}
+        style={{ position: 'relative', border: '1px solid var(--line)', background: '#fff', borderRadius: 12, width: 38, height: 38, cursor: 'pointer', fontSize: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        🔔
+        <Icon name="bell" size={16} />
         {total > 0 && (
           <span style={{ position: 'absolute', top: -6, right: -6, background: 'var(--persimmon)', color: '#fff', borderRadius: 20, minWidth: 18, height: 18, fontSize: 10.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
             {total > 99 ? '99+' : total}
@@ -50,12 +51,12 @@ export default function InboxBell() {
       {open && (
         <div style={{ position: 'absolute', right: 0, top: 46, width: 330, background: '#fff', border: '1px solid var(--line)', borderRadius: 14, boxShadow: '0 20px 50px -20px rgba(0,0,0,.35)', zIndex: 60, overflow: 'hidden' }}>
           {!inbox || total === 0 ? (
-            <div className="muted" style={{ padding: 16, fontSize: 13, textAlign: 'center' }}>Bekleyen bildirim yok 👍</div>
+            <div className="muted" style={{ padding: 16, fontSize: 13, textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%' }}><Icon name="check" size={14} /> Bekleyen bildirim yok</div>
           ) : (
             <div style={{ maxHeight: 380, overflowY: 'auto' }}>
               {inbox.slotRequests.length > 0 && (
                 <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)' }}>
-                  <b style={{ fontSize: 12 }}>🕒 Saat değişikliği talepleri ({inbox.counts.slotRequests})</b>
+                  <b style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="clock" size={14} /> Saat değişikliği talepleri ({inbox.counts.slotRequests})</b>
                   {inbox.slotRequests.map((r) => (
                     <div key={r.id} onClick={() => go('/siparisler')} style={{ fontSize: 12.5, padding: '5px 0', cursor: 'pointer' }}>
                       <b>{r.code}</b> · {r.customerName} → {r.slotChangeDate?.slice(5, 10)} {r.slotChangeWindow}
@@ -65,7 +66,7 @@ export default function InboxBell() {
               )}
               {inbox.newOrders.length > 0 && (
                 <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)' }}>
-                  <b style={{ fontSize: 12 }}>🆕 Aksiyon bekleyen siparişler ({inbox.counts.newOrders})</b>
+                  <b style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="basket" size={14} /> Aksiyon bekleyen siparişler ({inbox.counts.newOrders})</b>
                   {inbox.newOrders.map((o) => (
                     <div key={o.id} onClick={() => go('/siparisler')} style={{ fontSize: 12.5, padding: '5px 0', cursor: 'pointer' }}>
                       <b>{o.code}</b> · {o.customerName} · {tl(o.grandTotal)}
@@ -75,7 +76,7 @@ export default function InboxBell() {
               )}
               {inbox.openTickets.length > 0 && (
                 <div style={{ padding: '10px 14px' }}>
-                  <b style={{ fontSize: 12 }}>🎧 Açık destek talepleri ({inbox.counts.openTickets})</b>
+                  <b style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="headset" size={14} /> Açık destek talepleri ({inbox.counts.openTickets})</b>
                   {inbox.openTickets.map((t) => (
                     <div key={t.id} onClick={() => go('/destek')} style={{ fontSize: 12.5, padding: '5px 0', cursor: 'pointer' }}>
                       <b>{t.name}</b>{t.orderCode ? ` · ${t.orderCode}` : ''}

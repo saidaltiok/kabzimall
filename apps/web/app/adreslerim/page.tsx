@@ -10,6 +10,7 @@ import {
 import Modal from '@/components/Modal';
 import CustomerLogin from '@/components/CustomerLogin';
 import AddressForm from '@/components/AddressForm';
+import Icon from '@/components/Icon';
 
 export default function AddressesPage() {
   const [session, setSession] = useState<{ token: string; email: string } | null | undefined>(undefined);
@@ -93,7 +94,7 @@ export default function AddressesPage() {
         <div className="loading">Yükleniyor…</div>
       ) : items.length === 0 ? (
         <div className="empty" style={{ paddingTop: 20 }}>
-          <div className="big">📍</div>
+          <div className="big"><Icon name="mappin" size={44} /></div>
           <h2 className="serif">Henüz kayıtlı adresin yok</h2>
           <div>İlk adresini ekle — ödeme adımında hızlıca seçebilirsin.</div>
         </div>
@@ -101,15 +102,15 @@ export default function AddressesPage() {
         <div style={{ display: 'grid', gap: 12 }}>
           {items.map((a) => (
             <div key={a.id} className="block" style={{ margin: 0, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <div style={{ fontSize: 24 }}>📍</div>
+              <div style={{ fontSize: 24, display: 'flex', alignItems: 'center' }}><Icon name="mappin" size={24} /></div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                   {a.label}
-                  {a.isDefault && <span className="save" style={{ fontSize: 11 }}>✓ Varsayılan</span>}
+                  {a.isDefault && <span className="save" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={13} /> Varsayılan</span>}
                 </div>
                 <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{a.name} · {a.phone}</div>
                 <div style={{ fontSize: 13, marginTop: 2 }}>{a.district ? `${a.district} · ` : ''}{a.addressText}</div>
-                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>📍 {a.lat.toFixed(5)}, {a.lng.toFixed(5)}</div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="mappin" size={13} /> {a.lat.toFixed(5)}, {a.lng.toFixed(5)}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                 {!a.isDefault && <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12.5 }} onClick={() => makeDefault(a)}>Varsayılan yap</button>}

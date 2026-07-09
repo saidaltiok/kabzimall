@@ -16,6 +16,7 @@ import { isName, isPhone, isEmail, sanitizePhone, formatPhone } from '@/lib/vali
 import Modal from '@/components/Modal';
 import TrustBadges from '@/components/TrustBadges';
 import { MealCardLogo } from '@/components/MealCardLogo';
+import Icon, { type IconName } from '@/components/Icon';
 
 interface Slot { date: string; window: string; label: string; remaining: number | null }
 
@@ -35,10 +36,10 @@ const PAY_METHODS: { id: PayMethod; label: string; desc: string; brand?: boolean
 ];
 
 type SubPref = 'CALL' | 'REMOVE' | 'SUBSTITUTE';
-const SUB_PREFS: { id: SubPref; icon: string; title: string; desc: string }[] = [
-  { id: 'CALL', icon: '📞', title: 'Beni arayın', desc: 'Telefonla sorulmadan değişiklik yapılmaz' },
-  { id: 'REMOVE', icon: '➖', title: 'Eksik ürünü çıkarın', desc: 'Tutar düşer, kalanlar teslim edilir' },
-  { id: 'SUBSTITUTE', icon: '🔄', title: 'Benzeriyle değiştirin', desc: 'En yakın taze muadili konur' },
+const SUB_PREFS: { id: SubPref; icon: IconName; title: string; desc: string }[] = [
+  { id: 'CALL', icon: 'phone', title: 'Beni arayın', desc: 'Telefonla sorulmadan değişiklik yapılmaz' },
+  { id: 'REMOVE', icon: 'minus', title: 'Eksik ürünü çıkarın', desc: 'Tutar düşer, kalanlar teslim edilir' },
+  { id: 'SUBSTITUTE', icon: 'refresh', title: 'Benzeriyle değiştirin', desc: 'En yakın taze muadili konur' },
 ];
 
 /** İki nokta arası kuş uçuşu km (haversine) — konum teyidi için. */
@@ -136,7 +137,7 @@ export default function CheckoutPage() {
   if (items.length === 0)
     return (
       <div className="empty">
-        <div className="big">🧺</div>
+        <div className="big"><Icon name="basket" size={44} /></div>
         <h2 className="serif">Sepetin boş</h2>
         <p><Link href="/" className="back">← Alışverişe başla</Link></p>
       </div>
@@ -212,7 +213,7 @@ export default function CheckoutPage() {
                       }}
                       title={a.addressText}
                     >
-                      {pickedAddrId === a.id ? '✓ ' : '📍 '}<b>{a.label}</b>{a.isDefault ? ' ·varsayılan' : ''}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{pickedAddrId === a.id ? <Icon name="check" size={15} /> : <Icon name="mappin" size={15} />}<b>{a.label}</b>{a.isDefault ? ' ·varsayılan' : ''}</span>
                     </button>
                   ))}
                   <Link href="/adreslerim" className="back" style={{ alignSelf: 'center', fontSize: 12.5 }}>+ Yönet</Link>
@@ -254,7 +255,7 @@ export default function CheckoutPage() {
               {touched.address && !addressOk && <div style={errStyle}>Kuryenin bulabilmesi için açık adres girin (mahalle, cadde, no).</div>}
             </div>
             <div className="field">
-              <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : settings.requireGeo === false ? <span className="muted">(kuryenin sizi kolay bulması için)</span> : <span style={{ color: 'var(--berry, #b3261e)' }}>* zorunlu — kuryenin sizi bulması için</span>}</label>
+              <label>Haritada konum {geo ? <span className="save" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={14} /> işaretlendi</span> : settings.requireGeo === false ? <span className="muted">(kuryenin sizi kolay bulması için)</span> : <span style={{ color: 'var(--berry, #b3261e)' }}>* zorunlu — kuryenin sizi bulması için</span>}</label>
               <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => { setGeo({ lat, lng }); setPickedAddrId(null); }} onGeolocate={(lat, lng) => setGeoSelf({ lat, lng })} />
               {settings.requireGeo !== false && (touched.name || touched.phone || touched.address) && !geo && <div style={errStyle}>Kuryenin sizi bulabilmesi için haritadan konumunuzu işaretleyin.</div>}
               {session && geo && !pickedAddrId && (
@@ -278,7 +279,7 @@ export default function CheckoutPage() {
                         color: active ? '#fff' : 'inherit', borderRadius: 20, padding: '5px 12px', fontSize: 12, cursor: 'pointer',
                       }}
                     >
-                      {active ? '✓ ' : ''}{chip}
+                      {active ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={14} /> {chip}</span> : chip}
                     </button>
                   );
                 })}
@@ -306,7 +307,7 @@ export default function CheckoutPage() {
                         <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 700, color: 'var(--persimmon-d)', background: '#fbeee6', borderRadius: 20, padding: '2px 8px' }}>son {s.remaining} yer</span>
                       )}
                     </span>
-                    <span>{slotKey === key ? '✓' : ''}</span>
+                    <span>{slotKey === key ? <Icon name="check" size={16} /> : ''}</span>
                   </div>
                 );
               })
@@ -324,8 +325,8 @@ export default function CheckoutPage() {
                 style={{ marginBottom: 8, cursor: 'pointer' }}
                 onClick={() => setSubPref(p.id)}
               >
-                <div>{p.icon} <b>{p.title}</b><div className="muted" style={{ fontSize: 12 }}>{p.desc}</div></div>
-                <span>{subPref === p.id ? '✓' : ''}</span>
+                <div><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name={p.icon} size={16} /> <b>{p.title}</b></span><div className="muted" style={{ fontSize: 12 }}>{p.desc}</div></div>
+                <span>{subPref === p.id ? <Icon name="check" size={16} /> : ''}</span>
               </div>
             ))}
           </div>
@@ -342,7 +343,7 @@ export default function CheckoutPage() {
                   <MealCardLogo id={p.id} h={17} />
                   <div>{!p.brand && <b>{p.label}</b>}<div className="muted" style={{ fontSize: 12 }}>{p.desc}</div></div>
                 </div>
-                <span>{payMethod === p.id ? '✓' : ''}</span>
+                <span>{payMethod === p.id ? <Icon name="check" size={16} /> : ''}</span>
               </div>
             ))}
             <p className="muted" style={{ fontSize: 12, margin: '8px 2px 0' }}>Tüm ödemeler <b>kapıda</b> (teslimatta) alınır. Online ödeme yakında.</p>
@@ -396,8 +397,8 @@ export default function CheckoutPage() {
           <p className="muted" style={{ fontSize: 12, margin: '2px 0 0' }}>Tartılı üründe kesin tutar paketlemede gramajla kesinleşir.</p>
           {farWarn && (
             <div className="error" style={{ marginTop: 8 }}>
-              ⚠️ Seçtiğiniz teslimat noktası şu anki konumunuzdan ~{farKm < 10 ? farKm.toFixed(1).replace('.', ',') : Math.round(farKm)} km uzakta.
-              Farklı bir adrese sipariş veriyorsanız sorun yok; emin olun.
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="warning" size={15} /> Seçtiğiniz teslimat noktası şu anki konumunuzdan ~{farKm < 10 ? farKm.toFixed(1).replace('.', ',') : Math.round(farKm)} km uzakta.
+              Farklı bir adrese sipariş veriyorsanız sorun yok; emin olun.</span>
             </div>
           )}
         </div>

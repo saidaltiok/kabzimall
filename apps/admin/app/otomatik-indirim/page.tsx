@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
+import Icon from '@/components/Icon';
 
 interface Rule {
   id: string; scope: string; refId: string; mode: string; pct: number;
@@ -55,7 +56,7 @@ export default function OtomatikIndirimPage() {
           maxTotalOffPct: parseFloat(capPct.replace(',', '.')) / 100,
         } : {}),
       });
-      setOk('✓ Kural kaydedildi.');
+      setOk('Kural kaydedildi.');
       setRefId('');
       load();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -74,7 +75,7 @@ export default function OtomatikIndirimPage() {
     try {
       const r = await apiSend<RunResult>('POST', `/intel/markdown/run${dry ? '?dry=1' : ''}`);
       setRun(r);
-      if (!dry) setOk(`✓ ${r.applied.length} indirim uygulandı, ${r.cleared.length} indirim temizlendi (restok).`);
+      if (!dry) setOk(`${r.applied.length} indirim uygulandı, ${r.cleared.length} indirim temizlendi (restok).`);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -127,8 +128,8 @@ export default function OtomatikIndirimPage() {
           <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             Kurallar <span>{rules.length}</span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              <button className="btn ghost" disabled={busy} onClick={() => trigger(true)}>👁️ Önizle (yazmaz)</button>
-              <button className="btn" disabled={busy} onClick={() => trigger(false)}>▶️ Şimdi çalıştır</button>
+              <button className="btn ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy} onClick={() => trigger(true)}><Icon name="eye" size={15} /> Önizle (yazmaz)</button>
+              <button className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy} onClick={() => trigger(false)}><Icon name="play" size={15} /> Şimdi çalıştır</button>
             </div>
           </div>
           {rules.length === 0 ? <p className="muted">Kural yok. Örn: Kategori <b>sebze</b>, fiyatın %5&apos;i/gün, 2 gün bekleme.</p> : (
@@ -143,7 +144,7 @@ export default function OtomatikIndirimPage() {
                     <td className="num">{r.mode === 'EXCLUDE' ? '—' : `%${Math.round(r.pct * 100)}`}</td>
                     <td className="num">{r.mode === 'EXCLUDE' ? '—' : `${r.staleDays} gün`}</td>
                     <td className="num">{r.mode === 'EXCLUDE' ? '—' : `%${Math.round(r.maxTotalOffPct * 100)}`}</td>
-                    <td>{r.mode === 'EXCLUDE' ? '—' : r.allowBelowCost ? '⚠️ evet' : 'hayır'}</td>
+                    <td>{r.mode === 'EXCLUDE' ? '—' : r.allowBelowCost ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="warning" size={14} /> evet</span> : 'hayır'}</td>
                     <td>{r.isActive ? <span className="tagp ok">aktif</span> : <span className="tagp info">kapalı</span>}</td>
                     <td className="num" style={{ whiteSpace: 'nowrap' }}>
                       <button className="btn ghost" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => toggle(r)}>{r.isActive ? 'Kapat' : 'Aç'}</button>
@@ -158,7 +159,7 @@ export default function OtomatikIndirimPage() {
 
         {run && (
           <div className="card">
-            <div className="ct">{run.dryRun ? '👁️ Önizleme' : '▶️ Son koşu'} <span>{run.applied.length} indirim · {run.cleared.length} temizleme</span></div>
+            <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{run.dryRun ? <><Icon name="eye" size={15} /> Önizleme</> : <><Icon name="play" size={15} /> Son koşu</>} <span>{run.applied.length} indirim · {run.cleared.length} temizleme</span></div>
             {run.applied.length === 0 && run.cleared.length === 0 ? <p className="muted">Bugün inecek/temizlenecek ürün yok.</p> : (
               <>
                 {run.applied.length > 0 && (
@@ -178,7 +179,7 @@ export default function OtomatikIndirimPage() {
                   </table>
                 )}
                 {run.cleared.length > 0 && (
-                  <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>♻️ Restok — normale dönen: {run.cleared.map((c) => c.name).join(', ')}</p>
+                  <p className="muted" style={{ fontSize: 12, marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="refresh" size={14} /> Restok — normale dönen: {run.cleared.map((c) => c.name).join(', ')}</p>
                 )}
               </>
             )}

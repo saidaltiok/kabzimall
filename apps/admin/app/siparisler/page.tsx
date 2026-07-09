@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import OrdersBoard from '@/components/OrdersBoard';
+import Icon from '@/components/Icon';
 
 interface OrderItem {
   id: string; productName: string; orderedQty: number; pickedQty: number | null;
@@ -27,9 +28,9 @@ interface Order {
 
 /** Müşterinin "ürün eksik çıkarsa" tercihi — paketleyicinin uyması gereken kural. */
 const SUB_LABEL: Record<string, string> = {
-  CALL: '📞 Eksikte: müşteriyi ara',
-  REMOVE: '➖ Eksikte: ürünü çıkar',
-  SUBSTITUTE: '🔄 Eksikte: benzeriyle değiştir',
+  CALL: 'Eksikte: müşteriyi ara',
+  REMOVE: 'Eksikte: ürünü çıkar',
+  SUBSTITUTE: 'Eksikte: benzeriyle değiştir',
 };
 
 const STATUSES: [string, string][] = [
@@ -113,10 +114,10 @@ export default function SiparislerPage() {
         <div className="form-row" style={{ marginBottom: 14, alignItems: 'center' }}>
           <div className="pchips" style={{ margin: 0 }}>
             <div className={`pchip${view === 'pano' ? ' sel' : ''}`} onClick={() => setView('pano')} title="Günlük akış: siparişleri kolonlar arasında ilerlet">
-              <span className="e">📋</span> Pano
+              <span className="e"><Icon name="receipt" size={16} /></span> Pano
             </div>
             <div className={`pchip${view === 'liste' ? ' sel' : ''}`} onClick={() => setView('liste')} title="Ara, filtrele, geçmişe ve detaya bak">
-              <span className="e">☰</span> Liste
+              <span className="e"><Icon name="menu" size={16} /></span> Liste
             </div>
           </div>
         </div>
@@ -158,12 +159,12 @@ export default function SiparislerPage() {
                 {orders.map((o) => (
                   <Fragment key={o.id}>
                     <tr id={`order-${o.id}`} style={open === o.id ? { background: 'var(--cream)' } : undefined}>
-                      <td><b>{o.code}</b>{o.slotChangeStatus === 'PENDING' && <span title="Bekleyen teslimat saati talebi" style={{ marginLeft: 5 }}>🕒</span>}</td>
+                      <td><b>{o.code}</b>{o.slotChangeStatus === 'PENDING' && <span title="Bekleyen teslimat saati talebi" style={{ marginLeft: 5 }}><Icon name="clock" size={14} /></span>}</td>
                       <td>{o.customerName}<div className="muted" style={{ fontSize: 11 }}>{o.customerPhone}</div></td>
                       <td className="num">{o.items.length}</td>
                       <td className="num">{tl(o.subtotal)}</td>
                       <td className="num">{o.deliveryFee === 0 ? 'Ücretsiz' : tl(o.deliveryFee)}</td>
-                      <td className="num savecell">{tl(o.grandTotal)}{o.discountTotal > 0 && <span title={`Kupon ${o.couponCode}: −${tl(o.discountTotal)}`} style={{ marginLeft: 4 }}>🎟️</span>}</td>
+                      <td className="num savecell">{tl(o.grandTotal)}{o.discountTotal > 0 && <span title={`Kupon ${o.couponCode}: −${tl(o.discountTotal)}`} style={{ marginLeft: 4 }}><Icon name="tag" size={14} /></span>}</td>
                       <td><span className={`tagp ${cls(o.status)}`}>{label(o.status)}</span></td>
                       <td className="muted" style={{ fontSize: 11 }}>{dt(o.createdAt)}</td>
                       <td className="num">
@@ -183,17 +184,17 @@ export default function SiparislerPage() {
                             <span className="tagp risk" style={{ marginRight: 8 }}>{SUB_LABEL[o.substitutionPref] ?? SUB_LABEL.CALL}</span>
                             <b>Adres:</b> {o.addressText}
                             {o.lat != null && o.lng != null ? (
-                              <> · 📍 <a href={`https://www.google.com/maps?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer" style={{ color: 'var(--forest)', fontWeight: 600 }}>Haritada gör / yol tarifi</a></>
+                              <> · <Icon name="mappin" size={14} /> <a href={`https://www.google.com/maps?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer" style={{ color: 'var(--forest)', fontWeight: 600 }}>Haritada gör / yol tarifi</a></>
                             ) : (
-                              <> · <span className="muted">📍 harita konumu yok</span></>
+                              <> · <span className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="mappin" size={14} /> harita konumu yok</span></>
                             )}
                             {o.note && <> · <b>Not:</b> {o.note}</>}
-                            {o.discountTotal > 0 && <> · 🎟️ <b>Kupon {o.couponCode}:</b> −{tl(o.discountTotal)}</>}
+                            {o.discountTotal > 0 && <> · <Icon name="tag" size={14} /> <b>Kupon {o.couponCode}:</b> −{tl(o.discountTotal)}</>}
                             {o.slotChangeStatus === 'PENDING' && (
                               <div style={{ margin: '10px 0', padding: '8px 10px', background: '#fff7ed', border: '1px solid var(--honey)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                <span>🕒 <b>Saat değişikliği talebi:</b> {o.deliveryDate?.slice(0, 10)} {o.deliveryWindow} → <b>{o.slotChangeDate?.slice(0, 10)} {o.slotChangeWindow}</b></span>
-                                <button className="btn" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => decideSlot(o, true)}>✓ Onayla</button>
-                                <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px', color: 'var(--berry)' }} onClick={() => decideSlot(o, false)}>✕ Reddet</button>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="clock" size={14} /> <b>Saat değişikliği talebi:</b> {o.deliveryDate?.slice(0, 10)} {o.deliveryWindow} → <b>{o.slotChangeDate?.slice(0, 10)} {o.slotChangeWindow}</b></span>
+                                <button className="btn" style={{ fontSize: 12, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => decideSlot(o, true)}><Icon name="check" size={15} /> Onayla</button>
+                                <button className="btn ghost" style={{ fontSize: 12, padding: '5px 12px', color: 'var(--berry)', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => decideSlot(o, false)}><Icon name="x" size={15} /> Reddet</button>
                                 <span className="muted" style={{ fontSize: 11 }}>İki durumda da müşteri bilgilendirilir.</span>
                               </div>
                             )}
@@ -210,10 +211,10 @@ export default function SiparislerPage() {
                                     <td>
                                       {it.productName}
                                       {it.product?.stockQty != null && it.product.stockQty <= 0 && <span className="tagp zararina" style={{ marginLeft: 6 }}>stok bitti</span>}
-                                      {it.note && <div style={{ fontSize: 11, color: 'var(--persimmon-d)', fontStyle: 'italic' }}>📝 {it.note}</div>}
+                                      {it.note && <div style={{ fontSize: 11, color: 'var(--persimmon-d)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="edit" size={13} /> {it.note}</div>}
                                       {(it.product?.substitutes?.length ?? 0) > 0 && (
-                                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                                          🔄 İkame: {it.product!.substitutes
+                                        <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                          <Icon name="refresh" size={13} /> İkame: {it.product!.substitutes
                                             .filter((s) => s.substitute.isActive)
                                             .map((s) => `${s.substitute.name}${s.substitute.stockQty != null && s.substitute.stockQty <= 0 ? ' (stok yok)' : ''}`)
                                             .join(', ')}
@@ -245,7 +246,7 @@ export default function SiparislerPage() {
                               <div style={{ marginTop: 10 }}>
                                 <b style={{ fontSize: 12 }}>Gönderilen bildirimler:</b>
                                 <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
-                                  {o.notifications.map((n) => <li key={n.id}>🔔 {n.message}</li>)}
+                                  {o.notifications.map((n) => <li key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="bell" size={13} /> {n.message}</li>)}
                                 </ul>
                               </div>
                             )}

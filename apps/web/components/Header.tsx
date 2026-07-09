@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/lib/cart';
 import { customerSession } from '@/lib/api';
+import Icon from './Icon';
 
 const NAV: [string, string][] = [
   ['/', 'Ürünler'],
@@ -43,8 +44,8 @@ export default function Header() {
         <Link href="/" className="bm serif" onClick={() => setOpen(false)}>
           Kabzı<b>Mall</b>
         </Link>
-        <div className="loc">
-          📍 Teslimat · <b>Moda, Kadıköy</b>
+        <div className="loc" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="mappin" size={15} /> Teslimat · <b>Moda, Kadıköy</b>
         </div>
 
         {/* Masaüstü menü */}
@@ -55,20 +56,20 @@ export default function Header() {
         </nav>
 
         <div className="spacer" />
-        {email && <Link href="/adreslerim" className="hdr-orders" title="Kayıtlı teslimat adreslerin">📍 Adreslerim</Link>}
+        {email && <Link href="/adreslerim" className="hdr-orders" title="Kayıtlı teslimat adreslerin" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="mappin" size={15} /> Adreslerim</Link>}
         <Link href="/siparislerim" className="hdr-orders" title={email ? `${email} — siparişlerin ve çıkış` : 'E-postana gelen kodla giriş yap'}>
-          {email ? <>👤 {shortName} · Siparişlerim</> : <>Giriş yap · Siparişlerim</>}
+          {email ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="user" size={15} /> {shortName} · Siparişlerim</span> : <>Giriş yap · Siparişlerim</>}
         </Link>
         <Link href="/sepet" onClick={() => setOpen(false)}>
-          <button className="cartbtn">
-            🛒 Sepet
+          <button className="cartbtn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="cart" size={15} /> Sepet
             {items.length > 0 && <span className="dot">{items.length}</span>}
           </button>
         </Link>
 
         {/* Mobil hamburger */}
         <button className="burger" aria-label="Menü" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? '✕' : '☰'}
+          {open ? <Icon name="x" size={16} /> : <Icon name="menu" size={16} />}
         </button>
       </div>
 
@@ -78,8 +79,8 @@ export default function Header() {
           {NAV.map(([href, label]) => (
             <Link key={href} href={href}>{label}</Link>
           ))}
-          {email && <Link href="/adreslerim">📍 Adreslerim</Link>}
-          <Link href="/siparislerim">{email ? `👤 ${shortName} · Siparişlerim` : 'Giriş yap · Siparişlerim'}</Link>
+          {email && <Link href="/adreslerim" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="mappin" size={15} /> Adreslerim</Link>}
+          <Link href="/siparislerim">{email ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="user" size={15} /> {shortName} · Siparişlerim</span> : 'Giriş yap · Siparişlerim'}</Link>
         </nav>
       )}
     </header>

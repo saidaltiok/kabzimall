@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { MARKET_TABS } from '@/components/SectionTabs';
+import Icon from '@/components/Icon';
 import { ProductPicker } from '@/components/pickers';
 import { tlToKurus } from '@/lib/money';
 
@@ -105,7 +106,7 @@ export default function RakipPage() {
     try {
       const r = await apiSend<{ marketfiyati: { recorded: number }; manav: { site: string; recorded: number }[] }>('POST', '/intel/competitor-prices/refresh-all', {});
       const manavTotal = r.manav.reduce((s, m) => s + m.recorded, 0);
-      setOk(`✓ ${r.marketfiyati.recorded + manavTotal} güncel rakip fiyatı kaydedildi (zincir marketler ${r.marketfiyati.recorded} + online manavlar ${manavTotal}).`);
+      setOk(`${r.marketfiyati.recorded + manavTotal} güncel rakip fiyatı kaydedildi (zincir marketler ${r.marketfiyati.recorded} + online manavlar ${manavTotal}).`);
       await loadPrices(productId);
     } catch (e) {
       setError((e as Error).message);
@@ -143,7 +144,7 @@ export default function RakipPage() {
               <ProductPicker value={productId} onChange={setProductId} placeholder="Ürün ara ve seç…" />
             </div>
           </div>
-          <button className="btn ghost" style={{ marginBottom: 8 }} onClick={toggleAll}>{allOpen ? '▲ Tüm ürünler listesini gizle' : '📋 Tüm ürünler (rakip özeti)'}</button>
+          <button className="btn ghost" style={{ marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={toggleAll}>{allOpen ? '▲ Tüm ürünler listesini gizle' : <><Icon name="menu" size={15} /> Tüm ürünler (rakip özeti)</>}</button>
         </div>
 
         {allOpen && (
@@ -176,8 +177,8 @@ export default function RakipPage() {
         </p>
 
         <div className="form-row" style={{ marginBottom: 12, alignItems: 'center' }}>
-          <button className="btn" style={{ background: 'var(--persimmon)' }} onClick={refreshAll} disabled={busy}>
-            {busy ? 'Çekiliyor…' : '🔄 Şimdi güncelle (tüm otomatik kaynaklar)'}
+          <button className="btn" style={{ background: 'var(--persimmon)', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={refreshAll} disabled={busy}>
+            {busy ? 'Çekiliyor…' : <><Icon name="refresh" size={15} /> Şimdi güncelle (tüm otomatik kaynaklar)</>}
           </button>
           <span className="muted" style={{ fontSize: 12 }}>A101 · BİM · ŞOK · Migros · Carrefour · Tarım Kredi + online manavlar — her sabah 10:00'da kendiliğinden çalışır</span>
         </div>

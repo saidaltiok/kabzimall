@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiGet } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import Icon from '@/components/Icon';
 import { ProductPicker } from '@/components/pickers';
 
 interface DayPoint { date: string; units: number; orders: number; revenue: number }
@@ -156,7 +157,7 @@ export default function SatisPage() {
           <div className="card">
             <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               Mağaza geneli
-              <span>{tl(overview.summary.totalRevenue)} ciro · {overview.summary.totalOrders} sipariş · ort. sepet {tl(overview.summary.avgOrderValue)}{overview.summary.totalDiscount > 0 && <> · 🎟️ {tl(overview.summary.totalDiscount)} indirim</>}</span>
+              <span>{tl(overview.summary.totalRevenue)} ciro · {overview.summary.totalOrders} sipariş · ort. sepet {tl(overview.summary.avgOrderValue)}{overview.summary.totalDiscount > 0 && <> · <Icon name="tag" size={14} style={{ verticalAlign: '-0.15em' }} /> {tl(overview.summary.totalDiscount)} indirim</>}</span>
               <select value={ovDays} onChange={(e) => setOvDays(e.target.value)} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 8px' }}>
                 <option value="7">Son 7 gün</option>
                 <option value="30">Son 30 gün</option>
@@ -224,7 +225,7 @@ export default function SatisPage() {
         {/* İdeal sepet önerisi — birlikte-satın-alma analizi */}
         {affinity && affinity.pairs.length > 0 && (
           <div className="card">
-            <div className="ct">🧺 İdeal sepet önerisi <span>son {affinity.days} gün · {affinity.ordersAnalyzed} sipariş analiz edildi</span></div>
+            <div className="ct" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="basket" size={16} /> İdeal sepet önerisi <span>son {affinity.days} gün · {affinity.ordersAnalyzed} sipariş analiz edildi</span></div>
             {affinity.suggestedBasket.length >= 2 && (
               <div className="aibox" style={{ marginBottom: 12 }}>
                 <span className="k">Önerilen bileşim</span>
@@ -285,7 +286,7 @@ export default function SatisPage() {
               {selected.map((s) => (
                 <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--line)', borderRadius: 20, padding: '4px 6px 4px 12px', fontSize: 12.5, background: '#fff' }}>
                   {names[s] ?? s}
-                  <button onClick={() => removeProduct(s)} style={{ border: 'none', background: 'var(--cream, #f0ede6)', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
+                  <button onClick={() => removeProduct(s)} style={{ border: 'none', background: 'var(--cream, #f0ede6)', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={12} /></button>
                 </span>
               ))}
               <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12 }} onClick={() => setSelected([])}>tümünü temizle</button>

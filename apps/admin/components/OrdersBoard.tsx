@@ -27,9 +27,9 @@ interface Order {
 
 /** Müşterinin "ürün eksik çıkarsa" tercihi — paketlerken uyulacak kural. */
 const SUB_LABEL: Record<string, string> = {
-  CALL: '📞 Eksikte: müşteriyi ara',
-  REMOVE: '➖ Eksikte: ürünü çıkar',
-  SUBSTITUTE: '🔄 Eksikte: benzeriyle değiştir',
+  CALL: 'Eksikte: müşteriyi ara',
+  REMOVE: 'Eksikte: ürünü çıkar',
+  SUBSTITUTE: 'Eksikte: benzeriyle değiştir',
 };
 
 /** Operasyon akışı (soldan sağa ilerler). İptal ayrı tutulur. */
@@ -173,10 +173,10 @@ export default function OrdersBoard() {
                       <div className="oc-meta">
                         {o.items.length} kalem
                         {o.deliveryWindow && <> · {o.deliveryDate?.slice(5, 10).replace('-', '.')} {o.deliveryWindow}</>}
-                        {hasNote && <span className="oc-note" title="Müşteri notu var">📝</span>}
+                        {hasNote && <span className="oc-note" title="Müşteri notu var" style={{ display: 'inline-flex', alignItems: 'center' }}><Icon name="edit" size={14} /></span>}
                         {o.slotChangeStatus === 'PENDING' && (
-                          <span className="oc-slot" title={`Saat değişikliği talebi: ${o.slotChangeDate?.slice(5, 10).replace('-', '.')} ${o.slotChangeWindow}`}>
-                            🕒 saat talebi
+                          <span className="oc-slot" title={`Saat değişikliği talebi: ${o.slotChangeDate?.slice(5, 10).replace('-', '.')} ${o.slotChangeWindow}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Icon name="clock" size={13} /> saat talebi
                           </span>
                         )}
                       </div>
@@ -189,7 +189,7 @@ export default function OrdersBoard() {
                             <div className="oc-packrow" key={it.id}>
                               <span>
                                 {it.productName} <span className="muted">({it.orderedQty} {it.unitLabel ?? ''})</span>
-                                {it.note && <em>📝 {it.note}</em>}
+                                {it.note && <em style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="edit" size={13} /> {it.note}</em>}
                               </span>
                               <input
                                 className="cell"
@@ -200,8 +200,8 @@ export default function OrdersBoard() {
                             </div>
                           ))}
                           <div className="oc-act">
-                            <button className="btn" disabled={busy === o.id} onClick={() => pack(o)}>
-                              {busy === o.id ? '…' : '✅ Onayla → Hazır'}
+                            <button className="btn" disabled={busy === o.id} onClick={() => pack(o)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              {busy === o.id ? '…' : <><Icon name="check" size={15} /> Onayla → Hazır</>}
                             </button>
                             <button className="btn ghost" disabled={busy === o.id} onClick={() => setPackOpen(null)}>Vazgeç</button>
                           </div>
@@ -221,7 +221,7 @@ export default function OrdersBoard() {
                             )
                           )}
                           {status !== 'DELIVERED' && (
-                            <button className="btn ghost oc-cancel" disabled={busy === o.id} onClick={() => cancel(o)} title="Siparişi iptal et">✕</button>
+                            <button className="btn ghost oc-cancel" disabled={busy === o.id} onClick={() => cancel(o)} title="Siparişi iptal et" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={15} /></button>
                           )}
                         </div>
                       )}
@@ -246,7 +246,7 @@ export default function OrdersBoard() {
       )}
 
       <p className="note2" style={{ marginTop: 14 }}>
-        <b>Hazırlanıyor</b> kolonunda <b>⚖️ Paketle</b> ile tartılan gramajları girip tutarı kesinleştir
+        <b>Hazırlanıyor</b> kolonunda <b style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="basket" size={13} /> Paketle</b> ile tartılan gramajları girip tutarı kesinleştir
         (sipariş <b>Hazır</b>&apos;a geçer). Karttaki <b>koda tıkla</b> → detay pop-up&apos;ı. Aramak/geçmişe
         bakmak için üstten <b>Liste</b> görünümüne geç. Pano 15 sn&apos;de bir kendini tazeler.
       </p>

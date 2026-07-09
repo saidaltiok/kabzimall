@@ -4,6 +4,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AddressInput, SavedAddress } from '@/lib/api';
 import { isName, isPhone, sanitizePhone, formatPhone } from '@/lib/validate';
+import Icon from './Icon';
 
 const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false });
 
@@ -75,7 +76,7 @@ export default function AddressForm({
         {touched && !addrOk && <div style={err}>Açık adres girin (mahalle, cadde, no).</div>}
       </div>
       <div className="field">
-        <label>Haritada konum {geo ? <span className="save">✓ işaretlendi</span> : <span style={{ color: 'var(--berry, #b3261e)' }}>* zorunlu</span>}</label>
+        <label>Haritada konum {geo ? <span className="save" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="check" size={14} /> işaretlendi</span> : <span style={{ color: 'var(--berry, #b3261e)' }}>* zorunlu</span>}</label>
         <MapPicker lat={geo?.lat ?? null} lng={geo?.lng ?? null} onChange={(lat, lng) => setGeo({ lat, lng })} />
         {touched && !geoOk && <div style={err}>Kuryenin sizi bulması için haritadan konumu işaretleyin.</div>}
       </div>

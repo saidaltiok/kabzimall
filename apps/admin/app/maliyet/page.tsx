@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { COST_TABS } from '@/components/SectionTabs';
+import Icon from '@/components/Icon';
 import { ProductPicker } from '@/components/pickers';
 import { tlToKurus } from '@/lib/money';
 
@@ -106,7 +107,7 @@ export default function MaliyetPage() {
     setBusy(true); setError(null); setSaved(null);
     try {
       await apiSend('PUT', '/intel/cost-components', { scope: 'PRODUCT', refId: productId, ...componentsPayload() });
-      setSaved('✓ Maliyet bileşenleri bu ürün için kaydedildi.');
+      setSaved('Maliyet bileşenleri bu ürün için kaydedildi.');
       await load(productId);
     } catch (e) {
       setError((e as Error).message);
@@ -127,7 +128,7 @@ export default function MaliyetPage() {
       for (const slug of bulkTargets) {
         try { await apiSend('PUT', '/intel/cost-components', { scope: 'PRODUCT', refId: slug, ...payload }); done++; } catch { /* tekil hata toplu akışı bozmasın */ }
       }
-      setSaved(`✓ Girdiler ${bulkGlobal ? 'GLOBAL varsayılana' : ''}${bulkGlobal && done ? ' + ' : ''}${done ? `${done} ürüne` : ''} uygulandı.`);
+      setSaved(`Girdiler ${bulkGlobal ? 'GLOBAL varsayılana' : ''}${bulkGlobal && done ? ' + ' : ''}${done ? `${done} ürüne` : ''} uygulandı.`);
       setBulkTargets([]); setBulkGlobal(false);
       if (productId) await load(productId);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -166,9 +167,9 @@ export default function MaliyetPage() {
             <Row label="Yakıt / dağıtım (₺)" value={form.fuel} onChange={set('fuel')} />
             <Row label="Soğuk zincir (₺)" value={form.cold} onChange={set('cold')} />
             <Row label="Amortisman (₺)" value={form.amort} onChange={set('amort')} />
-            <p className="note2" style={{ margin: '2px 0 0', fontSize: 11 }}>
-              💡 Kart komisyonu birim maliyete girmez — <b>Finans → Genel Giderler</b>&apos;de (ciroya oranlı) tutulur;
-              böylece nakit müşteri komisyonla fazla fiyatlanmaz.
+            <p className="note2" style={{ margin: '2px 0 0', fontSize: 11, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+              <Icon name="info" size={15} style={{ flex: 'none', marginTop: 1 }} /> <span>Kart komisyonu birim maliyete girmez — <b>Finans → Genel Giderler</b>&apos;de (ciroya oranlı) tutulur;
+              böylece nakit müşteri komisyonla fazla fiyatlanmaz.</span>
             </p>
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
               <button className="btn ghost" onClick={compute} disabled={busy}>Hesapla</button>
@@ -191,13 +192,13 @@ export default function MaliyetPage() {
                   {bulkTargets.map((s) => (
                     <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--line)', borderRadius: 20, padding: '4px 6px 4px 12px', fontSize: 12.5, background: '#fff' }}>
                       {bulkNames[s] ?? s}
-                      <button onClick={() => setBulkTargets((t) => t.filter((x) => x !== s))} style={{ border: 'none', background: 'var(--cream, #f0ede6)', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
+                      <button onClick={() => setBulkTargets((t) => t.filter((x) => x !== s))} style={{ border: 'none', background: 'var(--cream, #f0ede6)', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={12} /></button>
                     </span>
                   ))}
                 </div>
               )}
-              <button className="btn" style={{ background: 'var(--persimmon)' }} onClick={saveBulk} disabled={busy || (!bulkGlobal && bulkTargets.length === 0)}>
-                ⇊ Toplu uygula{bulkTargets.length > 0 ? ` (${bulkTargets.length} ürün)` : ''}
+              <button className="btn" style={{ background: 'var(--persimmon)', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={saveBulk} disabled={busy || (!bulkGlobal && bulkTargets.length === 0)}>
+                <Icon name="download" size={15} /> Toplu uygula{bulkTargets.length > 0 ? ` (${bulkTargets.length} ürün)` : ''}
               </button>
             </div>
           </div>

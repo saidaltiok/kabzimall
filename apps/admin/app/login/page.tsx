@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiSend } from '@/lib/api';
 import { setSession, type SessionUser } from '@/lib/auth';
+import Icon from '@/components/Icon';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function LoginPage() {
       <div className="login-shell">
         <aside className="login-hero">
           <div className="login-brand">
-            <div className="leaf">🌿</div>
+            <div className="leaf"><Icon name="leaf" size={40} /></div>
             <div>
               <div className="bm serif">Kabzı<b>Mall</b></div>
               <div className="sub">Intelligence</div>
@@ -41,9 +42,9 @@ export default function LoginPage() {
           </div>
           <h2 className="serif">Fiyat zekâsı, tek ekranda.</h2>
           <ul className="login-feats">
-            <li><span>📈</span> Hal &amp; rakip fiyatları otomatik toplanır</li>
-            <li><span>🎯</span> Maliyet korumalı fiyat önerisi</li>
-            <li><span>🧾</span> Sipariş · paketleme · teslimat akışı</li>
+            <li><span><Icon name="chart" size={16} /></span> Hal &amp; rakip fiyatları otomatik toplanır</li>
+            <li><span><Icon name="target" size={16} /></span> Maliyet korumalı fiyat önerisi</li>
+            <li><span><Icon name="receipt" size={16} /></span> Sipariş · paketleme · teslimat akışı</li>
           </ul>
           <div className="login-foot">Pilot bölge: Kadıköy · Tek kaynak: packages/pricing</div>
         </aside>
@@ -63,7 +64,7 @@ export default function LoginPage() {
             <div className="pw-wrap">
               <input type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="••••••••" />
               <button type="button" className="pw-toggle" onClick={() => setShowPw((s) => !s)} aria-label={showPw ? 'Parolayı gizle' : 'Parolayı göster'}>
-                {showPw ? '🙈' : '👁️'}
+                <Icon name="eye" size={16} />
               </button>
             </div>
           </div>

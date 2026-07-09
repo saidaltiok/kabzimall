@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Icon from './Icon';
 import { tl, emojiFor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import { useFavs } from '@/lib/favs';
@@ -30,7 +31,7 @@ export default function ProductCard({ product: p, onAdded }: { product: CardProd
   const discPct = discounted ? Math.round((1 - eff / p.basePrice) * 100) : 0;
   const soldOut = p.stockQty != null && p.stockQty <= 0;
   const qty = items.find((i) => i.slug === p.slug && !i.basketSlug)?.qty ?? 0;
-  const cartLabel = qty > 0 ? `🛒 ${qty} ${p.unitLabel === 'kg' ? 'kg' : p.unitLabel ?? 'adet'} sepette` : null;
+  const cartLabel = qty > 0 ? `${qty} ${p.unitLabel === 'kg' ? 'kg' : p.unitLabel ?? 'adet'} sepette` : null;
 
   function addToCart() {
     add({ slug: p.slug, name: p.name, unitPrice: eff, unitLabel: p.unitLabel, emoji: emojiFor(p.slug, p.category?.slug), maxPerOrder: p.maxPerOrder ?? undefined });
@@ -44,13 +45,13 @@ export default function ProductCard({ product: p, onAdded }: { product: CardProd
       ) : discounted ? (
         <span className="pill disc">%{discPct} İNDİRİM</span>
       ) : p.freshToday ? (
-        <span className="pill fresh" title="Son 24 saatte halden alındı">🌿 BUGÜN HALDEN</span>
+        <span className="pill fresh" title="Son 24 saatte halden alındı" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="leaf" size={14} /> BUGÜN HALDEN</span>
       ) : p.isFreshDaily ? (
         <span className="pill fresh">GÜNLÜK TAZE</span>
       ) : p.isLocal ? (
         <span className="pill local">YÖRESEL</span>
       ) : null}
-      <button className="fav" onClick={() => toggle(p.slug)} aria-label={isFav(p.slug) ? 'Favorilerden çıkar' : 'Favorilere ekle'}>{isFav(p.slug) ? '❤️' : '🤍'}</button>
+      <button className="fav" onClick={() => toggle(p.slug)} aria-label={isFav(p.slug) ? 'Favorilerden çıkar' : 'Favorilere ekle'}><Icon name="star" size={16} style={isFav(p.slug) ? { fill: 'currentColor' } : undefined} /></button>
       <Link href={`/urun/${p.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
         <div className="ph">
           {p.imageUrl ? (
@@ -72,7 +73,7 @@ export default function ProductCard({ product: p, onAdded }: { product: CardProd
         </div>
         {!soldOut && <button className="add" onClick={addToCart} aria-label="Sepete ekle">+</button>}
       </div>
-      {cartLabel && <div className="incart">{cartLabel}</div>}
+      {cartLabel && <div className="incart" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="cart" size={14} /> {cartLabel}</div>}
     </div>
   );
 }
