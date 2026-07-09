@@ -15,6 +15,7 @@
     "prisma:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "db:seed": "node prisma/seed.mjs",
+    "db:backup": "node scripts/backup-db.mjs",
     "sim:10gun": "node scripts/simulate-10-days.mjs"
   },
   "dependencies": {

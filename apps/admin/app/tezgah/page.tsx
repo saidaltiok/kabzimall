@@ -12,10 +12,22 @@ interface Product {
 }
 interface Line { slug: string; name: string; unitLabel: string | null; qty: string; priceTl: string }
 interface PosSale {
-  id: string; code: string; status: string; finalTotal: number; createdAt: string; note: string | null;
+  id: string; code: string; status: string; finalTotal: number; createdAt: string; note: string | null; paymentMethod: string;
   items: { productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number }[];
 }
-interface Today { total: number; count: number; sales: PosSale[] }
+interface Today { total: number; count: number; byMethod: Record<string, number>; sales: PosSale[] }
+
+/** Ödeme yöntemleri — yalnız Nakit kasadaki nakde eklenir; diğerleri bankaya/karta gider. */
+const PAYMENTS: { id: string; label: string; icon: string }[] = [
+  { id: 'CASH', label: 'Nakit', icon: '💵' },
+  { id: 'CARD', label: 'Kredi/Banka Kartı', icon: '💳' },
+  { id: 'MULTINET', label: 'Multinet', icon: '🍽️' },
+  { id: 'SETCARD', label: 'Setcard', icon: '🍽️' },
+  { id: 'EDENRED', label: 'Edenred', icon: '🍽️' },
+  { id: 'METROPOL', label: 'Metropol', icon: '🍽️' },
+  { id: 'TOKENFLEX', label: 'Token Flex', icon: '🍽️' },
+];
+const payLabel = (id: string) => PAYMENTS.find((p) => p.id === id)?.label ?? id;
 
 /** İndirim varsa vitrindeki geçerli fiyat, yoksa taban fiyat (kuruş). */
 const effective = (p: Product) =>
@@ -34,6 +46,7 @@ export default function TezgahPage() {
   const [search, setSearch] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [note, setNote] = useState('');
+  const [payment, setPayment] = useState('CASH');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -87,16 +100,18 @@ export default function TezgahPage() {
         unitPrice: tlToKurus(l.priceTl)!,
       }));
       const r = await apiSend<{ code: string; finalTotal: number; warnings: string[] }>('POST', '/admin/pos/sales', {
-        items, note: note.trim() || undefined,
+        items, note: note.trim() || undefined, paymentMethod: payment,
       });
-      setOk(`✓ ${r.code} · ${items.length} kalem · ${tl(r.finalTotal)} nakit kasaya işlendi.`);
+      const dest = payment === 'CASH' ? 'nakit kasaya işlendi' : `${payLabel(payment)} ile tahsil edildi (kasaya girmez)`;
+      setOk(`✓ ${r.code} · ${items.length} kalem · ${tl(r.finalTotal)} — ${dest}.`);
       setWarnings(r.warnings ?? []);
-      setLines([]); setNote(''); load();
+      setLines([]); setNote(''); setPayment('CASH'); load();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
   async function refund(s: PosSale) {
-    if (!window.confirm(`${s.code} iade edilsin mi? Stok geri yüklenir, ${tl(s.finalTotal)} kasadan düşülür (kasa kapalıysa askıda bekler).`)) return;
+    const cashLine = s.paymentMethod === 'CASH' ? `${tl(s.finalTotal)} kasadan düşülür (kasa kapalıysa askıda bekler)` : `${payLabel(s.paymentMethod)} ödemesi iade edilir (kasaya dokunmaz)`;
+    if (!window.confirm(`${s.code} iade edilsin mi? Stok geri yüklenir, ${cashLine}.`)) return;
     setBusy(true); setError(null);
     try { await apiSend('PATCH', `/admin/orders/${s.id}/status`, { status: 'CANCELLED' }); load(); }
     catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -157,6 +172,20 @@ export default function TezgahPage() {
                 </tbody>
               </table>
             )}
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>Ödeme yöntemi</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {PAYMENTS.map((p) => (
+                  <button
+                    key={p.id} type="button" onClick={() => setPayment(p.id)}
+                    style={{ border: `1.5px solid ${payment === p.id ? 'var(--forest)' : 'var(--line)'}`, background: payment === p.id ? 'var(--forest)' : '#fff', color: payment === p.id ? '#fff' : 'inherit', borderRadius: 20, padding: '6px 12px', fontSize: 12.5, cursor: 'pointer' }}
+                  >
+                    {p.icon} {p.label}
+                  </button>
+                ))}
+              </div>
+              {payment !== 'CASH' && <p className="note2" style={{ margin: '6px 0 0' }}>Kart/yemek kartı ödemesi <b>kasadaki nakde eklenmez</b> (bankaya/karta gider); ciro ve rapora yine dahildir.</p>}
+            </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12, flexWrap: 'wrap' }}>
               <div className="field" style={{ flex: 1, minWidth: 150 }}>
                 <label>Not (ops. — fişte kalır)</label>
@@ -167,7 +196,7 @@ export default function TezgahPage() {
                 <div style={{ fontSize: 22, fontWeight: 800 }}>{tl(total)}</div>
               </div>
               <button className="btn" style={{ background: 'var(--forest)', fontSize: 14, padding: '10px 18px' }} disabled={busy || !allValid} onClick={collect}>
-                💵 Nakit tahsil et
+                {payment === 'CASH' ? '💵' : PAYMENTS.find((p) => p.id === payment)?.icon} Tahsil et
               </button>
             </div>
           </div>
@@ -175,11 +204,18 @@ export default function TezgahPage() {
 
         <div className="card" style={{ marginTop: 14 }}>
           <div className="ct">Bugünün fişleri <span>{today ? `${today.count} fiş · ${tl(today.total)}` : '—'}</span></div>
+          {today && today.byMethod && Object.keys(today.byMethod).length > 0 && (
+            <div className="miniinfo" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+              {Object.entries(today.byMethod).map(([m, v]) => (
+                <span key={m}>{payLabel(m)}: <b>{tl(v)}</b></span>
+              ))}
+            </div>
+          )}
           {!today || today.sales.length === 0 ? (
             <p className="muted">Bugün tezgâh satışı yok.</p>
           ) : (
             <table>
-              <thead><tr><th>Saat</th><th>Fiş</th><th>Kalemler</th><th className="num">Tutar</th><th></th></tr></thead>
+              <thead><tr><th>Saat</th><th>Fiş</th><th>Kalemler</th><th>Ödeme</th><th className="num">Tutar</th><th></th></tr></thead>
               <tbody>
                 {today.sales.map((s) => (
                   <tr key={s.id} style={s.status === 'CANCELLED' ? { opacity: 0.5 } : undefined}>
@@ -189,6 +225,7 @@ export default function TezgahPage() {
                       <b>{s.code}</b>{s.note && <span className="muted" style={{ fontSize: 11 }}> · {s.note}</span>}
                     </td>
                     <td className="muted" style={{ fontSize: 12 }}>{s.items.map((it) => `${it.productName} ${it.orderedQty}${it.unitLabel === 'kg' ? 'kg' : ''}`).join(' · ')}</td>
+                    <td className="muted" style={{ fontSize: 12 }}>{payLabel(s.paymentMethod)}</td>
                     <td className="num" style={{ fontWeight: 700 }}>{s.status === 'CANCELLED' ? <s>{tl(s.finalTotal)}</s> : tl(s.finalTotal)}</td>
                     <td className="num">
                       {s.status === 'CANCELLED'

@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -14,6 +15,8 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+
+export const POS_PAYMENTS = ['CASH', 'CARD', 'SETCARD', 'MULTINET', 'TOKENFLEX', 'EDENRED', 'METROPOL'] as const;
 
 export class PosSaleItemDto {
   @IsString()
@@ -46,4 +49,9 @@ export class PosSaleDto {
   @IsString()
   @MaxLength(300)
   note?: string;
+
+  /** Ödeme yöntemi (varsayılan NAKİT). Kart/yemek kartı kasadaki nakde eklenmez. */
+  @IsOptional()
+  @IsIn(POS_PAYMENTS)
+  paymentMethod?: (typeof POS_PAYMENTS)[number];
 }

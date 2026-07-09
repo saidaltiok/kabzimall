@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
+import { ProductPicker } from '@/components/pickers';
 
 interface DayPoint { date: string; units: number; orders: number; revenue: number }
 interface Sales { productId: string; days: number; series: DayPoint[]; summary: { totalUnits: number; totalRevenue: number; activeDays: number; avgDailyUnits: number } }
@@ -44,8 +45,13 @@ function isoWeek(dateStr: string): string {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
+interface CompareRow { slug: string; name: string; units: number; revenue: number; avgDaily: number }
+
 export default function SatisPage() {
-  const [productId, setProductId] = useState('domates');
+  const [productId, setProductId] = useState(''); // detay için odak ürün
+  const [selected, setSelected] = useState<string[]>([]); // karşılaştırma için çoklu seçim
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [compare, setCompare] = useState<CompareRow[]>([]);
   const [days, setDays] = useState('30');
   const [sales, setSales] = useState<Sales | null>(null);
   const [elast, setElast] = useState<Elasticity | null>(null);
@@ -65,6 +71,9 @@ export default function SatisPage() {
   }, [mvDays]);
   useEffect(() => {
     apiGet<Affinity>('/intel/analytics/basket-affinity?days=90').then(setAffinity).catch(() => {});
+    apiGet<{ data: { slug: string; name: string }[] }>('/catalog/products').then((r) => {
+      const m: Record<string, string> = {}; for (const p of r.data) m[p.slug] = p.name; setNames(m);
+    }).catch(() => {});
   }, []);
 
   // 45 günden uzun dönemde ısı haritası haftalık kırılıma iner (hücre = ISO haftası).
@@ -79,20 +88,39 @@ export default function SatisPage() {
       ? Object.entries(m.byDay).reduce((s, [day, n]) => (isoWeek(day) === key ? s + n : s), 0)
       : m.byDay[key] ?? 0;
 
-  async function load() {
+  /** Odak ürünün detayını (günlük seri + esneklik) getir. */
+  async function loadDetail(pid: string) {
+    if (!pid) { setSales(null); setElast(null); return; }
     setBusy(true); setError(null);
     try {
       const [s, e] = await Promise.all([
-        apiGet<Sales>(`/intel/analytics/sales?productId=${encodeURIComponent(productId.trim())}&days=${days}`),
-        apiGet<Elasticity>(`/intel/analytics/elasticity?productId=${encodeURIComponent(productId.trim())}`),
+        apiGet<Sales>(`/intel/analytics/sales?productId=${encodeURIComponent(pid)}&days=${days}`),
+        apiGet<Elasticity>(`/intel/analytics/elasticity?productId=${encodeURIComponent(pid)}`),
       ]);
-      setSales(s); setElast(e);
+      setSales(s); setElast(e); setProductId(pid);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
+
+  /** Seçili ürünlerin dönem özetini karşılaştırmalı getir. Tek ürünse detay da açılır. */
+  async function loadCompare() {
+    if (selected.length === 0) return;
+    setBusy(true); setError(null);
+    try {
+      const rows = await Promise.all(selected.map(async (slug) => {
+        const s = await apiGet<Sales>(`/intel/analytics/sales?productId=${encodeURIComponent(slug)}&days=${days}`);
+        return { slug, name: names[slug] ?? slug, units: s.summary.totalUnits, revenue: s.summary.totalRevenue, avgDaily: s.summary.avgDailyUnits } as CompareRow;
+      }));
+      rows.sort((a, b) => b.revenue - a.revenue);
+      setCompare(rows);
+      await loadDetail(selected.length === 1 ? selected[0] : '');
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
+  const addProduct = (slug: string) => { if (slug && !selected.includes(slug)) setSelected((s) => [...s, slug]); };
+  const removeProduct = (slug: string) => setSelected((s) => s.filter((x) => x !== slug));
 
   const maxUnits = sales?.series.reduce((m, p) => Math.max(m, p.units), 0) ?? 0;
 
@@ -214,9 +242,11 @@ export default function SatisPage() {
         )}
 
         <div className="card">
-          <div className="ct">Ürün</div>
-          <div className="form-row">
-            <div className="field"><label>Ürün slug</label><input value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="domates" onKeyDown={(e) => e.key === 'Enter' && load()} /></div>
+          <div className="ct">Ürün analizi</div>
+          <div className="form-row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="field" style={{ minWidth: 220 }}><label>Ürün ekle (birden çok seçilebilir)</label>
+              <ProductPicker value="" onChange={addProduct} placeholder="Ürün ara ve ekle…" />
+            </div>
             <div className="field"><label>Gün</label>
               <select value={days} onChange={(e) => setDays(e.target.value)}>
                 <option value="7">Son 7 gün</option>
@@ -224,12 +254,44 @@ export default function SatisPage() {
                 <option value="90">Son 90 gün</option>
               </select>
             </div>
-            <button className="btn" onClick={load} disabled={busy || !productId.trim()}>{busy ? '…' : 'Getir'}</button>
+            <button className="btn" onClick={loadCompare} disabled={busy || selected.length === 0}>{busy ? '…' : 'Getir'}</button>
           </div>
+          {selected.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+              {selected.map((s) => (
+                <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--line)', borderRadius: 20, padding: '4px 6px 4px 12px', fontSize: 12.5, background: '#fff' }}>
+                  {names[s] ?? s}
+                  <button onClick={() => removeProduct(s)} style={{ border: 'none', background: 'var(--cream, #f0ede6)', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
+                </span>
+              ))}
+              <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12 }} onClick={() => setSelected([])}>tümünü temizle</button>
+            </div>
+          )}
         </div>
+
+        {compare.length > 1 && (
+          <div className="card">
+            <div className="ct">Karşılaştırma <span>{compare.length} ürün · son {days} gün</span></div>
+            <table>
+              <thead><tr><th>Ürün</th><th className="num">Toplam satış</th><th className="num">Ciro</th><th className="num">Ort. günlük</th><th></th></tr></thead>
+              <tbody>
+                {compare.map((c) => (
+                  <tr key={c.slug} style={{ cursor: 'pointer' }} onClick={() => loadDetail(c.slug)} title="Detayını aç">
+                    <td><b>{c.name}</b></td>
+                    <td className="num savecell">{c.units}</td>
+                    <td className="num">{tl(c.revenue)}</td>
+                    <td className="num">{c.avgDaily}</td>
+                    <td className="num"><span className="muted" style={{ fontSize: 11 }}>detay ›</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {sales && (
           <>
+            {productId && <h3 className="serif" style={{ margin: '18px 0 8px', fontSize: 17 }}>{names[productId] ?? productId} — detay</h3>}
             <div className="kpis">
               <div className="kpi"><div className="l">Toplam satış</div><div className="v">{sales.summary.totalUnits}</div><div className="d">son {sales.days} gün</div></div>
               <div className="kpi"><div className="l">Toplam ciro</div><div className="v">{tl(sales.summary.totalRevenue)}</div><div className="d">iptaller hariç</div></div>

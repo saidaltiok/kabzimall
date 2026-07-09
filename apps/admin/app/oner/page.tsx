@@ -5,6 +5,7 @@ import { apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
+import { ProductPicker } from '@/components/pickers';
 
 interface SuggestResult {
   price: number;
@@ -17,12 +18,6 @@ interface SuggestResult {
   inputs: { halAvg: number; costSource: string; directCost: number; competitorCount: number; competitorAvg: number | null };
 }
 
-const CHIPS = [
-  { id: 'domates', e: '🍅', name: 'Domates' },
-  { id: 'patates', e: '🥔', name: 'Patates' },
-  { id: 'biber', e: '🫑', name: 'Biber' },
-  { id: 'salatalik', e: '🥒', name: 'Salatalık' },
-];
 const STRATS: [string, string][] = [
   ['MARGIN', 'Maliyet + hedef marj'],
   ['COMP_AVG', 'Rakip ortalaması'],
@@ -33,7 +28,7 @@ const STRATS: [string, string][] = [
 ];
 
 export default function OnerPage() {
-  const [productId, setProductId] = useState('domates');
+  const [productId, setProductId] = useState('');
   const [strategy, setStrategy] = useState('MARGIN');
   const [target, setTarget] = useState('0.30');
   const [result, setResult] = useState<SuggestResult | null>(null);
@@ -77,7 +72,7 @@ export default function OnerPage() {
         netMargin: result.netMargin,
         reason: 'Panelden uygulandı',
       });
-      setApplied(`✓ ${productId} mağaza fiyatı ${tl(result.price)} olarak yayınlandı.`);
+      setApplied(`✓ Mağaza fiyatı ${tl(result.price)} olarak yayınlandı${result.floored ? '' : ''}. Varsa eski indirim kaldırıldı.`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -90,32 +85,19 @@ export default function OnerPage() {
       <Topbar title="Fiyat Öneri Motoru" sub="Öneri → tek tıkla mağazaya yaz" />
       <div className="body">
         <SectionTabs tabs={PRICING_TABS} />
-        <div className="pchips">
-          {CHIPS.map((c) => (
-            <div key={c.id} className={`pchip${productId === c.id ? ' sel' : ''}`} onClick={() => setProductId(c.id)}>
-              <span className="e">{c.e}</span>
-              {c.name}
-            </div>
-          ))}
-        </div>
         <p className="hint">
-          Maliyet (cost-components + günlük hal ort.) ve rakipler veritabanından toplanır; strateji
-          uygulanır (komisyon + hedef marj dâhil, psikolojik yuvarlama + taban marj kuralı). Başka ürün
-          için aşağıya slug yaz.
+          Ürünü seçin; maliyet (hal alış + fire/işçilik) ve rakipler veritabanından toplanır, seçtiğiniz
+          strateji uygulanır (komisyon + hedef marj, psikolojik yuvarlama + taban marj kuralı dâhil).
+          Öneriyi tek tıkla mağaza fiyatı yapabilirsiniz.
         </p>
 
         <div className="calcgrid">
           <div className="card">
-            <div className="ct">Girdiler — {productId || '—'}</div>
-            <div className="form-row" style={{ marginBottom: 12 }}>
-              <div className="field">
-                <label>Ürün (slug)</label>
-                <input
-                  value={productId}
-                  onChange={(e) => setProductId(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && run()}
-                  placeholder="domates"
-                />
+            <div className="ct">Girdiler</div>
+            <div className="form-row" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+              <div className="field" style={{ minWidth: 220 }}>
+                <label>Ürün</label>
+                <ProductPicker value={productId} onChange={setProductId} placeholder="Ürün ara ve seç…" />
               </div>
               <div className="field">
                 <label>Hedef marj (0–1)</label>

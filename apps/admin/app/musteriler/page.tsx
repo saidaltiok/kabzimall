@@ -5,6 +5,8 @@ import { apiGet } from '@/lib/api';
 import { tl, dt } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { CUSTOMERS_TABS } from '@/components/SectionTabs';
+import Modal from '@/components/Modal';
+import OrderDetail, { type DetailOrder } from '@/components/OrderDetail';
 
 interface Card {
   phone: string; name: string; email: string | null;
@@ -28,6 +30,19 @@ export default function MusterilerPage() {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [orders, setOrders] = useState<Record<string, CustOrder[]>>({});
+  const [detail, setDetail] = useState<DetailOrder | null>(null); // tıklanan siparişin tam detayı
+  const [detailBusy, setDetailBusy] = useState(false);
+
+  /** Sipariş koduyla tam detayı çek (admin liste ucu kodla filtreler) → modal. */
+  async function openDetail(code: string) {
+    setDetailBusy(true);
+    try {
+      const r = await apiGet<{ data: DetailOrder[] }>(`/admin/orders?q=${encodeURIComponent(code)}`);
+      const found = r.data.find((o) => o.code === code) ?? r.data[0] ?? null;
+      if (found) setDetail(found);
+      else setError('Sipariş detayı bulunamadı.');
+    } catch (e) { setError((e as Error).message); } finally { setDetailBusy(false); }
+  }
 
   const load = useCallback(() => {
     const q = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
@@ -98,8 +113,8 @@ export default function MusterilerPage() {
                               </thead>
                               <tbody>
                                 {orders[c.phone].map((o) => (
-                                  <tr key={o.id} style={o.status === 'CANCELLED' ? { opacity: 0.55 } : undefined}>
-                                    <td><b>{o.code}</b>{o.couponCode && <span title={`Kupon ${o.couponCode}: −${tl(o.discountTotal)}`} style={{ marginLeft: 4 }}>🎟️</span>}</td>
+                                  <tr key={o.id} onClick={() => openDetail(o.code)} style={{ cursor: 'pointer', ...(o.status === 'CANCELLED' ? { opacity: 0.55 } : {}) }} title="Sipariş detayını aç">
+                                    <td><b>{o.code}</b>{o.couponCode && <span title={`Kupon ${o.couponCode}: −${tl(o.discountTotal)}`} style={{ marginLeft: 4 }}>🎟️</span>} <span className="muted" style={{ fontSize: 10.5 }}>detay ›</span></td>
                                     <td className="muted" style={{ fontSize: 11.5 }}>{dt(o.createdAt)}</td>
                                     <td className="muted" style={{ fontSize: 11.5 }}>{o.items.map((i) => i.productName).slice(0, 4).join(', ')}{o.items.length > 4 ? '…' : ''}</td>
                                     <td className="num">{tl(o.finalTotal ?? o.grandTotal)}</td>
@@ -118,6 +133,11 @@ export default function MusterilerPage() {
             </table>
           )}
         </div>
+
+        <Modal open={!!detail} onClose={() => setDetail(null)} title={detail ? `Sipariş ${detail.code}` : ''} sub={detail ? `${detail.items.length} kalem · ${tl(detail.finalTotal ?? detail.grandTotal)}` : undefined}>
+          {detail && <OrderDetail order={detail} />}
+        </Modal>
+        {detailBusy && <div className="muted" style={{ position: 'fixed', bottom: 16, right: 16, background: '#fff', padding: '8px 14px', borderRadius: 10, boxShadow: 'var(--shadow-sm)', fontSize: 13 }}>Sipariş açılıyor…</div>}
       </div>
     </>
   );

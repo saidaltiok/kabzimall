@@ -61,6 +61,21 @@ describe('Tezgâh satışı (POS)', () => {
     expect(r.body.items[0].unitPrice).toBe(4000);
   });
 
+  it('KART/yemek kartı ödemesi: kasaya NAKİT girmez ama ciroya/fişe girer', async () => {
+    const r = await http.post('/api/v1/admin/pos/sales').send({ items: [{ slug: SLUG, qty: 1, unitPrice: 5000 }], paymentMethod: 'MULTINET' }).expect(201);
+    expect(r.body.paymentMethod).toBe('MULTINET');
+    // Kasada bu fişe ait NAKİT hareketi OLMAMALI.
+    const cash = await prisma.cashMovement.findFirst({ where: { tenantId: DEV_TENANT_ID, refCode: r.body.code } });
+    expect(cash).toBeNull();
+    // Bugünün fişlerinde yöntem kırılımı görünür.
+    const today = await http.get('/api/v1/admin/pos/today').expect(200);
+    expect(today.body.byMethod.MULTINET).toBeGreaterThanOrEqual(5000);
+    // İade: kart ödemesi iptalinde de kasaya nakit çıkışı OLMAMALI.
+    await http.patch(`/api/v1/admin/orders/${r.body.id}/status`).send({ status: 'CANCELLED' }).expect(200);
+    const rev = await prisma.cashMovement.findFirst({ where: { tenantId: DEV_TENANT_ID, refCode: r.body.code, category: 'SALE_REVERSAL' } });
+    expect(rev).toBeNull();
+  });
+
   it('sipariş listesi/inbox/müşteri kartlarına girmez; ciroya girer (posToday ayrık)', async () => {
     const orders = await http.get('/api/v1/admin/orders').expect(200);
     expect(orders.body.data.some((o: { code: string }) => o.code === saleCode)).toBe(false);

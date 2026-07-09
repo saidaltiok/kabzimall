@@ -101,6 +101,16 @@ const orderCode = (prefix: string) =>
 /** OrderItem/Order tutar alanları Int32 — üstü sessiz taşma yerine 400. */
 const MAX_TOTAL_KURUS = 2_000_000_000;
 
+/** Tezgâh/sipariş ödeme yöntemleri. Yalnız NAKİT (ve web COD) kasadaki fiziksel
+ *  çekmeceyi etkiler; kart/yemek kartı bankaya/karta gider → kasa bakiyesine GİRMEZ. */
+export const POS_PAYMENT_METHODS = ['CASH', 'CARD', 'SETCARD', 'MULTINET', 'TOKENFLEX', 'EDENRED', 'METROPOL'] as const;
+export type PosPaymentMethod = (typeof POS_PAYMENT_METHODS)[number];
+const CASH_METHODS = new Set(['CASH', 'COD']); // kasadaki nakdi hareket ettiren yöntemler
+const PAYMENT_LABEL: Record<string, string> = {
+  CASH: 'Nakit', CARD: 'Kredi/banka kartı', SETCARD: 'Setcard', MULTINET: 'Multinet',
+  TOKENFLEX: 'Token Flex', EDENRED: 'Edenred', METROPOL: 'Metropol', COD: 'Kapıda ödeme',
+};
+
 @Injectable()
 export class MarketService {
   constructor(
@@ -788,9 +798,11 @@ export class MarketService {
       }
     });
     // Teslim → kasaya GİRİŞ; teslim SONRASI iptal → kasadan ÇIKIŞ (tahsilat iadesi).
-    if (status === 'DELIVERED') {
+    // YALNIZ nakit/COD kasadaki çekmeceyi etkiler; kart/yemek kartı bankaya gider.
+    const cashPaid = CASH_METHODS.has(order.paymentMethod);
+    if (status === 'DELIVERED' && cashPaid) {
       await this.cash.recordSale(order.code, order.finalTotal ?? order.grandTotal);
-    } else if (cancelling && wasDelivered) {
+    } else if (cancelling && wasDelivered && cashPaid) {
       await this.cash.recordSaleReversal(order.code, order.finalTotal ?? order.grandTotal);
     }
     await this.emailCustomer(id, order.customerEmail, `Sipariş güncellemesi (${order.code})`, STATUS_MSG[status] ?? `Durum: ${status}`);
@@ -844,8 +856,9 @@ export class MarketService {
    * ENGELLENMEZ — eksiye düşer ve uyarı döner (kayıt hatası görünür olsun).
    * İade = mevcut iptal yolu (stok geri + SALE_REVERSAL).
    */
-  async posSale(dto: { items: { slug: string; qty: number; unitPrice?: number }[]; note?: string }, actor?: string) {
+  async posSale(dto: { items: { slug: string; qty: number; unitPrice?: number }[]; note?: string; paymentMethod?: PosPaymentMethod }, actor?: string) {
     if (!dto?.items?.length) throw new BadRequestException('En az bir kalem gerekli.');
+    const payment: PosPaymentMethod = dto.paymentMethod ?? 'CASH';
     const slugs = [...new Set(dto.items.map((i) => i.slug))];
     const products = await this.prisma.product.findMany({
       where: { tenantId: DEV_TENANT_ID, slug: { in: slugs }, isActive: true },
@@ -893,7 +906,7 @@ export class MarketService {
         data: {
           tenantId: DEV_TENANT_ID, code, channel: 'POS',
           customerName: 'Tezgâh satışı', customerPhone: '', addressText: '—',
-          status: 'DELIVERED', paymentMethod: 'CASH',
+          status: 'DELIVERED', paymentMethod: payment,
           note: dto.note?.trim() || null,
           subtotal, discountTotal: 0, deliveryFee: 0,
           grandTotal: subtotal, estimatedTotal: subtotal, finalTotal: subtotal,
@@ -902,13 +915,13 @@ export class MarketService {
         include: { items: true },
       });
       await tx.orderStatusHistory.create({
-        data: { tenantId: DEV_TENANT_ID, orderId: order.id, fromStatus: null, toStatus: 'DELIVERED', changedBy: actor ?? 'tezgâh', note: `🧾 Tezgâh satışı — nakit ${fmtTL(subtotal)}` },
+        data: { tenantId: DEV_TENANT_ID, orderId: order.id, fromStatus: null, toStatus: 'DELIVERED', changedBy: actor ?? 'tezgâh', note: `🧾 Tezgâh satışı — ${PAYMENT_LABEL[payment] ?? payment} ${fmtTL(subtotal)}` },
       });
       return order;
     });
-    // Nakit tahsilat — kasa açıksa oturuma, kapalıysa askıya düşer (open() sahiplenir).
-    await this.cash.recordSale(created.code, subtotal);
-    return { ...created, warnings };
+    // Tahsilat kasaya YALNIZ nakitse düşer (kart/yemek kartı bankaya gider → çekmece bakiyesini şişirmesin).
+    if (CASH_METHODS.has(payment)) await this.cash.recordSale(created.code, subtotal);
+    return { ...created, warnings, paymentMethod: payment };
   }
 
   /** Bugünün tezgâh fişleri + toplamı (iptal edilenler listede kalır, toplama girmez). */
@@ -919,12 +932,16 @@ export class MarketService {
       where: { tenantId: DEV_TENANT_ID, channel: 'POS', createdAt: { gte: start } },
       orderBy: { createdAt: 'desc' },
       select: {
-        id: true, code: true, status: true, finalTotal: true, grandTotal: true, createdAt: true, note: true,
+        id: true, code: true, status: true, finalTotal: true, grandTotal: true, createdAt: true, note: true, paymentMethod: true,
         items: { select: { productName: true, orderedQty: true, unitLabel: true, lineTotal: true } },
       },
     });
     const live = sales.filter((s) => s.status !== 'CANCELLED');
-    return { total: live.reduce((a, s) => a + (s.finalTotal ?? s.grandTotal), 0), count: live.length, sales };
+    const total = live.reduce((a, s) => a + (s.finalTotal ?? s.grandTotal), 0);
+    // Ödeme yöntemine göre kırılım (nakit / kart / yemek kartı) — kasa mutabakatı için.
+    const byMethod: Record<string, number> = {};
+    for (const s of live) byMethod[s.paymentMethod] = (byMethod[s.paymentMethod] ?? 0) + (s.finalTotal ?? s.grandTotal);
+    return { total, count: live.length, byMethod, sales };
   }
 
   /** Dahili personel notu — durum geçmişine düşer (📌 önekli), müşteri bildirimine GİRMEZ. */

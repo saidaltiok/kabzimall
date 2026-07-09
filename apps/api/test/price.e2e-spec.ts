@@ -120,5 +120,24 @@ describe('Intel /price uçları', () => {
         .send({ productId: 'x', price: 0, strategy: 'MANUAL' })
         .expect(400);
     });
+
+    it('fiyat yayınlanınca eski indirim TEMİZLENİR (satış fiyatı gölgede kalmasın — bug #2)', async () => {
+      // İndirimli ürün: base 12490, indirim 10990 → vitrinde 10990.
+      await http.post('/api/v1/catalog/products')
+        .send({ slug: 'avokado-t', name: 'Avokado T', saleType: 'PIECE', unitLabel: 'adet', basePrice: 12490, discountedPrice: 10990 })
+        .expect(201);
+      // Yeni fiyat yayınla (indirimden yüksek).
+      const r = await http.post('/api/v1/intel/price/apply')
+        .send({ productId: 'avokado-t', price: 15190, strategy: 'MARGIN', netMargin: 0.3 })
+        .expect(200);
+      expect(r.body.product.basePrice).toBe(15190);
+      expect(r.body.product.discountedPrice).toBeNull(); // indirim temizlendi
+      expect(r.body.discountCleared).toBe(true);
+      // Vitrin artık yeni fiyatı gösterir (gölgeleme yok).
+      const p = await http.get('/api/v1/catalog/products?search=avokado-t').expect(200);
+      const row = p.body.data.find((x: { slug: string }) => x.slug === 'avokado-t');
+      expect(row.discountedPrice).toBeNull();
+      expect(row.basePrice).toBe(15190);
+    });
   });
 });

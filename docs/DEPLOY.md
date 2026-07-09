@@ -62,7 +62,22 @@ NEXT_PUBLIC_SITE_URL="https://ALANADIN.com"
 - [ ] Prod Postgres 16 hazır (PostGIS eklentisi ileride harita için; şimdilik şart değil).
 - [ ] Şema uygula: `cd apps/api && npx prisma migrate deploy` (üretimde **`migrate dev` KULLANMA**).
 - [ ] İlk içerik: `npm run db:seed` (kategoriler + örnek ürünler + sepet). Gerçek kataloğu panelden gir.
-- [ ] Yedekleme planı (günlük otomatik snapshot).
+
+### 2a. Günlük yedekleme (veri kaybına karşı güvenlik ağı)
+`apps/api` içinde: `npm run db:backup` → `apps/api/backups/kabzimall-YYYY-MM-DD.dump`
+(sıkıştırılmış custom-format), son **14 gün** tutulur (eskiler silinir).
+
+- [ ] **Günlük otomatik çalıştır** (OS zamanlayıcı):
+  - **Windows (Görev Zamanlayıcı):** her gün 23:30 → `cmd /c "cd C:\...\apps\api && npm run db:backup"`.
+  - **Linux (cron):** `30 23 * * *  cd /opt/kabzimall/apps/api && npm run db:backup`.
+- [ ] **Buluta (Drive) senkron — sorun anında geri çekmek için:** `rclone` kurup bir remote
+  tanımlayın (`rclone config` → Google Drive), sonra `.env`'e `BACKUP_RCLONE_REMOTE="gdrive:kabzimall-yedek"`
+  ekleyin. Betik yedeği otomatik oraya yükler (uzakta da 14 günden eskiyi temizler).
+  *rclone/remote yoksa yedek yalnız yerelde kalır — yine de çalışır.*
+- [ ] **Geri yükleme (felaket kurtarma):** `docker exec -i kabzimall-db pg_restore -U kabzimall
+  --clean --if-exists -d kabzimall < backups/kabzimall-GÜN.dump` → ardından `npx prisma migrate deploy`.
+- Ayarlanabilir env: `BACKUP_DIR`, `BACKUP_RETENTION_DAYS`, `BACKUP_DOCKER_CONTAINER`
+  (yönetilen Postgres'te boş bırakın → `DATABASE_URL` ile doğrudan `pg_dump`).
 - [ ] `prisma generate` build adımında çalışır (`postinstall`).
 
 ---

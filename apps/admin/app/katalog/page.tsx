@@ -47,12 +47,18 @@ async function resizeImage(file: File, maxSide: number, quality: number): Promis
 }
 
 const SALE_TYPES: [string, string][] = [
-  ['WEIGHT', 'Kilo (kg)'],
-  ['PIECE', 'Adet'],
+  ['WEIGHT', 'Kilo (kg) — tartılarak'],
+  ['PIECE', 'Adet / paket — sabit'],
   ['BUNCH', 'Demet'],
   ['PACK', 'Paket'],
   ['VARIABLE_WEIGHT_PACK', 'Yaklaşık gramajlı paket'],
 ];
+/** Satış tipi seçilince önerilen birim etiketi (kullanıcı yine değiştirebilir). */
+const DEFAULT_UNIT: Record<string, string> = {
+  WEIGHT: 'kg', PIECE: 'adet', BUNCH: 'demet', PACK: 'paket', VARIABLE_WEIGHT_PACK: 'paket',
+};
+/** Birim etiketi hızlı seçenekleri (baharat vb. için gramajlı satış). */
+const UNIT_CHIPS = ['kg', 'adet', 'demet', 'paket', '100 g', '250 g', '500 g'];
 
 const empty = {
   id: '', slug: '', name: '', categoryId: '', saleType: 'WEIGHT', unitLabel: 'kg',
@@ -299,13 +305,29 @@ export default function KatalogPage() {
             </div>
             <div className="field">
               <label>Satış tipi</label>
-              <select value={form.saleType} onChange={setF('saleType')}>
+              <select
+                value={form.saleType}
+                onChange={(e) => {
+                  const st = e.target.value;
+                  // Satış tipi değişince birim etiketini otomatik uyarla (mevcut etiket
+                  // bir varsayılana eşitse; kullanıcı özel yazdıysa —"100 g" gibi— dokunma).
+                  setForm((s) => ({ ...s, saleType: st, unitLabel: Object.values(DEFAULT_UNIT).includes(s.unitLabel) || s.unitLabel === '' ? DEFAULT_UNIT[st] : s.unitLabel }));
+                }}
+              >
                 {SALE_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
             <div className="field">
-              <label>Birim etiketi</label>
+              <label>Birim etiketi <span className="muted" style={{ fontWeight: 400 }}>(fiyat bu birim başınadır)</span></label>
               <input value={form.unitLabel} onChange={setF('unitLabel')} placeholder="kg" style={{ minWidth: 90 }} />
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 5 }}>
+                {UNIT_CHIPS.map((u) => (
+                  <button key={u} type="button" onClick={() => setForm((s) => ({ ...s, unitLabel: u }))}
+                    style={{ border: `1px solid ${form.unitLabel === u ? 'var(--forest)' : 'var(--line)'}`, background: form.unitLabel === u ? 'var(--forest)' : '#fff', color: form.unitLabel === u ? '#fff' : 'inherit', borderRadius: 16, padding: '3px 10px', fontSize: 11.5, cursor: 'pointer' }}>
+                    {u}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="field">
               <label>Mağaza fiyatı (₺)</label>

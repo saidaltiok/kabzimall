@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { COST_TABS } from '@/components/SectionTabs';
+import { ProductPicker, CategoryPicker } from '@/components/pickers';
 
 interface Rule {
   id: string;
@@ -44,6 +45,8 @@ export default function KurallarPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [names, setNames] = useState<Record<string, string>>({}); // slug → ad (tabloda slug yerine ad göster)
+
   const load = useCallback(async () => {
     try {
       const r = await apiGet<{ data: Rule[] }>('/intel/pricing-rules');
@@ -53,6 +56,16 @@ export default function KurallarPage() {
     }
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    Promise.all([
+      apiGet<{ data: { slug: string; name: string }[] }>('/catalog/products').catch(() => ({ data: [] })),
+      apiGet<{ data: { slug: string; name: string }[] }>('/catalog/categories').catch(() => ({ data: [] })),
+    ]).then(([p, c]) => {
+      const m: Record<string, string> = {};
+      for (const x of [...p.data, ...c.data]) m[x.slug] = x.name;
+      setNames(m);
+    });
+  }, []);
 
   const pctToRate = (v: string) => (v.trim() === '' ? undefined : Math.round(parseFloat(v.replace(',', '.'))) / 100);
 
@@ -106,9 +119,11 @@ export default function KurallarPage() {
               </select>
             </div>
             {form.scope !== 'GLOBAL' && (
-              <div className="field">
-                <label>{form.scope === 'CATEGORY' ? 'Kategori slug' : 'Ürün slug'}</label>
-                <input value={form.refId} onChange={(e) => setForm((s) => ({ ...s, refId: e.target.value }))} placeholder={form.scope === 'CATEGORY' ? 'sebze' : 'domates'} />
+              <div className="field" style={{ minWidth: 220 }}>
+                <label>{form.scope === 'CATEGORY' ? 'Kategori' : 'Ürün'}</label>
+                {form.scope === 'CATEGORY'
+                  ? <CategoryPicker value={form.refId} onChange={(v) => setForm((s) => ({ ...s, refId: v }))} />
+                  : <ProductPicker value={form.refId} onChange={(v) => setForm((s) => ({ ...s, refId: v }))} />}
               </div>
             )}
             <div className="field">
@@ -146,7 +161,7 @@ export default function KurallarPage() {
                 {rules.map((r) => (
                   <tr key={r.id}>
                     <td><span className="tagp info">{scopeLabel(r.scope)}</span></td>
-                    <td>{r.scope === 'GLOBAL' ? '—' : <b>{r.refId}</b>}</td>
+                    <td>{r.scope === 'GLOBAL' ? '—' : <b>{names[r.refId] ?? r.refId}</b>}</td>
                     <td>{stratLabel(r.strategy)}</td>
                     <td className="num">{pctStr(r.targetMargin)}</td>
                     <td className="num savecell">{pctStr(r.floorMargin)}</td>

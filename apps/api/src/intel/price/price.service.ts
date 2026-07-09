@@ -126,7 +126,7 @@ export class PriceService {
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.product.findUnique({
         where: { tenantId_slug: { tenantId: DEV_TENANT_ID, slug: dto.productId } },
-        select: { id: true, basePrice: true },
+        select: { id: true, basePrice: true, discountedPrice: true },
       });
       const oldPrice = existing?.basePrice ?? null;
 
@@ -134,14 +134,20 @@ export class PriceService {
         id: true,
         slug: true,
         basePrice: true,
+        discountedPrice: true,
         createdAt: true,
         updatedAt: true,
       } as const;
 
+      // Yeni fiyat yayınlanınca eski indirim (kampanya) sona erer: aksi halde
+      // daha düşük bir discountedPrice yeni fiyatı gölgeler → satış fiyatı hiç
+      // değişmez, marj/rakip bayrağı düşmez, karar sonsuza dek tekrarlar (bug).
+      const discountCleared = existing?.discountedPrice != null;
+
       const product = existing
         ? await tx.product.update({
             where: { id: existing.id },
-            data: { basePrice: dto.price },
+            data: { basePrice: dto.price, discountedPrice: null },
             select: productSelect,
           })
         : await tx.product.create({
@@ -164,7 +170,7 @@ export class PriceService {
         },
       });
 
-      return { product, history };
+      return { product, history, discountCleared };
     });
   }
 

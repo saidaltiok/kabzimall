@@ -5,6 +5,7 @@ import { apiGet, apiSend } from '@/lib/api';
 import { tl } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { MARKET_TABS } from '@/components/SectionTabs';
+import { ProductPicker } from '@/components/pickers';
 import { tlToKurus } from '@/lib/money';
 
 interface Competitor { id: string; name: string; group: { id: string; name: string } }
@@ -23,15 +24,8 @@ interface Prices {
   entries: { competitorId: string; competitor: string; group: string; price: number }[];
 }
 
-const CHIPS = [
-  { id: 'domates', e: '🍅', name: 'Domates' },
-  { id: 'patates', e: '🥔', name: 'Patates' },
-  { id: 'biber', e: '🫑', name: 'Biber' },
-  { id: 'salatalik', e: '🥒', name: 'Salatalık' },
-];
-
 export default function RakipPage() {
-  const [productId, setProductId] = useState('domates');
+  const [productId, setProductId] = useState('');
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [prices, setPrices] = useState<Prices | null>(null);
@@ -132,13 +126,10 @@ export default function RakipPage() {
       <Topbar title="Rakip Fiyatları" sub="Rakip ve grup karşılaştırması" />
       <div className="body">
         <SectionTabs tabs={MARKET_TABS} />
-        <div className="pchips">
-          {CHIPS.map((c) => (
-            <div key={c.id} className={`pchip${productId === c.id ? ' sel' : ''}`} onClick={() => setProductId(c.id)}>
-              <span className="e">{c.e}</span>
-              {c.name}
-            </div>
-          ))}
+        <div className="card" style={{ maxWidth: 360, marginBottom: 12 }}>
+          <div className="field"><label>Ürün</label>
+            <ProductPicker value={productId} onChange={setProductId} placeholder="Ürün ara ve seç…" />
+          </div>
         </div>
         <p className="hint">
           Rakip fiyatları <b>her sabah 10:00'da otomatik</b> çekilir (resmî marketfiyati zincirleri +
@@ -159,9 +150,11 @@ export default function RakipPage() {
 
         <div className="card">
           <div className="ct">
-            {productId} — rakip fiyatları <span>{prices?.count ?? 0} rakip fiyatlı</span>
+            Rakip fiyatları <span>{prices?.count ?? 0} rakip fiyatlı</span>
           </div>
-          {competitors.length === 0 ? (
+          {!productId ? (
+            <p className="muted">Rakip fiyatlarını görmek/girmek için yukarıdan bir ürün seçin.</p>
+          ) : competitors.length === 0 ? (
             <p className="muted">Henüz rakip yok. Aşağıdan ekleyebilirsin.</p>
           ) : (
             <table>
