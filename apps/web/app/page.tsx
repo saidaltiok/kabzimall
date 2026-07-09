@@ -10,6 +10,7 @@ import { useFavs } from '@/lib/favs';
 import { getOrderHistory } from '@/lib/orders';
 import ProductCard, { CardProduct } from '@/components/ProductCard';
 import Icon from '@/components/Icon';
+import CategoryIcon from '@/components/CategoryIcon';
 
 interface Product extends CardProduct {
   isFeatured: boolean;
@@ -24,7 +25,6 @@ interface Basket {
   components: BasketComponent[];
 }
 
-const CAT_ICON: Record<string, string> = { meyve: '🍑', sebze: '🥬', yag: '🫒', kahvalti: '🧀', yoresel: '🏺' };
 const NEW_WINDOW_DAYS = 21; // "Yeni gelenler" penceresi (kendiliğinden temizlenir)
 
 /** URL '?kategori=' parametresini kategori filtresine bağlar (header/footer linkleri). */
@@ -41,7 +41,8 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [baskets, setBaskets] = useState<Basket[]>([]);
-  const [banner, setBanner] = useState<Banner | null>(null);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [bIdx, setBIdx] = useState(0);
   const [frequentSlugs, setFrequentSlugs] = useState<string[]>([]);
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
@@ -67,7 +68,7 @@ export default function HomePage() {
       .then(([p, c, b]) => { setProducts(p.data); setCategories(c.data); setBaskets(b.data); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-    apiGet<{ data: Banner[] }>('/storefront/banners').then((r) => setBanner(r.data[0] ?? null)).catch(() => {});
+    apiGet<{ data: Banner[] }>('/storefront/banners').then((r) => setBanners(r.data ?? [])).catch(() => {});
 
     // "Sık Aldıkların": son 5 siparişte 2+ kez geçen ürünler (girişliyse sunucudan, değilse bu cihazdan).
     (async () => {
@@ -91,6 +92,13 @@ export default function HomePage() {
       } catch { /* raf isteğe bağlı — sessiz geç */ }
     })();
   }, []);
+
+  // Banner carousel — birden çok aktif banner varsa 6 sn'de bir döner.
+  useEffect(() => {
+    if (banners.length < 2) return;
+    const t = window.setInterval(() => setBIdx((i) => (i + 1) % banners.length), 6000);
+    return () => window.clearInterval(t);
+  }, [banners.length]);
 
   async function copyCoupon(code: string) {
     try {
@@ -150,6 +158,7 @@ export default function HomePage() {
     return <div className="error" style={{ marginTop: 24 }}>Ürünler yüklenemedi: {error}<br />Sunucu çalışıyor mu? (apps/api)</div>;
 
   const showcase = cat === 'all' && !q; // raflar + gruplu ızgara
+  const banner = banners.length ? banners[bIdx % banners.length] : null;
   const Rail = ({ title, icon, list }: { title: string; icon: string; list: Product[] }) =>
     list.length === 0 ? null : (
       <>
@@ -163,6 +172,19 @@ export default function HomePage() {
       <Suspense fallback={null}><KategoriReader onCat={setCat} /></Suspense>
       {toast && <div className="toast">{toast}</div>}
       <div className="promo">
+        <svg className="promo-motif" viewBox="0 0 200 160" aria-hidden="true">
+          <circle cx="150" cy="96" r="46" fill="#ffffff" opacity="0.07" />
+          <circle cx="120" cy="128" r="30" fill="#ffffff" opacity="0.06" />
+          {/* portakal + yaprak */}
+          <circle cx="150" cy="98" r="34" fill="#f4a03c" />
+          <circle cx="139" cy="86" r="9" fill="#fff" opacity="0.18" />
+          <path d="M150 64c2-14 12-22 26-23-1 14-11 22-26 23z" fill="#5aa564" />
+          <path d="M150 64c2-14 12-22 26-23" stroke="#4a8f53" strokeWidth="1.5" fill="none" />
+          {/* çilek */}
+          <path d="M96 118c-9 0-15-6-15-13 0-4 4-6 8-6h14c4 0 8 2 8 6 0 7-6 13-15 13z" fill="#e4572e" />
+          <path d="M92 99h16l-3-6h-10z" fill="#5aa564" />
+          <g fill="#fff" opacity="0.5"><circle cx="92" cy="106" r="1" /><circle cx="100" cy="110" r="1" /><circle cx="108" cy="106" r="1" /><circle cx="96" cy="114" r="1" /><circle cx="104" cy="114" r="1" /></g>
+        </svg>
         <div className="k">{banner?.kicker ?? 'Taze · Yöresel'}</div>
         <div className="t serif">{banner?.title ?? 'Dalından sofrana, özenle'}</div>
         <div className="s">{banner?.subtitle ?? 'Sabah toplanan ürünler, ertesi gün kapında.'}</div>
@@ -171,21 +193,28 @@ export default function HomePage() {
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="tag" size={16} /> {banner.couponCode} <span className="cp">kopyala</span></span>
           </button>
         )}
+        {banners.length > 1 && (
+          <div className="promo-dots">
+            {banners.map((b, i) => (
+              <button key={b.id} className={`pd ${i === bIdx % banners.length ? 'on' : ''}`} onClick={() => setBIdx(i)} aria-label={`Banner ${i + 1}`} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="cats">
         <button className={`cat ${cat === 'all' ? 'sel' : ''}`} onClick={() => setCat('all')}>
-          <span className="ring"><Icon name="cart" size={16} /></span>Tümü
+          <span className="ring"><CategoryIcon slug="all" size={34} /></span>Tümü
         </button>
         {categories.map((c) => (
           <button key={c.slug} className={`cat ${cat === c.slug ? 'sel' : ''}`} onClick={() => setCat(c.slug)}>
-            <span className="ring">{CAT_ICON[c.slug] ?? '🧺'}</span>
+            <span className="ring"><CategoryIcon slug={c.slug} size={34} /></span>
             {c.name}
           </button>
         ))}
         {favs.length > 0 && (
           <button className={`cat ${cat === 'favs' ? 'sel' : ''}`} onClick={() => setCat('favs')}>
-            <span className="ring"><Icon name="star" size={16} /></span>Favorilerim
+            <span className="ring"><CategoryIcon slug="favs" size={34} /></span>Favorilerim
           </button>
         )}
       </div>
@@ -234,7 +263,7 @@ export default function HomePage() {
           {/* Tüm ürünler — kategoriye göre gruplu */}
           {grouped.map((g) => (
             <div className="catgroup" key={g.cat.slug}>
-              <h3>{CAT_ICON[g.cat.slug] ?? '🧺'} {g.cat.name} <span className="cnt">{g.items.length}</span></h3>
+              <h3><CategoryIcon slug={g.cat.slug} size={24} /> {g.cat.name} <span className="cnt">{g.items.length}</span></h3>
               <div className="grid">
                 {g.items.map((p) => <ProductCard key={p.slug} product={p} onAdded={flash} />)}
               </div>
