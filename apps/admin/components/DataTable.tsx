@@ -118,10 +118,10 @@ export default function DataTable<T>({ id, columns, rows, rowKey, onRowClick, em
 
   return (
     <div style={{ position: 'relative' }}>
-      <div ref={menuRef} style={{ position: 'absolute', right: 0, top: -34, zIndex: 20 }}>
-        <button className="btn ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setMenuOpen((o) => !o)} title="Sütunları düzenle">⚙ Sütunlar</button>
+      <div ref={menuRef} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, position: 'relative', zIndex: 20 }}>
+        <button className="btn ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setMenuOpen((o) => !o)} title="Sütunları düzenle: gizle · sabitle · sırala">⚙ Sütunlar</button>
         {menuOpen && (
-          <div style={{ position: 'absolute', right: 0, top: 32, width: 280, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 40px -18px rgba(0,0,0,.35)', padding: 8, maxHeight: 360, overflowY: 'auto' }}>
+          <div style={{ position: 'absolute', right: 0, top: 34, width: 280, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 40px -18px rgba(0,0,0,.35)', padding: 8, maxHeight: 360, overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 6px 8px' }}>
               <b style={{ fontSize: 12.5 }}>Sütunlar</b>
               <button className="back" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11.5 }} onClick={reset}>Sıfırla</button>

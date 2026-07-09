@@ -67,9 +67,12 @@ describe('Tezgâh satışı (POS)', () => {
     // Kasada bu fişe ait NAKİT hareketi OLMAMALI.
     const cash = await prisma.cashMovement.findFirst({ where: { tenantId: DEV_TENANT_ID, refCode: r.body.code } });
     expect(cash).toBeNull();
-    // Bugünün fişlerinde yöntem kırılımı görünür.
+    // Bugünün fişlerinde yöntem kırılımı görünür (brüt/komisyon/net + sayı).
     const today = await http.get('/api/v1/admin/pos/today').expect(200);
-    expect(today.body.byMethod.MULTINET).toBeGreaterThanOrEqual(5000);
+    expect(today.body.byMethod.MULTINET.gross).toBeGreaterThanOrEqual(5000);
+    // Yemek kartı %6 komisyon: net = brüt − komisyon.
+    expect(today.body.byMethod.MULTINET.commission).toBe(Math.round(today.body.byMethod.MULTINET.gross * 0.06));
+    expect(today.body.byMethod.MULTINET.net).toBe(today.body.byMethod.MULTINET.gross - today.body.byMethod.MULTINET.commission);
     // İade: kart ödemesi iptalinde de kasaya nakit çıkışı OLMAMALI.
     await http.patch(`/api/v1/admin/orders/${r.body.id}/status`).send({ status: 'CANCELLED' }).expect(200);
     const rev = await prisma.cashMovement.findFirst({ where: { tenantId: DEV_TENANT_ID, refCode: r.body.code, category: 'SALE_REVERSAL' } });

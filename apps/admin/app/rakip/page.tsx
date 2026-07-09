@@ -10,6 +10,7 @@ import { tlToKurus } from '@/lib/money';
 
 interface Competitor { id: string; name: string; group: { id: string; name: string } }
 interface Group { id: string; name: string }
+interface CoverageRow { slug: string; name: string; coverage: number; minComp: number; medianComp: number; ourPrice: number | null; isActive: boolean; belowFloor: boolean }
 interface Prices {
   productId: string;
   count: number;
@@ -36,6 +37,9 @@ export default function RakipPage() {
   // yeni rakip
   const [newComp, setNewComp] = useState('');
   const [newGroup, setNewGroup] = useState('');
+  // tüm ürünler rakip özeti
+  const [allOpen, setAllOpen] = useState(false);
+  const [coverage, setCoverage] = useState<CoverageRow[] | null>(null);
 
   const loadMeta = useCallback(async () => {
     try {
@@ -60,6 +64,13 @@ export default function RakipPage() {
 
   useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => { if (productId) loadPrices(productId); }, [productId, loadPrices]);
+  async function toggleAll() {
+    const next = !allOpen; setAllOpen(next);
+    if (next && !coverage) {
+      try { const r = await apiGet<{ data: CoverageRow[] }>('/intel/competitor-prices/coverage'); setCoverage(r.data); }
+      catch (e) { setError((e as Error).message); }
+    }
+  }
 
   function currentPrice(competitorId: string): number | null {
     return prices?.entries.find((e) => e.competitorId === competitorId)?.price ?? null;
@@ -126,11 +137,37 @@ export default function RakipPage() {
       <Topbar title="Rakip Fiyatları" sub="Rakip ve grup karşılaştırması" />
       <div className="body">
         <SectionTabs tabs={MARKET_TABS} />
-        <div className="card" style={{ maxWidth: 360, marginBottom: 12 }}>
-          <div className="field"><label>Ürün</label>
-            <ProductPicker value={productId} onChange={setProductId} placeholder="Ürün ara ve seç…" />
+        <div className="form-row" style={{ marginBottom: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="card" style={{ maxWidth: 360, margin: 0, flex: 1 }}>
+            <div className="field"><label>Tek ürün rakip fiyatları</label>
+              <ProductPicker value={productId} onChange={setProductId} placeholder="Ürün ara ve seç…" />
+            </div>
           </div>
+          <button className="btn ghost" style={{ marginBottom: 8 }} onClick={toggleAll}>{allOpen ? '▲ Tüm ürünler listesini gizle' : '📋 Tüm ürünler (rakip özeti)'}</button>
         </div>
+
+        {allOpen && (
+          <div className="card">
+            <div className="ct">Tüm ürünler — rakip özeti {coverage && <span>{coverage.length} ürün</span>}</div>
+            {!coverage ? <p className="muted">Yükleniyor…</p> : coverage.length === 0 ? <p className="muted">Henüz rakip fiyatı girilmemiş.</p> : (
+              <table>
+                <thead><tr><th>Ürün</th><th className="num">Rakip sayısı</th><th className="num">En düşük</th><th className="num">Medyan</th><th className="num">Bizim fiyat</th><th>Durum</th></tr></thead>
+                <tbody>
+                  {coverage.map((c) => (
+                    <tr key={c.slug} onClick={() => { setProductId(c.slug); setAllOpen(false); }} style={{ cursor: 'pointer' }} title="Bu ürünün rakip detayını aç">
+                      <td><b>{c.name}</b> <span className="muted" style={{ fontSize: 10.5 }}>detay ›</span></td>
+                      <td className="num">{c.coverage}</td>
+                      <td className="num">{tl(c.minComp)}</td>
+                      <td className="num savecell">{tl(c.medianComp)}</td>
+                      <td className="num">{tl(c.ourPrice)}</td>
+                      <td>{!c.isActive ? <span className="tagp info">kapalı</span> : c.belowFloor ? <span className="tagp zararina">medyan taban altı</span> : <span className="tagp ok">yayında</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
         <p className="hint">
           Rakip fiyatları <b>her sabah 10:00'da otomatik</b> çekilir (resmî marketfiyati zincirleri +
           online manavlar). Beklemeden istersen <b>Şimdi güncelle</b>. Otomatik kaynakta olmayan

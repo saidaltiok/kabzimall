@@ -14,6 +14,7 @@ export interface MatrixRow {
   slug: string; name: string; unitLabel: string | null; category: string | null;
   halAvg: number | null;
   byGroup: Record<string, number | null>; // grup adı → ortalama fiyat (kuruş)
+  byComp: Record<string, number | null>;  // rakip id → o rakibin fiyatı (dinamik sütunlar için)
   avg: number | null; premiumAvg: number | null; median: number | null; compCount: number;
   currentPrice: number | null;   // yayındaki geçerli fiyat (indirimli varsa o)
   floorPrice: number | null;     // taban marj + komisyona göre en düşük satılabilir
@@ -21,6 +22,9 @@ export interface MatrixRow {
   published: boolean;            // aktif + fiyatlı
   belowFloor: boolean;           // güncel fiyat tabanın altında mı
 }
+
+/** Dinamik sütun kurucu için rakip kataloğu (id + görünen ad + grup). */
+export interface MatrixCompetitor { id: string; name: string; group: string }
 
 /** Basit eşzamanlılık sınırlı map — bağlantı havuzunu yormadan ürün başına async iş. */
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -74,16 +78,21 @@ export class PricingMatrixService {
     return { published, blocked };
   }
 
-  async matrix(dateStr?: string): Promise<{ groups: string[]; rows: MatrixRow[]; date: string }> {
+  async matrix(dateStr?: string): Promise<{ groups: string[]; competitors: MatrixCompetitor[]; rows: MatrixRow[]; date: string }> {
     const date = dateOnly(dateStr);
 
-    const [products, groups, compRows, catRows] = await Promise.all([
+    const [products, groups, comps, compRows, catRows] = await Promise.all([
       this.prisma.product.findMany({
         where: { tenantId: DEV_TENANT_ID, kind: 'SIMPLE', OR: [{ isActive: true }, { basePrice: { not: null } }] },
         orderBy: [{ categoryId: 'asc' }, { name: 'asc' }],
         select: { slug: true, name: true, unitLabel: true, basePrice: true, discountedPrice: true, isActive: true, category: { select: { name: true } } },
       }),
       this.prisma.competitorGroup.findMany({ where: { tenantId: DEV_TENANT_ID }, orderBy: { name: 'asc' }, select: { name: true } }),
+      // Rakip kataloğu (dinamik sütun kurucu için) — grup adıyla birlikte.
+      this.prisma.competitor.findMany({
+        where: { tenantId: DEV_TENANT_ID }, orderBy: { name: 'asc' },
+        select: { id: true, name: true, group: { select: { name: true } } },
+      }),
       // Bugünkü tüm rakip fiyatları — tek sorgu; rakip başına EN GÜNCEL (asc → son yazan).
       this.prisma.competitorPriceEntry.findMany({
         where: { tenantId: DEV_TENANT_ID, date },
@@ -102,6 +111,7 @@ export class PricingMatrixService {
     }
 
     const groupNames = groups.map((g) => g.name);
+    const competitors: MatrixCompetitor[] = comps.map((c) => ({ id: c.id, name: c.name, group: c.group.name }));
 
     const rows = await mapLimit(products, 8, async (p): Promise<MatrixRow> => {
       const compMap = byProduct.get(p.slug);
@@ -114,6 +124,9 @@ export class PricingMatrixService {
         const gp = entries.filter((e) => e.group === g).map((e) => e.price);
         byGroup[g] = gp.length ? Math.round(avg(gp)) : null;
       }
+      // Rakip bazlı ham fiyatlar (dinamik sütunlar client tarafında bunlardan hesaplar)
+      const byComp: Record<string, number | null> = {};
+      if (compMap) for (const [cid, e] of compMap) byComp[cid] = e.price;
       const med = prices.length ? Math.round(medianFn(prices)) : null;
       // Premium ortalama: medyan ÜSTÜ fiyatların ortalaması (üst segment); yetersizse genel ort.
       const upper = med != null ? prices.filter((x) => x > med) : [];
@@ -137,7 +150,7 @@ export class PricingMatrixService {
       return {
         slug: p.slug, name: p.name, unitLabel: p.unitLabel, category: p.category?.name ?? null,
         halAvg: cost?.halAvg ?? null,
-        byGroup, avg: prices.length ? Math.round(avg(prices)) : null, premiumAvg, median: med, compCount: prices.length,
+        byGroup, byComp, avg: prices.length ? Math.round(avg(prices)) : null, premiumAvg, median: med, compCount: prices.length,
         currentPrice, floorPrice, suggested,
         published: p.isActive && p.basePrice != null,
         belowFloor: currentPrice != null && floorPrice != null && currentPrice < floorPrice,
@@ -152,6 +165,6 @@ export class PricingMatrixService {
       return a.name.localeCompare(b.name, 'tr');
     });
 
-    return { groups: groupNames, rows, date: date.toISOString().slice(0, 10) };
+    return { groups: groupNames, competitors, rows, date: date.toISOString().slice(0, 10) };
   }
 }

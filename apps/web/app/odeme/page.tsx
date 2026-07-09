@@ -21,6 +21,18 @@ interface Slot { date: string; window: string; label: string; remaining: number 
 /** Hazır teslimat notu çipleri — serbest metin yerine tek dokunuş. */
 const NOTE_CHIPS = ['Kapıya bırak', 'Zili çalma', 'Gelmeden ara', 'Poşetleri ayır'];
 
+/** Kapıda ödeme yöntemleri (online ödeme henüz yok — kurye teslimatta tahsil eder). */
+type PayMethod = 'COD' | 'CARD' | 'MULTINET' | 'SETCARD' | 'EDENRED' | 'METROPOL' | 'TOKENFLEX';
+const PAY_METHODS: { id: PayMethod; label: string; desc: string; icon?: string; brand?: string; color?: string }[] = [
+  { id: 'COD', label: 'Kapıda nakit', desc: 'Kuryeye nakit ödeme', icon: '💵' },
+  { id: 'CARD', label: 'Kapıda kredi/banka kartı', desc: 'Kuryenin POS cihazından', icon: '💳' },
+  { id: 'MULTINET', label: 'Multinet', desc: 'Yemek kartı — kapıda', brand: 'multinet', color: '#f36f21' },
+  { id: 'SETCARD', label: 'Setcard', desc: 'Yemek kartı — kapıda', brand: 'setcard', color: '#0067b1' },
+  { id: 'EDENRED', label: 'Edenred', desc: 'Yemek kartı — kapıda', brand: 'edenred', color: '#1b3c8c' },
+  { id: 'METROPOL', label: 'Metropol', desc: 'Yemek kartı — kapıda', brand: 'metropol', color: '#ed1c24' },
+  { id: 'TOKENFLEX', label: 'Token Flex', desc: 'Yemek kartı — kapıda', brand: 'token flex', color: '#6d28d9' },
+];
+
 type SubPref = 'CALL' | 'REMOVE' | 'SUBSTITUTE';
 const SUB_PREFS: { id: SubPref; icon: string; title: string; desc: string }[] = [
   { id: 'CALL', icon: '📞', title: 'Beni arayın', desc: 'Telefonla sorulmadan değişiklik yapılmaz' },
@@ -54,9 +66,10 @@ export default function CheckoutPage() {
   /** Cihazın gerçek konumu (pin'den bağımsız) — "farklı yer seçtiniz" teyidi için. */
   const [geoSelf, setGeoSelf] = useState<{ lat: number; lng: number } | null>(null);
   const [subPref, setSubPref] = useState<SubPref>('CALL');
+  const [payMethod, setPayMethod] = useState<PayMethod>('COD');
   /** Mesafeli satış + KVKK onayı — işaretlenmeden sipariş verilemez (yasal gereklilik). */
   const [consent, setConsent] = useState(false);
-  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [coupon, setCoupon] = useState<{ code: string; discount: number; firstOrderOnly?: boolean } | null>(null);
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,9 +127,9 @@ export default function CheckoutPage() {
   useEffect(() => {
     const cc = savedCoupon();
     if (!cc || subtotal <= 0) return;
-    apiGet<{ valid: boolean; code: string; discount: number }>(
+    apiGet<{ valid: boolean; code: string; discount: number; firstOrderOnly?: boolean }>(
       `/storefront/coupons/check?code=${encodeURIComponent(cc)}&subtotal=${subtotal}`,
-    ).then((r) => { if (r.valid) setCoupon({ code: r.code, discount: r.discount }); else { setCoupon(null); clearCoupon(); } }).catch(() => {});
+    ).then((r) => { if (r.valid) setCoupon({ code: r.code, discount: r.discount, firstOrderOnly: r.firstOrderOnly }); else { setCoupon(null); clearCoupon(); } }).catch(() => {});
   }, [subtotal]);
 
   if (items.length === 0)
@@ -145,6 +158,7 @@ export default function CheckoutPage() {
         note: note || undefined,
         substitutionPref: subPref,
         couponCode: coupon?.code,
+        paymentMethod: payMethod,
       });
       clearCoupon();
       rememberOrder(order.id, order.code);
@@ -316,14 +330,29 @@ export default function CheckoutPage() {
           </div>
           <div className="block">
             <h3>Ödeme yöntemi</h3>
-            <div className="choice sel"><div>💵 <b>Kapıda ödeme</b><div className="muted" style={{ fontSize: 12 }}>Nakit / kart</div></div><span>✓</span></div>
-            <p className="muted" style={{ fontSize: 12, margin: '8px 2px 0' }}>Online ödeme (kart) yakında.</p>
+            {PAY_METHODS.map((p) => (
+              <div
+                key={p.id}
+                className={`choice ${payMethod === p.id ? 'sel' : ''}`}
+                style={{ marginBottom: 8, cursor: 'pointer' }}
+                onClick={() => setPayMethod(p.id)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {p.brand
+                    ? <span style={{ display: 'inline-block', background: p.color, color: '#fff', borderRadius: 5, padding: '2px 7px', fontSize: 10.5, fontWeight: 800, textTransform: 'lowercase' }}>{p.brand}</span>
+                    : <span>{p.icon}</span>}
+                  <div><b>{p.label}</b><div className="muted" style={{ fontSize: 12 }}>{p.desc}</div></div>
+                </div>
+                <span>{payMethod === p.id ? '✓' : ''}</span>
+              </div>
+            ))}
+            <p className="muted" style={{ fontSize: 12, margin: '8px 2px 0' }}>Tüm ödemeler <b>kapıda</b> (teslimatta) alınır. Online ödeme yakında.</p>
           </div>
         </div>
 
         <div className="summary">
           <div className="ln"><span>Ara toplam ({items.length} ürün)</span><span>{tl(subtotal)}</span></div>
-          {coupon && <div className="ln"><span>Kupon <b>{coupon.code}</b></span><span className="save">−{tl(coupon.discount)}</span></div>}
+          {coupon && <div className="ln"><span>Kupon <b>{coupon.code}</b>{coupon.firstOrderOnly && <span className="muted" style={{ fontSize: 11 }}> · ilk siparişe özel</span>}</span><span className="save">−{tl(coupon.discount)}</span></div>}
           <div className="ln"><span>Teslimat</span><span className="save">{fee === 0 ? 'Ücretsiz' : tl(fee)}</span></div>
           <div className="ln tot serif"><span>Tahmini toplam</span><span>{tl(subtotal - (coupon?.discount ?? 0) + fee)}</span></div>
           <div className="note">Kesin tutar tartılı üründe paketlemede gramajla kesinleşir.</div>
@@ -361,7 +390,7 @@ export default function CheckoutPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Ürün</span><span>{items.length} kalem</span></div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Teslimat</span><span>{slots.find((s) => `${s.date}|${s.window}` === slotKey)?.label ?? '—'}</span></div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Adres</span><span style={{ maxWidth: 220, textAlign: 'right' }}>{district ? `${district} · ` : ''}{address}</span></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Ödeme</span><span>Kapıda ödeme (nakit/kart)</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Ödeme</span><span>{PAY_METHODS.find((p) => p.id === payMethod)?.label ?? 'Kapıda ödeme'} <span className="muted">(kapıda)</span></span></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 16, marginTop: 4 }}>
             <span>Tahmini toplam</span><span>{tl(subtotal - (coupon?.discount ?? 0) + fee)}</span>
           </div>

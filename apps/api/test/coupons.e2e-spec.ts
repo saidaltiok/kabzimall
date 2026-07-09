@@ -146,4 +146,45 @@ describe('Kuponlar (admin CRUD + storefront check + sipariş entegrasyonu)', () 
       expect(packed.body.finalTotal).toBe(28720 - 2872 + order.body.deliveryFee);
     });
   });
+
+  describe('ilk siparişe özel kupon (firstOrderOnly)', () => {
+    // Bu bloğa özgü, başka testlerde kullanılmayan taze kimlik.
+    const NEW = { name: 'Yeni Musteri', phone: '05559990001', email: 'ilk@ornek.com', address: 'Yeni Mah. No:2' };
+
+    it('önizlemede firstOrderOnly bayrağı döner; ilk siparişte indirim uygulanır', async () => {
+      await http.post('/api/v1/admin/coupons').send({ code: 'ILK15', type: 'PERCENT', value: 15, firstOrderOnly: true }).expect(201);
+      const chk = await request(server).get('/api/v1/storefront/coupons/check?code=ILK15&subtotal=35900').expect(200);
+      expect(chk.body.valid).toBe(true);
+      expect(chk.body.firstOrderOnly).toBe(true);
+
+      const first = await request(server)
+        .post('/api/v1/storefront/orders')
+        .send({ items: [{ slug: 'kpn-urun', qty: 10 }], customer: NEW, couponCode: 'ILK15' })
+        .expect(201);
+      expect(first.body.discountTotal).toBe(Math.round(35900 * 0.15)); // 5385
+    });
+
+    it('aynı telefonla ikinci sipariş → kupon reddedilir (400)', async () => {
+      await request(server)
+        .post('/api/v1/storefront/orders')
+        .send({ items: [{ slug: 'kpn-urun', qty: 10 }], customer: NEW, couponCode: 'ILK15' })
+        .expect(400);
+    });
+
+    it('farklı telefon ama aynı e-posta → yine reddedilir (e-posta eşleşmesi)', async () => {
+      await request(server)
+        .post('/api/v1/storefront/orders')
+        .send({ items: [{ slug: 'kpn-urun', qty: 10 }], customer: { name: 'Baska Kisi', phone: '05559990002', email: 'ilk@ornek.com', address: 'X Mah. No:3' }, couponCode: 'ILK15' })
+        .expect(400);
+    });
+
+    it('tamamen yeni müşteri → ilk sipariş sayılır, indirim uygulanır', async () => {
+      const fresh = { name: 'Bambaska', phone: '05559990003', email: 'bambaska@ornek.com', address: 'Z Mah. No:4' };
+      const r = await request(server)
+        .post('/api/v1/storefront/orders')
+        .send({ items: [{ slug: 'kpn-urun', qty: 10 }], customer: fresh, couponCode: 'ILK15' })
+        .expect(201);
+      expect(r.body.discountTotal).toBe(Math.round(35900 * 0.15));
+    });
+  });
 });

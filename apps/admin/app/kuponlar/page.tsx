@@ -10,7 +10,7 @@ import { tlToKurus } from '@/lib/money';
 interface Coupon {
   id: string; code: string; type: 'PERCENT' | 'FIXED'; value: number;
   minSubtotal: number; expiresAt: string | null; maxUses: number | null;
-  usedCount: number; isActive: boolean; createdAt: string;
+  usedCount: number; isActive: boolean; firstOrderOnly: boolean; createdAt: string;
 }
 
 export default function KuponlarPage() {
@@ -25,6 +25,7 @@ export default function KuponlarPage() {
   const [minTl, setMinTl] = useState('');
   const [maxUses, setMaxUses] = useState('');
   const [expires, setExpires] = useState('');
+  const [firstOrderOnly, setFirstOrderOnly] = useState(false);
 
   const load = useCallback(() => {
     apiGet<{ data: Coupon[] }>('/admin/coupons').then((r) => setRows(r.data)).catch((e) => setError((e as Error).message));
@@ -44,9 +45,10 @@ export default function KuponlarPage() {
         minSubtotal: tlToKurus(minTl) ?? 0,
         maxUses: maxUses.trim() ? parseInt(maxUses, 10) : undefined,
         expiresAt: expires ? new Date(expires + 'T23:59:59').toISOString() : undefined,
+        firstOrderOnly,
       });
       setOk(`✓ Kupon oluşturuldu: ${code.trim().toUpperCase()}`);
-      setCode(''); setValue(''); setMinTl(''); setMaxUses(''); setExpires('');
+      setCode(''); setValue(''); setMinTl(''); setMaxUses(''); setExpires(''); setFirstOrderOnly(false);
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -92,8 +94,17 @@ export default function KuponlarPage() {
             <div className="field"><label>Asgari sepet (₺, ops.)</label><input value={minTl} onChange={(e) => setMinTl(e.target.value)} placeholder="200,00" style={{ width: 120 }} /></div>
             <div className="field"><label>Kullanım limiti (ops.)</label><input value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder="100" style={{ width: 100 }} /></div>
             <div className="field"><label>Son kullanma (ops.)</label><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></div>
+            <div className="field" style={{ justifyContent: 'flex-end' }}>
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={firstOrderOnly} onChange={(e) => setFirstOrderOnly(e.target.checked)} /> Yalnız ilk siparişe
+              </label>
+            </div>
             <button className="btn" onClick={create} disabled={busy || !code.trim() || !value.trim()}>{busy ? '…' : 'Oluştur'}</button>
           </div>
+          <p className="note2" style={{ marginTop: 8 }}>
+            <b>Yalnız ilk siparişe:</b> Aynı <b>telefon veya e-posta</b> ile daha önce (iptal olmayan) sipariş verilmişse
+            kupon reddedilir. Kontrol sipariş anında sunucuda yapılır (misafir siparişlerde de çalışır).
+          </p>
         </div>
 
         <div className="card">
@@ -103,7 +114,7 @@ export default function KuponlarPage() {
           ) : (
             <table>
               <thead>
-                <tr><th>Kod</th><th>İndirim</th><th className="num">Asgari sepet</th><th className="num">Kullanım</th><th>Son kullanma</th><th>Durum</th><th></th></tr>
+                <tr><th>Kod</th><th>İndirim</th><th className="num">Asgari sepet</th><th className="num">Kullanım</th><th>Son kullanma</th><th>Kapsam</th><th>Durum</th><th></th></tr>
               </thead>
               <tbody>
                 {rows.map((c) => (
@@ -113,6 +124,7 @@ export default function KuponlarPage() {
                     <td className="num">{c.minSubtotal > 0 ? tl(c.minSubtotal) : '—'}</td>
                     <td className="num">{c.usedCount}{c.maxUses != null ? ` / ${c.maxUses}` : ''}</td>
                     <td>{c.expiresAt ? c.expiresAt.slice(0, 10) : '—'}</td>
+                    <td>{c.firstOrderOnly ? <span className="tagp info" title="Yalnız ilk siparişte geçerli">ilk sipariş</span> : <span className="muted">herkes</span>}</td>
                     <td>{c.isActive ? <span className="tagp ok">aktif</span> : <span className="tagp info">kapalı</span>}</td>
                     <td className="num">
                       <button className="btn ghost" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => toggle(c)}>

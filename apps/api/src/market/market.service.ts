@@ -111,6 +111,20 @@ const PAYMENT_LABEL: Record<string, string> = {
   TOKENFLEX: 'Token Flex', EDENRED: 'Edenred', METROPOL: 'Metropol', COD: 'Kapıda ödeme',
 };
 
+/**
+ * Ödeme yöntemi başına tahsilat komisyonu (binde — basis point). Nakit/kapıda 0;
+ * kredi/banka kartı ~%1.8; yemek kartları ~%6. Fiyatlama motorundaki `commissionRate`
+ * TEK harmanlanmış bir orandır (öneri fiyatına gömülür); buradaki oranlar ise satış
+ * ANINDA seçilen gerçek yönteme göre net tahsilatı raporlamak içindir. Oranlar tek
+ * yerde: sözleşmen değişirse burada güncelle.
+ */
+export const PAYMENT_COMMISSION_BPS: Record<string, number> = {
+  CASH: 0, COD: 0, CARD: 180, SETCARD: 600, MULTINET: 600, TOKENFLEX: 600, EDENRED: 600, METROPOL: 600,
+};
+/** Verilen tutardan (kuruş) yöntemin komisyonunu (kuruş) hesapla. */
+export const paymentCommission = (method: string, amount: number) =>
+  Math.round((amount * (PAYMENT_COMMISSION_BPS[method] ?? 0)) / 10_000);
+
 @Injectable()
 export class MarketService {
   constructor(
@@ -473,7 +487,7 @@ export class MarketService {
       let couponCode: string | null = null;
       let discountTotal = 0;
       if (dto.couponCode?.trim()) {
-        const r = await this.coupons.redeem(tx, dto.couponCode, subtotal);
+        const r = await this.coupons.redeem(tx, dto.couponCode, subtotal, { phone: dto.customer.phone, email: dto.customer.email });
         couponCode = r.code;
         discountTotal = r.discount;
       }
@@ -938,10 +952,22 @@ export class MarketService {
     });
     const live = sales.filter((s) => s.status !== 'CANCELLED');
     const total = live.reduce((a, s) => a + (s.finalTotal ?? s.grandTotal), 0);
-    // Ödeme yöntemine göre kırılım (nakit / kart / yemek kartı) — kasa mutabakatı için.
-    const byMethod: Record<string, number> = {};
-    for (const s of live) byMethod[s.paymentMethod] = (byMethod[s.paymentMethod] ?? 0) + (s.finalTotal ?? s.grandTotal);
-    return { total, count: live.length, byMethod, sales };
+    // Ödeme yöntemine göre kırılım (nakit / kart / yemek kartı) — kasa mutabakatı + komisyon için.
+    const byMethod: Record<string, { gross: number; commission: number; net: number; count: number }> = {};
+    let commissionTotal = 0;
+    for (const s of live) {
+      const amt = s.finalTotal ?? s.grandTotal;
+      const com = paymentCommission(s.paymentMethod, amt);
+      commissionTotal += com;
+      const m = byMethod[s.paymentMethod] ?? { gross: 0, commission: 0, net: 0, count: 0 };
+      m.gross += amt; m.commission += com; m.net += amt - com; m.count += 1;
+      byMethod[s.paymentMethod] = m;
+    }
+    return {
+      total, count: live.length, byMethod, sales,
+      commissionTotal, net: total - commissionTotal,
+      commissionBps: PAYMENT_COMMISSION_BPS,
+    };
   }
 
   /** Dahili personel notu — durum geçmişine düşer (📌 önekli), müşteri bildirimine GİRMEZ. */

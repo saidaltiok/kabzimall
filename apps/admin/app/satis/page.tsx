@@ -51,6 +51,7 @@ export default function SatisPage() {
   const [productId, setProductId] = useState(''); // detay için odak ürün
   const [selected, setSelected] = useState<string[]>([]); // karşılaştırma için çoklu seçim
   const [names, setNames] = useState<Record<string, string>>({});
+  const [catOf, setCatOf] = useState<Record<string, string>>({}); // slug → kategori slug
   const [compare, setCompare] = useState<CompareRow[]>([]);
   const [days, setDays] = useState('30');
   const [sales, setSales] = useState<Sales | null>(null);
@@ -71,8 +72,10 @@ export default function SatisPage() {
   }, [mvDays]);
   useEffect(() => {
     apiGet<Affinity>('/intel/analytics/basket-affinity?days=90').then(setAffinity).catch(() => {});
-    apiGet<{ data: { slug: string; name: string }[] }>('/catalog/products').then((r) => {
-      const m: Record<string, string> = {}; for (const p of r.data) m[p.slug] = p.name; setNames(m);
+    apiGet<{ data: { slug: string; name: string; category: { name: string } | null }[] }>('/catalog/products').then((r) => {
+      const m: Record<string, string> = {}; const c: Record<string, string> = {};
+      for (const p of r.data) { m[p.slug] = p.name; if (p.category) c[p.slug] = p.category.name; }
+      setNames(m); setCatOf(c);
     }).catch(() => {});
   }, []);
 
@@ -110,10 +113,15 @@ export default function SatisPage() {
     if (selected.length === 0) return;
     setBusy(true); setError(null);
     try {
-      const rows = await Promise.all(selected.map(async (slug) => {
-        const s = await apiGet<Sales>(`/intel/analytics/sales?productId=${encodeURIComponent(slug)}&days=${days}`);
-        return { slug, name: names[slug] ?? slug, units: s.summary.totalUnits, revenue: s.summary.totalRevenue, avgDaily: s.summary.avgDailyUnits } as CompareRow;
-      }));
+      // "Tümü"/kategori ile yüzlerce ürün seçilebildiğinden istekleri 8'erli gruplarla akıt.
+      const rows: CompareRow[] = [];
+      for (let i = 0; i < selected.length; i += 8) {
+        const batch = await Promise.all(selected.slice(i, i + 8).map(async (slug) => {
+          const s = await apiGet<Sales>(`/intel/analytics/sales?productId=${encodeURIComponent(slug)}&days=${days}`);
+          return { slug, name: names[slug] ?? slug, units: s.summary.totalUnits, revenue: s.summary.totalRevenue, avgDaily: s.summary.avgDailyUnits } as CompareRow;
+        }));
+        rows.push(...batch);
+      }
       rows.sort((a, b) => b.revenue - a.revenue);
       setCompare(rows);
       await loadDetail(selected.length === 1 ? selected[0] : '');
@@ -121,6 +129,10 @@ export default function SatisPage() {
   }
   const addProduct = (slug: string) => { if (slug && !selected.includes(slug)) setSelected((s) => [...s, slug]); };
   const removeProduct = (slug: string) => setSelected((s) => s.filter((x) => x !== slug));
+  const allSlugs = Object.keys(names);
+  const categories = [...new Set(Object.values(catOf))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const addAll = () => setSelected(allSlugs);
+  const addCategory = (catName: string) => setSelected((s) => [...new Set([...s, ...allSlugs.filter((sl) => catOf[sl] === catName)])]);
 
   const maxUnits = sales?.series.reduce((m, p) => Math.max(m, p.units), 0) ?? 0;
 
@@ -255,6 +267,13 @@ export default function SatisPage() {
               </select>
             </div>
             <button className="btn" onClick={loadCompare} disabled={busy || selected.length === 0}>{busy ? '…' : 'Getir'}</button>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+            <span className="muted" style={{ fontSize: 12 }}>Hızlı ekle:</span>
+            <button className="btn ghost" style={{ fontSize: 12, padding: '5px 10px' }} onClick={addAll}>Tümü ({allSlugs.length})</button>
+            {categories.map((c) => (
+              <button key={c} className="btn ghost" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => addCategory(c)}>{c}</button>
+            ))}
           </div>
           {selected.length > 0 && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>

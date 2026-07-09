@@ -5,6 +5,7 @@ import { apiSend } from '@/lib/api';
 import { tl, pct } from '@/lib/format';
 import Topbar from '@/components/Topbar';
 import SectionTabs, { PRICING_TABS } from '@/components/SectionTabs';
+import { ProductPicker } from '@/components/pickers';
 import { tlToKurus } from '@/lib/money';
 
 interface CostInputs { halAvg: number; fireRate: number; labor: number; packaging: number; fuel: number; coldStorage?: number; amortization?: number; commissionRate: number }
@@ -18,7 +19,7 @@ interface ScenarioResult {
 const kurusToTl = (k: number) => (k / 100).toFixed(2);
 
 export default function SenaryoPage() {
-  const [productId, setProductId] = useState('domates');
+  const [productId, setProductId] = useState('');
   const [basePriceTl, setBasePriceTl] = useState('');
   const [levers, setLevers] = useState({ firePct: '', halTl: '', laborTl: '', packagingTl: '', fuelTl: '', commissionPct: '' });
   const [result, setResult] = useState<ScenarioResult | null>(null);
@@ -92,10 +93,10 @@ export default function SenaryoPage() {
 
         <div className="card">
           <div className="ct">Ürün</div>
-          <div className="form-row">
-            <div className="field">
-              <label>Ürün slug</label>
-              <input value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="domates" onKeyDown={(e) => e.key === 'Enter' && loadBaseline()} />
+          <div className="form-row" style={{ alignItems: 'flex-end' }}>
+            <div className="field" style={{ minWidth: 240 }}>
+              <label>Ürün</label>
+              <ProductPicker value={productId} onChange={setProductId} placeholder="Ürün ara ve seç…" />
             </div>
             <button className="btn" onClick={loadBaseline} disabled={busy || !productId.trim()}>Girdileri yükle</button>
           </div>

@@ -370,11 +370,11 @@ export class AdminCouponsController {
     return { data, meta: { total: data.length } };
   }
 
-  /** POST /admin/coupons — { code, type: PERCENT|FIXED, value, minSubtotal?, expiresAt?, maxUses? } */
+  /** POST /admin/coupons — { code, type: PERCENT|FIXED, value, minSubtotal?, expiresAt?, maxUses?, firstOrderOnly? } */
   @Post()
   @Roles(...PRICE_WRITERS)
-  @ApiBody({ schema: { example: { code: 'HOSGELDIN10', type: 'PERCENT', value: 10, minSubtotal: 20000, maxUses: 100 } } })
-  create(@Body() dto: { code: string; type: 'PERCENT' | 'FIXED'; value: number; minSubtotal?: number; expiresAt?: string; maxUses?: number }) {
+  @ApiBody({ schema: { example: { code: 'HOSGELDIN10', type: 'PERCENT', value: 10, minSubtotal: 20000, maxUses: 100, firstOrderOnly: true } } })
+  create(@Body() dto: { code: string; type: 'PERCENT' | 'FIXED'; value: number; minSubtotal?: number; expiresAt?: string; maxUses?: number; firstOrderOnly?: boolean }) {
     return this.coupons.create(dto);
   }
 

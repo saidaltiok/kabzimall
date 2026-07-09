@@ -54,6 +54,12 @@ export default function OnerPage() {
     }
   }, [productId, strategy, target]);
 
+  // Ürünler tablosundan "Fiyatla →" ile gelince ürünü ön-seç (?p=slug).
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('p');
+    if (p) setProductId(p);
+  }, []);
+
   // Ürün veya strateji değişince otomatik öner (prototipteki anlık his).
   useEffect(() => {
     run();

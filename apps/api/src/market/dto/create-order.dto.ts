@@ -104,7 +104,11 @@ export class CreateOrderDto {
   @IsOptional() @IsString()
   couponCode?: string;
 
-  /** Faz 1: yalnızca kapıda ödeme. */
-  @IsOptional() @IsIn(['COD'])
-  paymentMethod?: 'COD';
+  /**
+   * Kapıda ödeme yöntemi (online ödeme henüz yok — hepsi teslimatta tahsil edilir).
+   * COD = kapıda nakit (geriye dönük uyum), CARD = kapıda kredi/banka kartı,
+   * yemek kartları kuryenin POS cihazından. Komisyon raporlaması buna göre.
+   */
+  @IsOptional() @IsIn(['COD', 'CASH', 'CARD', 'SETCARD', 'MULTINET', 'TOKENFLEX', 'EDENRED', 'METROPOL'])
+  paymentMethod?: 'COD' | 'CASH' | 'CARD' | 'SETCARD' | 'MULTINET' | 'TOKENFLEX' | 'EDENRED' | 'METROPOL';
 }

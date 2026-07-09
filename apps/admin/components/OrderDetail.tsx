@@ -11,7 +11,7 @@ export interface DetailItem {
 export interface DetailOrder {
   id: string; code: string; customerName: string; customerPhone: string; customerEmail?: string | null;
   addressText?: string | null; lat: number | null; lng: number | null;
-  status: string; substitutionPref: string;
+  status: string; substitutionPref: string; paymentMethod?: string | null;
   subtotal?: number; deliveryFee?: number; discountTotal?: number; couponCode?: string | null;
   grandTotal: number; estimatedTotal?: number; finalTotal: number | null;
   deliveryDate: string | null; deliveryWindow: string | null;
@@ -29,6 +29,10 @@ const STATUS_TR: Record<string, string> = {
 };
 const SUB_LABEL: Record<string, string> = {
   CALL: '📞 Eksikte: müşteriyi ara', REMOVE: '➖ Eksikte: ürünü çıkar', SUBSTITUTE: '🔄 Eksikte: benzeriyle değiştir',
+};
+const PAY_LABEL: Record<string, string> = {
+  COD: '💵 Kapıda nakit', CASH: '💵 Nakit', CARD: '💳 Kapıda kart',
+  SETCARD: 'Setcard', MULTINET: 'Multinet', TOKENFLEX: 'Token Flex', EDENRED: 'Edenred', METROPOL: 'Metropol',
 };
 
 export interface RefundRequest {
@@ -109,6 +113,7 @@ export default function OrderDetail({ order: o, onSlotDecide, onAddNote, onRefun
       <div style={{ marginBottom: 8 }}>
         <b>Teslimat:</b> {o.deliveryWindow ? `${o.deliveryDate?.slice(0, 10)} · ${o.deliveryWindow}` : 'saat seçilmedi'}
         {' · '}<span className="tagp risk">{SUB_LABEL[o.substitutionPref] ?? SUB_LABEL.CALL}</span>
+        {o.paymentMethod && <> · <span className="tagp info" title="Tahsilat yöntemi">{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span></>}
       </div>
 
       {o.note && <div style={{ marginBottom: 8 }}><b>Not:</b> {o.note}</div>}

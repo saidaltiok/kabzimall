@@ -14,7 +14,7 @@ export class PricingCockpitController {
   @Roles(...PRICE_WRITERS)
   @ApiQuery({ name: 'days', required: false })
   overview(@Query('days') days?: string) {
-    return this.service.overview(days ? Math.min(365, Math.max(7, Number(days))) : 30);
+    return this.service.overview(days ? Math.min(365, Math.max(1, Number(days))) : 30);
   }
 
   /** GET /intel/pricing-cockpit/:slug?days=30 — tek ürün günlük trend serisi. */
@@ -22,6 +22,6 @@ export class PricingCockpitController {
   @Roles(...PRICE_WRITERS)
   @ApiQuery({ name: 'days', required: false })
   series(@Param('slug') slug: string, @Query('days') days?: string) {
-    return this.service.series(slug, days ? Math.min(365, Math.max(7, Number(days))) : 30);
+    return this.service.series(slug, days ? Math.min(365, Math.max(1, Number(days))) : 30);
   }
 }

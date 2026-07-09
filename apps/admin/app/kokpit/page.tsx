@@ -64,16 +64,19 @@ export default function KokpitPage() {
       <div className="body">
         <SectionTabs tabs={PRICING_TABS} />
         <p className="hint">
-          Her ürün için <b>benim alış fiyatım</b> (hal alımlarından), <b>hal piyasa</b> ort., <b>rakip</b> ort. ve
-          <b> benim satış fiyatım</b> yan yana. Başlığa tıklayıp sıralayın; <b>⚙ Sütunlar</b> ile gizleyip/sabitleyin.
-          Satıra tıklayınca <b>zaman trendi</b> altta açılır.
+          Her ürün için <b>benim alış fiyatım</b> (hal alımlarından), <b>hal piyasa</b>, <b>rakip</b> ve
+          <b> benim satış fiyatım</b> yan yana. <b>Dönem</b>, verilerin hangi zaman aralığından toplandığını
+          belirler: alış/hal/rakip sütunları o dönemdeki <b>ortalamalardır</b> (satış fiyatı her zaman güncel).
+          <b> Bugün</b>&apos;ü seçersen yalnız bugünün verisi görünür. Başlığa tıkla → sırala; <b>⚙ Sütunlar</b> ile
+          gizle/sabitle; satıra tıkla → <b>gün gün trend</b>.
         </p>
         <div className="form-row" style={{ marginBottom: 12, alignItems: 'center' }}>
-          <div className="field"><label>Dönem</label>
+          <div className="field"><label>Dönem (ortalama penceresi)</label>
             <select value={days} onChange={(e) => setDays(e.target.value)}>
-              <option value="7">Son 7 gün</option>
-              <option value="30">Son 30 gün</option>
-              <option value="90">Son 90 gün</option>
+              <option value="1">Bugün</option>
+              <option value="7">Son 7 gün (ort.)</option>
+              <option value="30">Son 30 gün (ort.)</option>
+              <option value="90">Son 90 gün (ort.)</option>
             </select>
           </div>
         </div>

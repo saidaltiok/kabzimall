@@ -248,6 +248,8 @@ model Coupon {
   maxUses     Int?      @map("max_uses")
   usedCount   Int       @default(0) @map("used_count")
   isActive    Boolean   @default(true) @map("is_active")
+  /// Yalnız ilk siparişe özel mi (aynı telefon/e-posta ile önceki sipariş yoksa geçerli).
+  firstOrderOnly Boolean @default(false) @map("first_order_only")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@unique([tenantId, code])

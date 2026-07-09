@@ -27,8 +27,39 @@ export class CouponService {
     return Math.max(0, Math.min(raw, subtotal));
   }
 
-  /** Sepette/checkout'ta önizleme: geçerli mi + ne kadar indirim. Hata fırlatmaz. */
-  async check(codeRaw: string, subtotal: number): Promise<CouponCheck> {
+  /** Telefon eşleştirmesi için: yalnızca rakamlar, son 10 hane (sipariş modeliyle aynı). */
+  private static phoneKey(p?: string | null) {
+    const d = (p ?? '').replace(/\D/g, '');
+    return d.length > 10 ? d.slice(-10) : d;
+  }
+
+  /**
+   * Aynı telefon/e-posta ile daha önce (iptal olmayan) WEB siparişi var mı?
+   * Yoksa bu müşterinin İLK siparişidir. Tezgâh (POS) satışları müşteri kimliği
+   * taşımadığından hariç. Not: telefon formatlı saklandığından bellekte normalize
+   * ederek karşılaştırırız; hacim büyürse normalize kolon + index eklenebilir.
+   */
+  async isFirstOrder(identity: { phone?: string | null; email?: string | null }): Promise<boolean> {
+    const pk = CouponService.phoneKey(identity.phone);
+    const em = identity.email?.trim().toLocaleLowerCase('tr') || null;
+    if (!pk && !em) return true; // kimlik yoksa engelleme (ilk kabul et)
+    const prior = await this.prisma.order.findMany({
+      where: { tenantId: DEV_TENANT_ID, channel: 'WEB', status: { not: 'CANCELLED' } },
+      select: { customerPhone: true, customerEmail: true },
+    });
+    return !prior.some(
+      (o) =>
+        (pk && CouponService.phoneKey(o.customerPhone) === pk) ||
+        (em && o.customerEmail?.trim().toLocaleLowerCase('tr') === em),
+    );
+  }
+
+  /**
+   * Sepette/checkout'ta önizleme: geçerli mi + ne kadar indirim. Hata fırlatmaz.
+   * `firstOrderOnly` kuponlarda kimlik önizlemede bilinmediğinden (PII'yi URL'e
+   * koymayız) burada engellenmez — kesin kontrol sipariş anında `redeem`'de yapılır.
+   */
+  async check(codeRaw: string, subtotal: number): Promise<CouponCheck & { firstOrderOnly?: boolean }> {
     const code = normalize(codeRaw ?? '');
     if (!code) return { valid: false, code, discount: 0, message: 'Kupon kodu girin.' };
     const c = await this.prisma.coupon.findUnique({ where: { tenantId_code: { tenantId: DEV_TENANT_ID, code } } });
@@ -39,19 +70,30 @@ export class CouponService {
       return { valid: false, code, discount: 0, message: `Bu kupon ${(c.minSubtotal / 100).toLocaleString('tr-TR')} ₺ ve üzeri sepetlerde geçerli.` };
     }
     const discount = CouponService.discountFor(c, subtotal);
-    return { valid: true, code, discount, message: c.type === 'PERCENT' ? `%${c.value} indirim uygulandı.` : 'İndirim uygulandı.' };
+    const base = c.type === 'PERCENT' ? `%${c.value} indirim uygulandı.` : 'İndirim uygulandı.';
+    const message = c.firstOrderOnly ? `${base} (yalnız ilk siparişte geçerli)` : base;
+    return { valid: true, code, discount, message, firstOrderOnly: c.firstOrderOnly };
   }
 
   /**
    * Sipariş oluşturma sırasında kullan: koşullu atomik artış — koşullar artık
    * sağlanmıyorsa (limit dolduysa) sipariş 400 ile durur, sessizce indirimsiz geçmez.
    */
-  async redeem(tx: Prisma.TransactionClient, codeRaw: string, subtotal: number): Promise<{ code: string; discount: number }> {
+  async redeem(
+    tx: Prisma.TransactionClient,
+    codeRaw: string,
+    subtotal: number,
+    identity?: { phone?: string | null; email?: string | null },
+  ): Promise<{ code: string; discount: number }> {
     const code = normalize(codeRaw);
     const c = await tx.coupon.findUnique({ where: { tenantId_code: { tenantId: DEV_TENANT_ID, code } } });
     if (!c) throw new BadRequestException('Kupon bulunamadı.');
     const pre = await this.check(code, subtotal);
     if (!pre.valid) throw new BadRequestException(pre.message);
+    // İlk siparişe özel kupon: aynı telefon/e-posta ile geçmiş sipariş varsa reddet.
+    if (c.firstOrderOnly && identity && !(await this.isFirstOrder(identity))) {
+      throw new BadRequestException('Bu kupon yalnız ilk siparişte geçerli — bu telefon/e-posta ile daha önce sipariş verilmiş.');
+    }
     const res = await tx.coupon.updateMany({
       where: {
         id: c.id,
@@ -91,7 +133,7 @@ export class CouponService {
     return this.prisma.coupon.findMany({ where: { tenantId: DEV_TENANT_ID }, orderBy: { createdAt: 'desc' } });
   }
 
-  async create(dto: { code: string; type: 'PERCENT' | 'FIXED'; value: number; minSubtotal?: number; expiresAt?: string; maxUses?: number }) {
+  async create(dto: { code: string; type: 'PERCENT' | 'FIXED'; value: number; minSubtotal?: number; expiresAt?: string; maxUses?: number; firstOrderOnly?: boolean }) {
     const code = normalize(dto.code);
     if (!/^[A-Z0-9_-]{3,24}$/.test(code)) throw new BadRequestException('Kod 3-24 karakter; harf/rakam/tire.');
     if (dto.type === 'PERCENT' && (dto.value < 1 || dto.value > 100)) throw new BadRequestException('Yüzde 1-100 arası olmalı.');
@@ -106,6 +148,7 @@ export class CouponService {
           minSubtotal: dto.minSubtotal ?? 0,
           expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
           maxUses: dto.maxUses ?? null,
+          firstOrderOnly: dto.firstOrderOnly ?? false,
         },
       });
     } catch (e) {

@@ -15,19 +15,38 @@ interface PosSale {
   id: string; code: string; status: string; finalTotal: number; createdAt: string; note: string | null; paymentMethod: string;
   items: { productName: string; orderedQty: number; unitLabel: string | null; lineTotal: number }[];
 }
-interface Today { total: number; count: number; byMethod: Record<string, number>; sales: PosSale[] }
+interface MethodBreak { gross: number; commission: number; net: number; count: number }
+interface Today { total: number; count: number; byMethod: Record<string, MethodBreak>; sales: PosSale[]; commissionTotal: number; net: number; commissionBps: Record<string, number> }
 
-/** Ödeme yöntemleri — yalnız Nakit kasadaki nakde eklenir; diğerleri bankaya/karta gider. */
-const PAYMENTS: { id: string; label: string; icon: string }[] = [
-  { id: 'CASH', label: 'Nakit', icon: '💵' },
-  { id: 'CARD', label: 'Kredi/Banka Kartı', icon: '💳' },
-  { id: 'MULTINET', label: 'Multinet', icon: '🍽️' },
-  { id: 'SETCARD', label: 'Setcard', icon: '🍽️' },
-  { id: 'EDENRED', label: 'Edenred', icon: '🍽️' },
-  { id: 'METROPOL', label: 'Metropol', icon: '🍽️' },
-  { id: 'TOKENFLEX', label: 'Token Flex', icon: '🍽️' },
+/**
+ * Ödeme yöntemleri. Yalnız Nakit kasadaki nakde eklenir; diğerleri bankaya/karta gider.
+ * `brand` renkli rozetli yemek kartları; `icon` nakit/kart için emoji. `bps` = komisyon
+ * binde (backend PAYMENT_COMMISSION_BPS ile aynı; net tahsilat tahmini için).
+ */
+interface Pay { id: string; label: string; icon?: string; brand?: string; color?: string; bps: number }
+const PAYMENTS: Pay[] = [
+  { id: 'CASH', label: 'Nakit', icon: '💵', bps: 0 },
+  { id: 'CARD', label: 'Kredi/Banka Kartı', icon: '💳', bps: 180 },
+  { id: 'MULTINET', label: 'Multinet', brand: 'multinet', color: '#f36f21', bps: 600 },
+  { id: 'SETCARD', label: 'Setcard', brand: 'setcard', color: '#0067b1', bps: 600 },
+  { id: 'EDENRED', label: 'Edenred', brand: 'edenred', color: '#1b3c8c', bps: 600 },
+  { id: 'METROPOL', label: 'Metropol', brand: 'metropol', color: '#ed1c24', bps: 600 },
+  { id: 'TOKENFLEX', label: 'Token Flex', brand: 'token flex', color: '#6d28d9', bps: 600 },
 ];
 const payLabel = (id: string) => PAYMENTS.find((p) => p.id === id)?.label ?? id;
+const payOf = (id: string) => PAYMENTS.find((p) => p.id === id);
+
+/** Ödeme yöntemi simgesi: yemek kartları marka renkli rozet, diğerleri emoji. */
+function PayIcon({ p, on }: { p: Pay; on?: boolean }) {
+  if (p.brand) {
+    return (
+      <span style={{ display: 'inline-block', background: on ? '#fff' : p.color, color: on ? p.color : '#fff', borderRadius: 5, padding: '2px 7px', fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3, textTransform: 'lowercase', lineHeight: 1.4 }}>
+        {p.brand}
+      </span>
+    );
+  }
+  return <span>{p.icon}</span>;
+}
 
 /** İndirim varsa vitrindeki geçerli fiyat, yoksa taban fiyat (kuruş). */
 const effective = (p: Product) =>
@@ -175,16 +194,29 @@ export default function TezgahPage() {
             <div className="field" style={{ marginTop: 12 }}>
               <label>Ödeme yöntemi</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {PAYMENTS.map((p) => (
-                  <button
-                    key={p.id} type="button" onClick={() => setPayment(p.id)}
-                    style={{ border: `1.5px solid ${payment === p.id ? 'var(--forest)' : 'var(--line)'}`, background: payment === p.id ? 'var(--forest)' : '#fff', color: payment === p.id ? '#fff' : 'inherit', borderRadius: 20, padding: '6px 12px', fontSize: 12.5, cursor: 'pointer' }}
-                  >
-                    {p.icon} {p.label}
-                  </button>
-                ))}
+                {PAYMENTS.map((p) => {
+                  const on = payment === p.id;
+                  return (
+                    <button
+                      key={p.id} type="button" onClick={() => setPayment(p.id)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1.5px solid ${on ? 'var(--forest)' : 'var(--line)'}`, background: on ? 'var(--forest)' : '#fff', color: on ? '#fff' : 'inherit', borderRadius: 20, padding: '6px 12px', fontSize: 12.5, cursor: 'pointer' }}
+                    >
+                      <PayIcon p={p} on={on} /> {p.label}
+                    </button>
+                  );
+                })}
               </div>
-              {payment !== 'CASH' && <p className="note2" style={{ margin: '6px 0 0' }}>Kart/yemek kartı ödemesi <b>kasadaki nakde eklenmez</b> (bankaya/karta gider); ciro ve rapora yine dahildir.</p>}
+              {(() => {
+                const p = payOf(payment);
+                const com = p ? Math.round((total * p.bps) / 10_000) : 0;
+                if (!p || p.bps === 0) return payment === 'CASH' ? null : <p className="note2" style={{ margin: '6px 0 0' }}>Bu ödeme <b>kasadaki nakde eklenmez</b>; ciro ve rapora yine dahildir.</p>;
+                return (
+                  <p className="note2" style={{ margin: '6px 0 0' }}>
+                    Komisyon <b>%{(p.bps / 100).toFixed(p.bps % 100 ? 1 : 0)}</b>{total > 0 && <> → bu satıştan <b>{tl(com)}</b> kesilir, net <b>{tl(total - com)}</b></>}.{' '}
+                    Kart/yemek kartı <b>kasadaki nakde eklenmez</b> (bankaya/karta gider); ciro ve rapora dahildir.
+                  </p>
+                );
+              })()}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12, flexWrap: 'wrap' }}>
               <div className="field" style={{ flex: 1, minWidth: 150 }}>
@@ -195,8 +227,8 @@ export default function TezgahPage() {
                 <div className="muted" style={{ fontSize: 11.5 }}>TOPLAM</div>
                 <div style={{ fontSize: 22, fontWeight: 800 }}>{tl(total)}</div>
               </div>
-              <button className="btn" style={{ background: 'var(--forest)', fontSize: 14, padding: '10px 18px' }} disabled={busy || !allValid} onClick={collect}>
-                {payment === 'CASH' ? '💵' : PAYMENTS.find((p) => p.id === payment)?.icon} Tahsil et
+              <button className="btn" style={{ background: 'var(--forest)', fontSize: 14, padding: '10px 18px', display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={busy || !allValid} onClick={collect}>
+                {(() => { const p = payOf(payment); return p ? <PayIcon p={p} /> : null; })()} Tahsil et
               </button>
             </div>
           </div>
@@ -205,11 +237,22 @@ export default function TezgahPage() {
         <div className="card" style={{ marginTop: 14 }}>
           <div className="ct">Bugünün fişleri <span>{today ? `${today.count} fiş · ${tl(today.total)}` : '—'}</span></div>
           {today && today.byMethod && Object.keys(today.byMethod).length > 0 && (
-            <div className="miniinfo" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
-              {Object.entries(today.byMethod).map(([m, v]) => (
-                <span key={m}>{payLabel(m)}: <b>{tl(v)}</b></span>
-              ))}
-            </div>
+            <>
+              <div className="miniinfo" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+                {Object.entries(today.byMethod).map(([m, v]) => (
+                  <span key={m}>
+                    {payLabel(m)}: <b>{tl(v.gross)}</b>
+                    {v.commission > 0 && <span className="muted" style={{ fontSize: 11 }}> (−{tl(v.commission)} kom. → {tl(v.net)})</span>}
+                  </span>
+                ))}
+              </div>
+              {today.commissionTotal > 0 && (
+                <p className="note2" style={{ marginTop: 0 }}>
+                  Brüt <b>{tl(today.total)}</b> · toplam komisyon <b style={{ color: 'var(--berry)' }}>−{tl(today.commissionTotal)}</b> · elde kalan net <b>{tl(today.net)}</b>.
+                  Komisyon oranları ödeme yöntemine göre (yemek kartı %6, kart %1,8, nakit %0).
+                </p>
+              )}
+            </>
           )}
           {!today || today.sales.length === 0 ? (
             <p className="muted">Bugün tezgâh satışı yok.</p>

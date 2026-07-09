@@ -47,7 +47,7 @@ export default function UrunlerPage() {
       key: 'competitionIndex', label: 'Endeks', align: 'right', sortValue: (r) => r.competitionIndex,
       render: (r) => (r.competitionIndex == null ? '—' : <span className={`tagp ${r.competitionIndex < 100 ? 'down' : 'up'}`}>{r.competitionIndex}</span>),
     },
-    { key: 'action', label: '', render: () => <Link href="/oner" className="btn ghost" style={{ fontSize: 11, padding: '5px 9px' }}>Fiyatla →</Link> },
+    { key: 'action', label: 'İşlem', render: (r) => <Link href={`/oner?p=${encodeURIComponent(r.productId)}`} className="btn ghost" style={{ fontSize: 11, padding: '5px 9px', whiteSpace: 'nowrap' }}>Fiyatla →</Link> },
   ];
 
   return (
