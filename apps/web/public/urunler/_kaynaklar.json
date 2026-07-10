@@ -1,9 +1,9 @@
 [
  {
   "slug": "ahududu",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/53133240@N00/2678646974",
-  "creator": "Muffet"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/raspberries-red-fruit-berry-ripe-3454504/",
+  "creator": "ulleo"
  },
  {
   "slug": "ananas",
@@ -37,9 +37,9 @@
  },
  {
   "slug": "avakado",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/146966953@N02/29215779510",
-  "creator": "Kjokkenutstyr.net"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/avocado-food-fruit-vegetables-8498520/",
+  "creator": "JohnyVid"
  },
  {
   "slug": "bamya",
@@ -67,9 +67,9 @@
  },
  {
   "slug": "biber-carli",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/51671102@N04/5572058548",
-  "creator": "Sharunas Jurevic"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/healthy-green-bell-pepper-paprika-1283458/",
+  "creator": "Pexels"
  },
  {
   "slug": "biber-dolma",
@@ -79,9 +79,9 @@
  },
  {
   "slug": "biber-koy",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/53133240@N00/5922004490",
-  "creator": "Muffet"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/paprika-green-paprika-vegetables-1717226/",
+  "creator": "I_hoernchen"
  },
  {
   "slug": "biber-renkli",
@@ -91,9 +91,9 @@
  },
  {
   "slug": "biber-sivri",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/155512413@N07/40280844400",
-  "creator": "TheChili.Life"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/jalapeno-pepper-spicy-green-1620473/",
+  "creator": "ajcespedes"
  },
  {
   "slug": "biber-sivri-kil",
@@ -163,9 +163,9 @@
  },
  {
   "slug": "dut",
-  "license": "BY-ND 2.0",
-  "source": "https://www.flickr.com/photos/7398698@N08/21440302723",
-  "creator": "fruitGloss"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/mulberry-fruit-2242901/",
+  "creator": "BoyKat"
  },
  {
   "slug": "elma-golden",
@@ -223,9 +223,9 @@
  },
  {
   "slug": "feslegen",
-  "license": "CC BY-SA 4.0",
-  "source": "https://commons.wikimedia.org/wiki/File:Fresh_Basil_Plant.jpg",
-  "creator": "Nabunje Leticia"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/basil-herbs-food-dew-932079/",
+  "creator": "tookapic"
  },
  {
   "slug": "ginger-zencefil",
@@ -283,9 +283,9 @@
  },
  {
   "slug": "ispanak",
-  "license": "CC BY-SA 4.0",
-  "source": "https://commons.wikimedia.org/wiki/File:Fresh_Spinach_leaves.jpg",
-  "creator": "Charipearl"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/spinach-factory-healthy-7413568/",
+  "creator": "trangntt90"
  },
  {
   "slug": "kabak-sakiz",
@@ -313,9 +313,9 @@
  },
  {
   "slug": "kayisi-i",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/70693287@N00/5972116134",
-  "creator": "naturalflow"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/apricot-fruit-power-2314631/",
+  "creator": "Dgraph88"
  },
  {
   "slug": "kayisi-igdir",
@@ -325,9 +325,9 @@
  },
  {
   "slug": "kereviz",
-  "license": "BY-ND 2.0",
-  "source": "https://www.flickr.com/photos/50557433@N03/4643872765",
-  "creator": "Skånska Matupplevelser"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/soup-greens-celery-vegetables-food-869075/",
+  "creator": "stevepb"
  },
  {
   "slug": "kiraz",
@@ -367,9 +367,9 @@
  },
  {
   "slug": "lahana-beyaz",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/11191108@N04/2883356498",
-  "creator": "Fruitnet.com"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/cabbage-cultivation-vegetables-3722498/",
+  "creator": "ulleo"
  },
  {
   "slug": "lahana-kara",
@@ -379,9 +379,9 @@
  },
  {
   "slug": "lahana-kirmizi",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/30152489@N00/9808168",
-  "creator": "Rick Heath"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/cabbage-red-cabbage-cabbage-head-5968277/",
+  "creator": "manfredrichter"
  },
  {
   "slug": "limon",
@@ -421,15 +421,15 @@
  },
  {
   "slug": "misir",
-  "license": "CC0 1.0",
-  "source": "https://www.flickr.com/photos/65798313@N06/6022178523",
-  "creator": "Picdrome Public Domain Pictures"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/corn-sweet-corn-vegetable-food-8028831/",
+  "creator": "ignartonosbg"
  },
  {
   "slug": "muz-1-kalite",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/30091649@N06/6612824761",
-  "creator": "24oranges.nl"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/banana-yellow-green-fruit-325461/",
+  "creator": "218860"
  },
  {
   "slug": "muz-yerli",
@@ -457,9 +457,9 @@
  },
  {
   "slug": "pancar",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/21309047@N00/2790571154",
-  "creator": "Annie Mole"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/beetroot-food-diet-vegetable-687251/",
+  "creator": "Desertrose7"
  },
  {
   "slug": "patates",
@@ -469,9 +469,9 @@
  },
  {
   "slug": "patlican-bostan",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/40994455@N06/36102768134",
-  "creator": "nutrilover"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/eggplant-vegetables-food-produce-1659784/",
+  "creator": "Larisa-K"
  },
  {
   "slug": "patlican-i",
@@ -487,9 +487,9 @@
  },
  {
   "slug": "pirasa",
-  "license": "CC BY-SA 4.0",
-  "source": "https://commons.wikimedia.org/wiki/File:Leek_on_white_background_-_0947.jpg",
-  "creator": "Amada44"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/leek-vegetables-stalk-broad-leek-2199563/",
+  "creator": "Couleur"
  },
  {
   "slug": "pitahaya-ejder-meyvesi",
@@ -499,9 +499,9 @@
  },
  {
   "slug": "portakal",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/31192329@N00/484275757",
-  "creator": "chriscom"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/oranges-fruit-vitamins-428072/",
+  "creator": "jarmoluk"
  },
  {
   "slug": "roka",
@@ -541,9 +541,9 @@
  },
  {
   "slug": "semizotu",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/7147684@N03/1667066658",
-  "creator": "pellaea"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/succulent-botany-plant-nature-6517789/",
+  "creator": "dyturge"
  },
  {
   "slug": "sogan-kirmizi-balik",
@@ -553,15 +553,15 @@
  },
  {
   "slug": "sogan-kuru",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/39160147@N03/16078329022",
-  "creator": "JeepersMedia"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/onions-garlic-vegetables-1238332/",
+  "creator": "Shutterbug26"
  },
  {
   "slug": "sogan-taze",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/142284085@N06/48013850048",
-  "creator": "HungryHuy"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/spring-onions-vegetables-845032/",
+  "creator": "congerdesign"
  },
  {
   "slug": "tereotu",
@@ -571,21 +571,21 @@
  },
  {
   "slug": "uzum",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/36101697408@N01/190418664",
-  "creator": "Dano"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/fruit-grapes-healthy-harvest-6630499/",
+  "creator": "matthiasboeckel"
  },
  {
   "slug": "uzum-cekirdeksiz",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/36101697408@N01/190418664",
-  "creator": "Dano"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/grape-vine-wine-fruit-vineyard-4361980/",
+  "creator": "ybernardi"
  },
  {
   "slug": "uzum-siyah",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/7718908@N04/5069158308",
-  "creator": "h080"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/grape-fruit-black-973313/",
+  "creator": "johndavi"
  },
  {
   "slug": "visne",
@@ -601,74 +601,74 @@
  },
  {
   "slug": "yaprak-taze",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/8404611@N06/7185789602",
-  "creator": "Walt Stoneburner"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/grape-leaf-vines-vine-wine-growing-3555596/",
+  "creator": "MyriRoet"
  },
  {
   "slug": "nar-eksisi-330ml",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/69668444@N03/8431123213",
-  "creator": "Migle Seikyte"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/pomegranate-fruit-seeds-1647930/",
+  "creator": "Couleur"
  },
  {
   "slug": "antakya-tadim-paketi-1",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/37054091@N06/5622055101",
-  "creator": "CeresB"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/olive-oil-bottle-olives-glass-1867229/",
+  "creator": "Pexels"
  },
  {
   "slug": "antakya-tadim-paketi-2",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/45257015@N03/7568124256",
-  "creator": "Hey Paul Studios"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/olives-black-olives-olive-bowl-6777954/",
+  "creator": "Van3ssa_"
  },
  {
   "slug": "cover-ofis-meyve",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/18832207@N00/484603274",
-  "creator": "[Crewe]"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/fruits-food-harvest-strawberries-3441830/",
+  "creator": "sweetlouise"
  },
  {
   "slug": "cover-aile-pazar",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/56205607@N00/1580858853",
-  "creator": "Uncleweed"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/vegetables-produce-healthy-broccoli-1238252/",
+  "creator": "Shutterbug26"
  },
  {
   "slug": "cover-ogrenci-evi",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/99424477@N04/9595379492",
-  "creator": "prague.czech.photo"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/salad-fruit-berry-healthy-vitamins-2756467/",
+  "creator": "silviarita"
  },
  {
   "slug": "cover-kahvalti-sofrasi",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/92269745@N00/7846872334",
-  "creator": "ralph and jenny"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/vegetables-water-droplets-fresh-1584999/",
+  "creator": "JerzyGórecki"
  },
  {
   "slug": "cover-yemeklik-corbalik",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/51464530@N00/2944502774",
-  "creator": "alexlomas"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/vegetables-potato-food-cook-eat-3821220/",
+  "creator": "Taken"
  },
  {
   "slug": "cover-salata",
-  "license": "CC0 1.0",
-  "source": "https://www.rawpixel.com/image/5965694/fresh-salad-vegetables-and-corn",
-  "creator": ""
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/salad-fruit-berry-healthy-vitamins-2756467/",
+  "creator": "silviarita"
  },
  {
   "slug": "cover-antakya-yoresel",
-  "license": "BY 2.0",
-  "source": "https://www.flickr.com/photos/10413717@N08/6825479819",
-  "creator": "Smabs Sputzer (1956-2017)"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/olive-oil-bottle-olives-glass-1867229/",
+  "creator": "Pexels"
  },
  {
   "slug": "cover-detoks-bagisiklik",
-  "license": "BY-SA 2.0",
-  "source": "https://www.flickr.com/photos/8749778@N06/6913169568",
-  "creator": "Eric Kilby"
+  "license": "Pixabay Content License",
+  "source": "https://pixabay.com/photos/lemon-fruit-slice-flesh-food-1024641/",
+  "creator": "Jaro_N"
  }
 ]
