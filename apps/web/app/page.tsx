@@ -26,6 +26,12 @@ interface Basket {
 }
 
 const NEW_WINDOW_DAYS = 21; // "Yeni gelenler" penceresi (kendiliğinden temizlenir)
+/** Kategori tepsisi gerçek foto (Getir tarzı). Slug → görsel. */
+const KAT_PHOTO: Record<string, string> = {
+  meyve: '/urunler/kat-meyve.jpg',
+  sebze: '/urunler/kat-sebze.jpg',
+  yoresel: '/urunler/kat-yoresel.jpg',
+};
 
 /** URL '?kategori=' parametresini kategori filtresine bağlar (header/footer linkleri). */
 function KategoriReader({ onCat }: { onCat: (c: string) => void }) {
@@ -208,7 +214,11 @@ export default function HomePage() {
         </button>
         {categories.map((c) => (
           <button key={c.slug} className={`cat ${cat === c.slug ? 'sel' : ''}`} onClick={() => setCat(c.slug)}>
-            <span className="ring"><CategoryIcon slug={c.slug} size={34} /></span>
+            <span className="ring">
+              {KAT_PHOTO[c.slug]
+                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={KAT_PHOTO[c.slug]} alt={c.name} loading="lazy" />
+                : <CategoryIcon slug={c.slug} size={34} />}
+            </span>
             {c.name}
           </button>
         ))}
@@ -263,7 +273,12 @@ export default function HomePage() {
           {/* Tüm ürünler — kategoriye göre gruplu */}
           {grouped.map((g) => (
             <div className="catgroup" key={g.cat.slug}>
-              <h3><CategoryIcon slug={g.cat.slug} size={24} /> {g.cat.name} <span className="cnt">{g.items.length}</span></h3>
+              <h3>
+                {KAT_PHOTO[g.cat.slug]
+                  ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={KAT_PHOTO[g.cat.slug]} alt="" className="cathead-img" />
+                  : <CategoryIcon slug={g.cat.slug} size={24} />}
+                {g.cat.name} <span className="cnt">{g.items.length}</span>
+              </h3>
               <div className="grid">
                 {g.items.map((p) => <ProductCard key={p.slug} product={p} onAdded={flash} />)}
               </div>
