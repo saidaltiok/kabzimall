@@ -10,7 +10,6 @@ import { useFavs } from '@/lib/favs';
 import { getOrderHistory } from '@/lib/orders';
 import ProductCard, { CardProduct } from '@/components/ProductCard';
 import Icon from '@/components/Icon';
-import CategoryIcon from '@/components/CategoryIcon';
 
 interface Product extends CardProduct {
   isFeatured: boolean;
@@ -26,12 +25,8 @@ interface Basket {
 }
 
 const NEW_WINDOW_DAYS = 21; // "Yeni gelenler" penceresi (kendiliğinden temizlenir)
-/** Kategori tepsisi gerçek foto (Getir tarzı). Slug → görsel. */
-const KAT_PHOTO: Record<string, string> = {
-  meyve: '/urunler/kat-meyve.jpg',
-  sebze: '/urunler/kat-sebze.jpg',
-  yoresel: '/urunler/kat-yoresel.jpg',
-};
+/** Kategori simgeleri — hi-fi mockup'takiyle aynı, temiz ve büyük emoji. */
+const CAT_ICON: Record<string, string> = { meyve: '🍑', sebze: '🥬', yoresel: '🏺' };
 
 /** URL '?kategori=' parametresini kategori filtresine bağlar (header/footer linkleri). */
 function KategoriReader({ onCat }: { onCat: (c: string) => void }) {
@@ -210,21 +205,17 @@ export default function HomePage() {
 
       <div className="cats">
         <button className={`cat ${cat === 'all' ? 'sel' : ''}`} onClick={() => setCat('all')}>
-          <span className="ring"><CategoryIcon slug="all" size={34} /></span>Tümü
+          <span className="ring">🛒</span>Tümü
         </button>
         {categories.map((c) => (
           <button key={c.slug} className={`cat ${cat === c.slug ? 'sel' : ''}`} onClick={() => setCat(c.slug)}>
-            <span className="ring">
-              {KAT_PHOTO[c.slug]
-                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={KAT_PHOTO[c.slug]} alt={c.name} loading="lazy" />
-                : <CategoryIcon slug={c.slug} size={34} />}
-            </span>
+            <span className="ring">{CAT_ICON[c.slug] ?? '🧺'}</span>
             {c.name}
           </button>
         ))}
         {favs.length > 0 && (
           <button className={`cat ${cat === 'favs' ? 'sel' : ''}`} onClick={() => setCat('favs')}>
-            <span className="ring"><CategoryIcon slug="favs" size={34} /></span>Favorilerim
+            <span className="ring">❤️</span>Favorilerim
           </button>
         )}
       </div>
@@ -273,12 +264,7 @@ export default function HomePage() {
           {/* Tüm ürünler — kategoriye göre gruplu */}
           {grouped.map((g) => (
             <div className="catgroup" key={g.cat.slug}>
-              <h3>
-                {KAT_PHOTO[g.cat.slug]
-                  ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={KAT_PHOTO[g.cat.slug]} alt="" className="cathead-img" />
-                  : <CategoryIcon slug={g.cat.slug} size={24} />}
-                {g.cat.name} <span className="cnt">{g.items.length}</span>
-              </h3>
+              <h3>{CAT_ICON[g.cat.slug] ?? '🧺'} {g.cat.name} <span className="cnt">{g.items.length}</span></h3>
               <div className="grid">
                 {g.items.map((p) => <ProductCard key={p.slug} product={p} onAdded={flash} />)}
               </div>
