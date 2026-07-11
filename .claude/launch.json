@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "apps/admin", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "mobile-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/mobile", "run", "web:preview"],
+      "port": 8091
     }
   ]
 }

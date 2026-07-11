@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "KabzıMall",
+    "slug": "kabzimall",
+    "scheme": "kabzimall",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1F4D38"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kabzimall.app"
+    },
+    "android": {
+      "package": "com.kabzimall.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1F4D38",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
+  }
+}
